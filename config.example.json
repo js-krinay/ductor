@@ -28,6 +28,12 @@
         "append_mode": false,
         "sentence_break": true
     },
+    "reactions": {
+        "level": "ack",
+        "ack_emoji": "👀",
+        "done_emoji": "✅",
+        "error_emoji": "❌"
+    },
     "docker": {
         "enabled": false,
         "image_name": "ductor-sandbox",
