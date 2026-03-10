@@ -80,6 +80,7 @@ if TYPE_CHECKING:
     from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
     from ductor_bot.orchestrator.core import Orchestrator
+    from ductor_bot.pairing import PairingService
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +154,7 @@ class TelegramBot:
         allowed_groups = set(config.allowed_group_ids)
         self._allowed_users = allowed
         self._allowed_groups = allowed_groups
-        self._pairing_svc: object | None = None
+        self._pairing_svc: PairingService | None = None
         if config.pairing.enabled:
             from ductor_bot.pairing import PairingService
 
@@ -1412,9 +1413,13 @@ class TelegramBot:
         if self._orchestrator:
             await self._orchestrator.shutdown()
 
-        # Clean command menu on shutdown
+        # Clean command menu on shutdown (each scope is independent).
         with contextlib.suppress(Exception):
+            from aiogram.types import BotCommandScopeAllGroupChats, BotCommandScopeAllPrivateChats
+
             await self._bot.delete_my_commands()
+            await self._bot.delete_my_commands(scope=BotCommandScopeAllPrivateChats())
+            await self._bot.delete_my_commands(scope=BotCommandScopeAllGroupChats())
 
         # Release the Telegram polling session so a new bot instance can start.
         # Without this, Telegram rejects the next getUpdates call with

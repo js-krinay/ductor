@@ -56,4 +56,5 @@ class TestSyncCommands:
             bot._orchestrator.shutdown = AsyncMock()
             await bot.shutdown()
 
-            mock_bot.delete_my_commands.assert_called()
+            # Default + private + group = 3 calls
+            assert mock_bot.delete_my_commands.call_count == 3
