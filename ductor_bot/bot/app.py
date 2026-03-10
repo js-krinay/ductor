@@ -21,6 +21,7 @@ from ductor_bot.bot.callbacks import (
     mark_button_choice,
     parse_ns_callback,
 )
+from ductor_bot.bot.reactions import ReactionService
 from ductor_bot.bot.chat_tracker import ChatRecord, ChatTracker
 from ductor_bot.bot.file_browser import (
     file_browser_start,
@@ -136,6 +137,7 @@ class TelegramBot:
             token=config.telegram_token,
             default=DefaultBotProperties(parse_mode=ParseMode.HTML),
         )
+        self._reactions = ReactionService(self._bot, config)
         self._bot_id: int | None = None
         self._bot_username: str | None = None
 
@@ -1307,28 +1309,38 @@ class TelegramBot:
     async def _sync_commands(self) -> None:
         from aiogram.types import BotCommandScopeAllGroupChats, BotCommandScopeAllPrivateChats
 
-        desired = _BOT_COMMANDS
+        from ductor_bot.commands import GROUP_COMMANDS
 
-        # Clear legacy scoped commands (previous versions set per-scope lists).
-        # Telegram keeps scoped commands independently — they must be deleted
-        # explicitly or they shadow the default-scope list.
-        for scope in (BotCommandScopeAllPrivateChats(), BotCommandScopeAllGroupChats()):
+        private_cmds = _BOT_COMMANDS
+        group_cmds = [BotCommand(command=c, description=d) for c, d in GROUP_COMMANDS]
+
+        scopes: list[tuple[object, list[BotCommand]]] = [
+            (BotCommandScopeAllPrivateChats(), private_cmds),
+            (BotCommandScopeAllGroupChats(), group_cmds),
+        ]
+
+        # Clear legacy default-scope commands so they don't shadow scoped ones.
+        try:
+            default_cmds = await self._bot.get_my_commands()
+            if default_cmds:
+                await self._bot.delete_my_commands()
+        except TelegramAPIError:
+            pass
+
+        for scope, desired in scopes:
             try:
-                scoped = await self._bot.get_my_commands(scope=scope)
-                if scoped:
-                    await self._bot.delete_my_commands(scope=scope)
-                    logger.info("Cleared legacy %s commands", type(scope).__name__)
+                current = await self._bot.get_my_commands(scope=scope)
+                current_tuples = [(c.command, c.description) for c in current]
+                desired_tuples = [(c.command, c.description) for c in desired]
+                if current_tuples != desired_tuples:
+                    await self._bot.set_my_commands(desired, scope=scope)
+                    logger.info(
+                        "Updated %d commands for %s",
+                        len(desired),
+                        type(scope).__name__,
+                    )
             except TelegramAPIError:
-                pass  # scope not set — nothing to clear
-
-        # Set default-scope commands (shown everywhere).
-        # Compare as ordered list so reordering triggers an update.
-        current = await self._bot.get_my_commands()
-        current_tuples = [(c.command, c.description) for c in current]
-        desired_tuples = [(c.command, c.description) for c in desired]
-        if current_tuples != desired_tuples:
-            await self._bot.set_my_commands(desired)
-            logger.info("Updated %d bot commands", len(desired))
+                logger.warning("Failed to sync commands for %s", type(scope).__name__)
 
     async def _watch_restart_marker(self) -> None:
         """Poll for restart-requested marker file."""

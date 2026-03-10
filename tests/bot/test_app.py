@@ -1152,8 +1152,7 @@ class TestWatchRestartMarker:
 
 class TestSyncCommands:
     async def test_sets_commands_when_different(self) -> None:
-        from ductor_bot.bot.app import _BOT_COMMANDS
-
+        """When scoped commands are unset, set_my_commands is called for each scope."""
         tg_bot, bot_instance = _make_tg_bot()
         bot_instance.get_my_commands = AsyncMock(return_value=[])
         bot_instance.set_my_commands = AsyncMock()
@@ -1161,34 +1160,28 @@ class TestSyncCommands:
 
         await tg_bot._sync_commands()
 
-        bot_instance.set_my_commands.assert_called_once_with(_BOT_COMMANDS)
+        # Private scope + group scope = 2 calls
+        assert bot_instance.set_my_commands.call_count == 2
 
     async def test_skips_when_commands_match(self) -> None:
-        from ductor_bot.bot.app import _BOT_COMMANDS
-
-        tg_bot, bot_instance = _make_tg_bot()
-        desired = list(_BOT_COMMANDS)
-        bot_instance.get_my_commands = AsyncMock(return_value=desired)
-        bot_instance.set_my_commands = AsyncMock()
-        bot_instance.delete_my_commands = AsyncMock()
-
-        await tg_bot._sync_commands()
-
-        bot_instance.set_my_commands.assert_not_called()
-
-    async def test_clears_legacy_scoped_commands(self) -> None:
-        """Old scoped commands (private/group) are deleted on sync."""
+        """When scoped commands already match desired, set_my_commands is skipped."""
         from aiogram.types import BotCommand
 
         from ductor_bot.bot.app import _BOT_COMMANDS
+        from ductor_bot.commands import GROUP_COMMANDS
+
+        group_cmds = [BotCommand(command=c, description=d) for c, d in GROUP_COMMANDS]
 
         tg_bot, bot_instance = _make_tg_bot()
-        legacy = [BotCommand(command="old", description="legacy")]
 
         async def _get_my_commands(**kwargs: object) -> list[BotCommand]:
-            if kwargs.get("scope"):
-                return legacy
-            return list(_BOT_COMMANDS)
+            scope = kwargs.get("scope")
+            if scope is None:
+                return []  # no legacy default scope
+            scope_type = type(scope).__name__
+            if "Private" in scope_type:
+                return list(_BOT_COMMANDS)
+            return group_cmds
 
         bot_instance.get_my_commands = AsyncMock(side_effect=_get_my_commands)
         bot_instance.set_my_commands = AsyncMock()
@@ -1196,22 +1189,49 @@ class TestSyncCommands:
 
         await tg_bot._sync_commands()
 
-        assert bot_instance.delete_my_commands.call_count == 2
         bot_instance.set_my_commands.assert_not_called()
 
-    async def test_updates_when_order_changes(self) -> None:
-        """Reordering commands triggers an update (not just content diff)."""
-        from ductor_bot.bot.app import _BOT_COMMANDS
+    async def test_clears_legacy_default_commands(self) -> None:
+        """Legacy default-scope commands are deleted when present."""
+        from aiogram.types import BotCommand
 
         tg_bot, bot_instance = _make_tg_bot()
-        reversed_cmds = list(reversed(_BOT_COMMANDS))
-        bot_instance.get_my_commands = AsyncMock(return_value=reversed_cmds)
+        legacy = [BotCommand(command="old", description="legacy")]
+
+        async def _get_my_commands(**kwargs: object) -> list[BotCommand]:
+            if kwargs.get("scope"):
+                return []
+            return legacy  # default scope has stale commands
+
+        bot_instance.get_my_commands = AsyncMock(side_effect=_get_my_commands)
         bot_instance.set_my_commands = AsyncMock()
         bot_instance.delete_my_commands = AsyncMock()
 
         await tg_bot._sync_commands()
 
-        bot_instance.set_my_commands.assert_called_once_with(_BOT_COMMANDS)
+        # delete called once for default scope, set called twice for per-scope
+        bot_instance.delete_my_commands.assert_called_once()
+
+    async def test_updates_when_order_changes(self) -> None:
+        """Reordering commands in a scope triggers an update."""
+        from ductor_bot.bot.app import _BOT_COMMANDS
+
+        tg_bot, bot_instance = _make_tg_bot()
+        reversed_cmds = list(reversed(_BOT_COMMANDS))
+
+        async def _get_my_commands(**kwargs: object) -> list[object]:
+            if kwargs.get("scope"):
+                return reversed_cmds  # stale order for both scopes
+            return []  # no legacy default
+
+        bot_instance.get_my_commands = AsyncMock(side_effect=_get_my_commands)
+        bot_instance.set_my_commands = AsyncMock()
+        bot_instance.delete_my_commands = AsyncMock()
+
+        await tg_bot._sync_commands()
+
+        # Both scopes have wrong order → two updates
+        assert bot_instance.set_my_commands.call_count == 2
 
 
 # ---------------------------------------------------------------------------
