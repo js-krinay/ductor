@@ -28,7 +28,6 @@ from ductor_bot.bot.file_browser import (
     is_file_browser_callback,
 )
 from ductor_bot.bot.formatting import markdown_to_telegram_html
-from ductor_bot.bot.session_factory import create_bot_session
 from ductor_bot.bot.handlers import (
     handle_abort,
     handle_abort_all,
@@ -52,6 +51,7 @@ from ductor_bot.bot.middleware import MQ_PREFIX, AuthMiddleware, SequentialMiddl
 from ductor_bot.bot.reactions import ReactionService
 from ductor_bot.bot.sender import SendRichOpts, send_rich
 from ductor_bot.bot.sender import send_files_from_text as _send_files_from_text
+from ductor_bot.bot.session_factory import create_bot_session
 from ductor_bot.bot.topic import TopicNameCache, get_session_key, get_thread_id
 from ductor_bot.bot.typing import TypingContext as _TypingContext
 from ductor_bot.bot.welcome import (
@@ -204,7 +204,9 @@ class TelegramBot:
             AuthMiddleware(allowed, allowed_group_ids=allowed_groups, on_rejected=on_rejected)
         )
         self._router.channel_post.outer_middleware(
-            AuthMiddleware(allowed, allowed_group_ids=allowed_groups, allowed_channel_ids=allowed_channels)
+            AuthMiddleware(
+                allowed, allowed_group_ids=allowed_groups, allowed_channel_ids=allowed_channels
+            )
         )
         self._router.channel_post.outer_middleware(self._sequential)
 
@@ -1293,6 +1295,7 @@ class TelegramBot:
                 thread_id=thread_id,
                 polls_enabled=self._config.polls.enabled,
                 polls_anonymous=self._config.polls.is_anonymous,
+                reply_to_mode=self._orch.resolver.reply_to_mode(key.chat_id),
             ),
         )
 
@@ -1316,6 +1319,7 @@ class TelegramBot:
                 thread_id=thread_id,
                 polls_enabled=self._config.polls.enabled,
                 polls_anonymous=self._config.polls.is_anonymous,
+                reply_to_mode=self._orch.resolver.reply_to_mode(key.chat_id),
             ),
         )
 

@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+ReplyToMode = Literal["off", "first", "all"]
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
@@ -254,6 +256,7 @@ class ChatOverrides(BaseModel):
     group_mention_only: bool | None = None
     require_mention: bool | None = None
     enabled: bool | None = None
+    reply_to_mode: ReplyToMode | None = None
 
 
 class ProxyConfig(BaseModel):
@@ -316,6 +319,7 @@ class AgentConfig(BaseModel):
     polls: PollConfig = Field(default_factory=PollConfig)
     proxy: ProxyConfig = Field(default_factory=ProxyConfig)
     approval: ApprovalConfig = Field(default_factory=ApprovalConfig)
+    reply_to_mode: ReplyToMode = "first"
     chat_overrides: dict[str, dict[str, object]] = Field(default_factory=dict)
 
     @field_validator("gemini_api_key", mode="before")
