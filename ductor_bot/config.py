@@ -228,6 +228,15 @@ async def update_config_file_async(config_path: Path, **updates: object) -> None
     await asyncio.to_thread(update_config_file, config_path, **updates)
 
 
+class PairingConfig(BaseModel):
+    """Settings for DM pairing / self-service onboarding."""
+
+    enabled: bool = False
+    code_ttl_minutes: int = 60
+    code_length: int = 6
+    max_active_codes: int = 10
+
+
 class AgentConfig(BaseModel):
     """Top-level configuration loaded from config.json."""
 
@@ -262,6 +271,7 @@ class AgentConfig(BaseModel):
     telegram_token: str = ""
     allowed_user_ids: list[int] = Field(default_factory=list)
     allowed_group_ids: list[int] = Field(default_factory=list)
+    pairing: PairingConfig = Field(default_factory=PairingConfig)
 
     @field_validator("gemini_api_key", mode="before")
     @classmethod
