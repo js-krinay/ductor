@@ -245,6 +245,101 @@ class TestAuthMiddleware:
         assert calls == []
 
 
+class TestAuthMiddlewarePairing:
+    """Test pairing flow integration with AuthMiddleware."""
+
+    async def test_unknown_user_gets_pairing_prompt(self) -> None:
+        from ductor_bot.bot.middleware import AuthMiddleware
+
+        pairing_callback = AsyncMock()
+        mw = AuthMiddleware(
+            allowed_user_ids={100},
+            on_unknown_dm=pairing_callback,
+        )
+        handler = AsyncMock()
+        msg = _make_message(user_id=999, chat_type="private")
+
+        result = await mw(handler, msg, {})
+
+        handler.assert_not_called()
+        pairing_callback.assert_called_once()
+
+    async def test_known_user_not_prompted(self) -> None:
+        from ductor_bot.bot.middleware import AuthMiddleware
+
+        pairing_callback = AsyncMock()
+        mw = AuthMiddleware(
+            allowed_user_ids={100},
+            on_unknown_dm=pairing_callback,
+        )
+        handler = AsyncMock(return_value="ok")
+        msg = _make_message(user_id=100, chat_type="private")
+
+        result = await mw(handler, msg, {})
+
+        handler.assert_called_once()
+        pairing_callback.assert_not_called()
+
+    async def test_pairing_code_validates_and_adds_user(self) -> None:
+        from ductor_bot.bot.middleware import AuthMiddleware
+
+        pairing_svc = MagicMock()
+        pairing_svc.validate.return_value = True
+
+        on_paired = AsyncMock()
+        mw = AuthMiddleware(
+            allowed_user_ids={100},
+            pairing_svc=pairing_svc,
+            on_paired=on_paired,
+        )
+        handler = AsyncMock()
+        msg = _make_message(user_id=999, text="ABC123", chat_type="private")
+
+        result = await mw(handler, msg, {})
+
+        pairing_svc.validate.assert_called_once_with("ABC123", user_id=999)
+        on_paired.assert_called_once_with(999)
+
+    async def test_invalid_code_triggers_prompt(self) -> None:
+        from ductor_bot.bot.middleware import AuthMiddleware
+
+        pairing_svc = MagicMock()
+        pairing_svc.validate.return_value = False
+
+        on_unknown_dm = AsyncMock()
+        mw = AuthMiddleware(
+            allowed_user_ids={100},
+            pairing_svc=pairing_svc,
+            on_unknown_dm=on_unknown_dm,
+        )
+        handler = AsyncMock()
+        msg = _make_message(user_id=999, text="WRONG1", chat_type="private")
+
+        result = await mw(handler, msg, {})
+
+        handler.assert_not_called()
+        on_unknown_dm.assert_called_once()
+
+    async def test_paired_user_added_to_allowed_set(self) -> None:
+        """After pairing, user should be in allowed set for future messages."""
+        from ductor_bot.bot.middleware import AuthMiddleware
+
+        pairing_svc = MagicMock()
+        pairing_svc.validate.return_value = True
+
+        allowed = {100}
+        mw = AuthMiddleware(
+            allowed_user_ids=allowed,
+            pairing_svc=pairing_svc,
+            on_paired=AsyncMock(),
+        )
+        handler = AsyncMock()
+        msg = _make_message(user_id=999, text="ABC123", chat_type="private")
+
+        await mw(handler, msg, {})
+        assert 999 in allowed
+
+
 class TestSequentialMiddleware:
     """Test dedup + per-chat sequential lock."""
 

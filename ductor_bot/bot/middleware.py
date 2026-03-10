@@ -90,11 +90,17 @@ class AuthMiddleware(BaseMiddleware):
         allowed_group_ids: set[int] | None = None,
         on_rejected: RejectedCallback | None = None,
         resolver: object | None = None,
+        pairing_svc: object | None = None,
+        on_unknown_dm: Callable[[int, Message], Awaitable[None]] | None = None,
+        on_paired: Callable[[int], Awaitable[None]] | None = None,
     ) -> None:
         self._allowed_users = allowed_user_ids
         self._allowed_groups = allowed_group_ids or set()
         self._on_rejected = on_rejected
         self._resolver = resolver
+        self._pairing_svc = pairing_svc
+        self._on_unknown_dm = on_unknown_dm
+        self._on_paired = on_paired
 
     async def __call__(
         self,
@@ -128,6 +134,19 @@ class AuthMiddleware(BaseMiddleware):
             if user.id not in self._allowed_users:
                 return None
         elif user.id not in self._allowed_users:
+            # Private chat — check for pairing flow
+            if chat_type == "private" and isinstance(event, Message):
+                text = (event.text or "").strip()
+                # Try to validate as pairing code
+                if self._pairing_svc and text:
+                    if self._pairing_svc.validate(text, user_id=user.id):
+                        self._allowed_users.add(user.id)
+                        if self._on_paired:
+                            await self._on_paired(user.id)
+                        return None  # Don't process the code as a message
+                # Send pairing prompt
+                if self._on_unknown_dm:
+                    await self._on_unknown_dm(user.id, event)
             return None
 
         # Check per-chat enabled status
