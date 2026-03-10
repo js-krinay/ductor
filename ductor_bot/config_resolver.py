@@ -25,7 +25,7 @@ class ChatConfigResolver:
         self._overrides.clear()
         for key, raw in config.chat_overrides.items():
             try:
-                self._overrides[key] = ChatOverrides(**raw) if isinstance(raw, dict) else raw
+                self._overrides[key] = ChatOverrides.model_validate(raw)
             except Exception:
                 logger.warning("Invalid chat override for key=%s, skipping", key)
 
