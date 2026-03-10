@@ -15,22 +15,21 @@ Stack:
 
 ```bash
 # Setup
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+uv sync --group dev
 
 # Run
-ductor
-ductor -v
+uv run ductor
+uv run ductor -v
 
 # Tests
-pytest
-pytest tests/bot/test_app.py
-pytest -k "pattern"
+uv run pytest
+uv run pytest tests/bot/test_app.py
+uv run pytest -k "pattern"
 
 # Quality
-ruff format .
-ruff check .
-mypy ductor_bot
+uv run ruff format .
+uv run ruff check .
+uv run mypy ductor_bot
 ```
 
 ## Runtime Flow

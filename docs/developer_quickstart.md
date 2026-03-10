@@ -5,9 +5,7 @@ Fast onboarding path for contributors and junior devs.
 ## 1) Local setup
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+uv sync --group dev
 ```
 
 Optional for full runtime validation:
@@ -43,10 +41,10 @@ Primary runtime files/directories:
 ## 3) Quality gates
 
 ```bash
-pytest
-ruff format .
-ruff check .
-mypy ductor_bot
+uv run pytest
+uv run ruff format .
+uv run ruff check .
+uv run mypy ductor_bot
 ```
 
 Expected: zero warnings, zero errors.
