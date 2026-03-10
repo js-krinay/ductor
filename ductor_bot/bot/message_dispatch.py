@@ -34,6 +34,8 @@ class NonStreamingDispatch:
     allowed_roots: list[Path] | None
     reply_to: Message | None = None
     thread_id: int | None = None
+    polls_enabled: bool = False
+    polls_anonymous: bool = True
 
 
 @dataclass(slots=True)
@@ -48,6 +50,8 @@ class StreamingDispatch:
     streaming_cfg: StreamingConfig
     allowed_roots: list[Path] | None
     thread_id: int | None = None
+    polls_enabled: bool = False
+    polls_anonymous: bool = True
 
 
 async def run_non_streaming_message(
@@ -66,6 +70,8 @@ async def run_non_streaming_message(
             reply_to_message_id=reply_id,
             allowed_roots=dispatch.allowed_roots,
             thread_id=dispatch.thread_id,
+            polls_enabled=dispatch.polls_enabled,
+            polls_anonymous=dispatch.polls_anonymous,
         ),
     )
     return result.text
@@ -143,6 +149,8 @@ async def run_streaming_message(
                 reply_to_message_id=dispatch.message.message_id,
                 allowed_roots=dispatch.allowed_roots,
                 thread_id=dispatch.thread_id,
+                polls_enabled=dispatch.polls_enabled,
+                polls_anonymous=dispatch.polls_anonymous,
             ),
         )
     else:

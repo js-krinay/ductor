@@ -33,6 +33,8 @@ class SendRichOpts:
     allowed_roots: Sequence[Path] | None = field(default=None)
     reply_markup: InlineKeyboardMarkup | None = None
     thread_id: int | None = None
+    polls_enabled: bool = False
+    polls_anonymous: bool = True
 
 
 logger = logging.getLogger(__name__)
@@ -190,6 +192,21 @@ async def send_rich(
     file_paths = FILE_PATH_RE.findall(text)
     clean_text = FILE_PATH_RE.sub("", text).strip()
     logger.debug("Sending rich text chars=%d files=%d", len(clean_text), len(file_paths))
+
+    # Extract and send polls if enabled
+    if o.polls_enabled:
+        from ductor_bot.bot.poll_parser import parse_polls, strip_polls
+        from ductor_bot.bot.poll_sender import send_poll as _send_poll
+
+        polls = parse_polls(clean_text)
+        if polls:
+            clean_text = strip_polls(clean_text).strip()
+            for directive in polls:
+                await _send_poll(
+                    bot, chat_id, directive,
+                    thread_id=o.thread_id,
+                    is_anonymous=o.polls_anonymous,
+                )
 
     button_markup = o.reply_markup if o.reply_markup is not None else extract_buttons(clean_text)[1]
     last_msg: Message | None = None

@@ -1291,6 +1291,8 @@ class TelegramBot:
                 streaming_cfg=self._config.streaming,
                 allowed_roots=self.file_roots(self._orch.paths),
                 thread_id=thread_id,
+                polls_enabled=self._config.polls.enabled,
+                polls_anonymous=self._config.polls.is_anonymous,
             ),
         )
 
@@ -1312,6 +1314,8 @@ class TelegramBot:
                 allowed_roots=self.file_roots(self._orch.paths),
                 reply_to=reply_to,
                 thread_id=thread_id,
+                polls_enabled=self._config.polls.enabled,
+                polls_anonymous=self._config.polls.is_anonymous,
             ),
         )
 

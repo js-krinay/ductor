@@ -44,6 +44,10 @@
         "auto_approve_tools": ["Read", "Glob", "Grep"],
         "auto_deny_on_timeout": true
     },
+    "polls": {
+        "enabled": false,
+        "is_anonymous": true
+    },
     "streaming": {
         "enabled": true,
         "min_chars": 200,

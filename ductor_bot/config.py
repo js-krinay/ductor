@@ -238,6 +238,13 @@ class PairingConfig(BaseModel):
     max_active_codes: int = 10
 
 
+class PollConfig(BaseModel):
+    """Settings for Telegram poll creation."""
+
+    enabled: bool = False
+    is_anonymous: bool = True
+
+
 class ChatOverrides(BaseModel):
     """Per-chat configuration overrides. All fields optional (None = use global)."""
 
@@ -306,6 +313,7 @@ class AgentConfig(BaseModel):
     allowed_group_ids: list[int] = Field(default_factory=list)
     allowed_channel_ids: list[int] = Field(default_factory=list)
     pairing: PairingConfig = Field(default_factory=PairingConfig)
+    polls: PollConfig = Field(default_factory=PollConfig)
     proxy: ProxyConfig = Field(default_factory=ProxyConfig)
     approval: ApprovalConfig = Field(default_factory=ApprovalConfig)
     chat_overrides: dict[str, dict[str, object]] = Field(default_factory=dict)
