@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -258,6 +259,17 @@ class ProxyConfig(BaseModel):
         return bool(self.url.strip())
 
 
+class ApprovalConfig(BaseModel):
+    """Settings for tool execution approval routing."""
+
+    enabled: bool = False
+    approver_ids: list[int] = Field(default_factory=list)
+    timeout_seconds: int = 120
+    target: Literal["dm", "channel", "both"] = "dm"
+    auto_approve_tools: list[str] = Field(default_factory=list)
+    auto_deny_on_timeout: bool = True
+
+
 class AgentConfig(BaseModel):
     """Top-level configuration loaded from config.json."""
 
@@ -295,6 +307,7 @@ class AgentConfig(BaseModel):
     allowed_channel_ids: list[int] = Field(default_factory=list)
     pairing: PairingConfig = Field(default_factory=PairingConfig)
     proxy: ProxyConfig = Field(default_factory=ProxyConfig)
+    approval: ApprovalConfig = Field(default_factory=ApprovalConfig)
     chat_overrides: dict[str, dict[str, object]] = Field(default_factory=dict)
 
     @field_validator("gemini_api_key", mode="before")
