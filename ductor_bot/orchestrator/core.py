@@ -15,6 +15,7 @@ from ductor_bot.background import (
 from ductor_bot.cli.process_registry import ProcessRegistry
 from ductor_bot.cli.service import CLIService, CLIServiceConfig
 from ductor_bot.config import AgentConfig
+from ductor_bot.config_resolver import ChatConfigResolver
 from ductor_bot.cron.manager import CronManager
 from ductor_bot.errors import (
     CLIError,
@@ -124,6 +125,7 @@ class Orchestrator:
         self._config = config
         self._paths: DuctorPaths = paths
         self._docker: DockerManager | None = None
+        self._resolver = ChatConfigResolver(config)
         self._providers = ProviderManager(config)
         self._sessions = SessionManager(paths.sessions_path, config)
         self._named_sessions = NamedSessionRegistry(paths.named_sessions_path)
@@ -185,6 +187,11 @@ class Orchestrator:
     def config(self) -> AgentConfig:
         """Public access to the agent config."""
         return self._config
+
+    @property
+    def resolver(self) -> ChatConfigResolver:
+        """Public access to the per-chat config resolver."""
+        return self._resolver
 
     @property
     def inflight_tracker(self) -> InflightTracker:
