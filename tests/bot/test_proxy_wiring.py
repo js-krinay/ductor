@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 class TestProxyWiring:
     def test_bot_created_with_proxy_session(self) -> None:
         from ductor_bot.config import AgentConfig, ProxyConfig
+        from ductor_bot.bot.session_factory import ResilientSession
 
         config = AgentConfig(
             telegram_token="test:token",
@@ -16,21 +17,19 @@ class TestProxyWiring:
 
         with (
             patch("ductor_bot.bot.app.Bot") as MockBot,
-            patch("ductor_bot.bot.session_factory.AiohttpSession") as MockSession,
+            patch("ductor_bot.bot.session_factory.AiohttpSession.__init__", return_value=None),
         ):
-            mock_session = MagicMock()
-            MockSession.return_value = mock_session
-
             from ductor_bot.bot.app import TelegramBot
 
             bot = TelegramBot(config)
 
-            # Bot should have been created with session kwarg
+            # Bot should have been created with a ResilientSession
             call_kwargs = MockBot.call_args.kwargs
-            assert call_kwargs.get("session") is mock_session
+            assert isinstance(call_kwargs.get("session"), ResilientSession)
 
     def test_bot_created_without_proxy(self) -> None:
         from ductor_bot.config import AgentConfig
+        from ductor_bot.bot.session_factory import ResilientSession
 
         config = AgentConfig(telegram_token="test:token")
 
@@ -39,5 +38,6 @@ class TestProxyWiring:
 
             bot = TelegramBot(config)
 
+            # Resilience is always enabled, so a ResilientSession is used even without proxy
             call_kwargs = MockBot.call_args.kwargs
-            assert call_kwargs.get("session") is None
+            assert isinstance(call_kwargs.get("session"), ResilientSession)

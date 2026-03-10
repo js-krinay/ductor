@@ -24,6 +24,7 @@ from ductor_bot.bot.callbacks import (
     parse_ns_callback,
 )
 from ductor_bot.bot.chat_tracker import ChatRecord, ChatTracker
+from ductor_bot.bot.conflict_detector import ConflictDetector
 from ductor_bot.bot.file_browser import (
     file_browser_start,
     handle_file_browser_callback,
@@ -159,7 +160,7 @@ class TelegramBot:
         self._abort_all_callback: Callable[[], Awaitable[int]] | None = None
 
         self._proxy_url = resolve_proxy_url(config)
-        bot_session = create_bot_session(self._proxy_url)
+        bot_session = create_bot_session(self._proxy_url, resilience_config=config.resilience)
 
         self._bot = Bot(
             token=config.telegram_token,
@@ -170,6 +171,7 @@ class TelegramBot:
         self._bot_id: int | None = None
         self._bot_username: str | None = None
 
+        self._conflict_detector = ConflictDetector()
         self._dp = Dispatcher()
         self._router = Router(name="main")
         self._exit_code: int = 0
@@ -238,6 +240,16 @@ class TelegramBot:
         self._register_member_handlers()
         self._dp.include_router(self._router)
         self._dp.startup.register(self._on_startup)
+
+        @self._dp.errors()
+        async def _on_polling_error(event: object) -> None:
+            from aiogram.types import ErrorEvent
+
+            if isinstance(event, ErrorEvent):
+                from aiogram.exceptions import TelegramConflictError
+
+                if isinstance(event.exception, TelegramConflictError):
+                    await self._conflict_detector.record_async(event.exception)
 
     @property
     def _orch(self) -> Orchestrator:

@@ -295,6 +295,15 @@ class ThreadBindingConfig(BaseModel):
     cleanup_interval_minutes: int = 15
 
 
+class ResilienceConfig(BaseModel):
+    """Settings for Telegram API retry and backoff behavior."""
+
+    max_retries: int = 3
+    base_backoff_seconds: float = 1.0
+    max_backoff_seconds: float = 30.0
+    jitter: bool = True
+
+
 class AgentConfig(BaseModel):
     """Top-level configuration loaded from config.json."""
 
@@ -337,6 +346,7 @@ class AgentConfig(BaseModel):
     approval: ApprovalConfig = Field(default_factory=ApprovalConfig)
     thread_binding: ThreadBindingConfig = Field(default_factory=ThreadBindingConfig)
     reply_to_mode: ReplyToMode = "first"
+    resilience: ResilienceConfig = Field(default_factory=ResilienceConfig)
     chat_overrides: dict[str, dict[str, object]] = Field(default_factory=dict)
 
     @property
