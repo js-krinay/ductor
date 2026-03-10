@@ -292,6 +292,7 @@ class AgentConfig(BaseModel):
     telegram_token: str = ""
     allowed_user_ids: list[int] = Field(default_factory=list)
     allowed_group_ids: list[int] = Field(default_factory=list)
+    allowed_channel_ids: list[int] = Field(default_factory=list)
     pairing: PairingConfig = Field(default_factory=PairingConfig)
     proxy: ProxyConfig = Field(default_factory=ProxyConfig)
     chat_overrides: dict[str, dict[str, object]] = Field(default_factory=dict)
