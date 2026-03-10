@@ -650,6 +650,9 @@ class Orchestrator:
         if "model" in hot:
             self._providers.refresh_known_model_ids()
 
+        if "chat_overrides" in hot:
+            self._resolver.reload(config)
+
         handler = getattr(self, "_config_hot_reload_handler", None)
         if handler is not None:
             handler(config, hot)
