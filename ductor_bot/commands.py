@@ -31,6 +31,14 @@ BOT_COMMANDS: list[tuple[str, str]] = [
     ("restart", "Restart bot"),
 ]
 
+# Commands shown in group/supergroup chats — excludes admin/maintenance.
+# Kept as a separate list (not filtered) so order can be curated.
+_GROUP_EXCLUDED: frozenset[str] = frozenset({"diagnose", "upgrade", "restart", "agent_commands"})
+
+GROUP_COMMANDS: list[tuple[str, str]] = [
+    (cmd, desc) for cmd, desc in BOT_COMMANDS if cmd not in _GROUP_EXCLUDED
+]
+
 # Sub-commands registered as handlers but NOT shown in the Telegram popup.
 # Users discover them via /agent_commands or /help.
 MULTIAGENT_SUB_COMMANDS: list[tuple[str, str]] = [
