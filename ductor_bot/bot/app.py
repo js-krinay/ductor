@@ -153,6 +153,11 @@ class TelegramBot:
         allowed_groups = set(config.allowed_group_ids)
         self._allowed_users = allowed
         self._allowed_groups = allowed_groups
+        self._pairing_svc: object | None = None
+        if config.pairing.enabled:
+            from ductor_bot.pairing import PairingService
+
+            self._pairing_svc = PairingService(config)
         self._chat_tracker: ChatTracker | None = None  # set in _on_startup
         self._topic_names = TopicNameCache()
         self._lock_pool = LockPool()
@@ -1148,10 +1153,18 @@ class TelegramBot:
         thread_id = get_thread_id(message)
         logger.debug("Message text=%s", text[:80])
 
-        if self._config.streaming.enabled:
-            await self._handle_streaming(message, key, text, thread_id=thread_id)
-        else:
-            await self._handle_non_streaming(message, key, text, thread_id=thread_id)
+        chat_id = message.chat.id
+        msg_id = message.message_id
+        await self._reactions.ack(chat_id, msg_id)
+        try:
+            if self._config.streaming.enabled:
+                await self._handle_streaming(message, key, text, thread_id=thread_id)
+            else:
+                await self._handle_non_streaming(message, key, text, thread_id=thread_id)
+            await self._reactions.done(chat_id, msg_id)
+        except Exception:
+            await self._reactions.error(chat_id, msg_id)
+            raise
 
     async def _resolve_text(self, message: Message) -> str | None:
         """Extract processable text from *message* (plain text or media prompt)."""
@@ -1385,6 +1398,10 @@ class TelegramBot:
             await self._update_observer.stop()
         if self._orchestrator:
             await self._orchestrator.shutdown()
+
+        # Clean command menu on shutdown
+        with contextlib.suppress(Exception):
+            await self._bot.delete_my_commands()
 
         # Release the Telegram polling session so a new bot instance can start.
         # Without this, Telegram rejects the next getUpdates call with
