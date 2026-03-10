@@ -21,7 +21,6 @@ from ductor_bot.bot.callbacks import (
     mark_button_choice,
     parse_ns_callback,
 )
-from ductor_bot.bot.reactions import ReactionService
 from ductor_bot.bot.chat_tracker import ChatRecord, ChatTracker
 from ductor_bot.bot.file_browser import (
     file_browser_start,
@@ -49,6 +48,7 @@ from ductor_bot.bot.message_dispatch import (
     run_streaming_message,
 )
 from ductor_bot.bot.middleware import MQ_PREFIX, AuthMiddleware, SequentialMiddleware
+from ductor_bot.bot.reactions import ReactionService
 from ductor_bot.bot.sender import SendRichOpts, send_rich
 from ductor_bot.bot.sender import send_files_from_text as _send_files_from_text
 from ductor_bot.bot.topic import TopicNameCache, get_session_key, get_thread_id
@@ -79,6 +79,7 @@ from ductor_bot.workspace.paths import DuctorPaths
 if TYPE_CHECKING:
     from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
+    from ductor_bot.approval import ApprovalService
     from ductor_bot.orchestrator.core import Orchestrator
     from ductor_bot.pairing import PairingService
 
@@ -160,6 +161,11 @@ class TelegramBot:
             from ductor_bot.pairing import PairingService
 
             self._pairing_svc = PairingService(config)
+        self._approval_svc: ApprovalService | None = None
+        if config.approval.enabled:
+            from ductor_bot.approval import ApprovalService
+
+            self._approval_svc = ApprovalService(config)
         self._chat_tracker: ChatTracker | None = None  # set in _on_startup
         self._topic_names = TopicNameCache()
         self._lock_pool = LockPool()
@@ -1040,13 +1046,22 @@ class TelegramBot:
 
         return False
 
-    async def _route_prefix_callback(
+    async def _route_prefix_callback(  # noqa: PLR0911
         self, key: SessionKey, message_id: int, data: str, *, thread_id: int | None = None
     ) -> bool:
         """Handle prefix-based callback namespaces. Returns True when handled."""
         chat_id = key.chat_id
         if data.startswith(MQ_PREFIX):
             await self._handle_queue_cancel(chat_id, data)
+            return True
+
+        if data.startswith("apr:"):
+            if self._approval_svc:
+                from ductor_bot.bot.approval_handler import handle_approval_callback
+
+                await handle_approval_callback(
+                    self._bot, self._approval_svc, data, chat_id, message_id
+                )
             return True
 
         if data.startswith("upg:"):
