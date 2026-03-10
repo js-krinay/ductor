@@ -29,6 +29,7 @@ from ductor_bot.bot.file_browser import (
     is_file_browser_callback,
 )
 from ductor_bot.bot.formatting import markdown_to_telegram_html
+from ductor_bot.bot.session_factory import create_bot_session
 from ductor_bot.bot.handlers import (
     handle_abort,
     handle_abort_all,
@@ -66,6 +67,7 @@ from ductor_bot.commands import BOT_COMMANDS as _COMMAND_DEFS
 from ductor_bot.commands import MULTIAGENT_SUB_COMMANDS as _MA_SUB_DEFS
 from ductor_bot.config import AgentConfig, update_config_file_async
 from ductor_bot.files.allowed_roots import resolve_allowed_roots
+from ductor_bot.infra.proxy import resolve_proxy_url
 from ductor_bot.infra.restart import EXIT_RESTART, consume_restart_marker
 from ductor_bot.infra.updater import UpdateObserver
 from ductor_bot.infra.version import VersionInfo, get_current_version
@@ -135,9 +137,13 @@ class TelegramBot:
         self._orchestrator: Orchestrator | None = None
         self._abort_all_callback: Callable[[], Awaitable[int]] | None = None
 
+        self._proxy_url = resolve_proxy_url(config)
+        bot_session = create_bot_session(self._proxy_url)
+
         self._bot = Bot(
             token=config.telegram_token,
             default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+            session=bot_session,
         )
         self._reactions = ReactionService(self._bot, config)
         self._bot_id: int | None = None

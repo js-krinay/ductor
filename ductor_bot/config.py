@@ -248,6 +248,16 @@ class ChatOverrides(BaseModel):
     enabled: bool | None = None
 
 
+class ProxyConfig(BaseModel):
+    """HTTP/SOCKS5 proxy for Telegram API calls."""
+
+    url: str = ""
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.url.strip())
+
+
 class AgentConfig(BaseModel):
     """Top-level configuration loaded from config.json."""
 
@@ -283,6 +293,7 @@ class AgentConfig(BaseModel):
     allowed_user_ids: list[int] = Field(default_factory=list)
     allowed_group_ids: list[int] = Field(default_factory=list)
     pairing: PairingConfig = Field(default_factory=PairingConfig)
+    proxy: ProxyConfig = Field(default_factory=ProxyConfig)
     chat_overrides: dict[str, dict[str, object]] = Field(default_factory=dict)
 
     @field_validator("gemini_api_key", mode="before")

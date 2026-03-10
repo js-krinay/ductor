@@ -60,6 +60,11 @@ async def run_startup(bot: TelegramBot) -> None:
     bot._bot_username = (me.username or "").lower()
     logger.info("Bot online: @%s (id=%d)", me.username, me.id)
 
+    if bot._proxy_url:
+        from ductor_bot.infra.proxy import sanitize_proxy_url
+
+        logger.info("Telegram API connected via proxy: %s", sanitize_proxy_url(bot._proxy_url))
+
     sentinel = await _handle_restart_sentinel(bot)
 
     bot._orch.wire_observers_to_bus(bot._bus, wake_handler=bot._handle_webhook_wake)

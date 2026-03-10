@@ -26,6 +26,9 @@
             "group_mention_only": true
         }
     },
+    "proxy": {
+        "url": ""
+    },
     "pairing": {
         "enabled": false,
         "code_ttl_minutes": 60,
