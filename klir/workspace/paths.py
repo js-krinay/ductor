@@ -76,10 +76,6 @@ class KlirPaths:
         return self.workspace / "tools"
 
     @property
-    def user_tools_dir(self) -> Path:
-        return self.workspace / "tools" / "user_tools"
-
-    @property
     def output_to_user_dir(self) -> Path:
         return self.workspace / "output_to_user"
 

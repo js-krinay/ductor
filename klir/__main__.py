@@ -17,9 +17,6 @@ from rich.console import Console
 from klir.cli_commands.agents import cmd_agents as _cmd_agents
 from klir.cli_commands.api_cmd import cmd_api as _cmd_api
 from klir.cli_commands.docker import cmd_docker as _cmd_docker
-from klir.cli_commands.lifecycle import (  # noqa: F401
-    _re_exec_bot,
-)
 from klir.cli_commands.lifecycle import (
     cmd_restart as _cmd_restart,
 )
