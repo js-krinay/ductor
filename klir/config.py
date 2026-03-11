@@ -304,6 +304,19 @@ class ResilienceConfig(BaseModel):
     jitter: bool = True
 
 
+class UserMessageHookConfig(BaseModel):
+    """User-defined message hook from config.json."""
+
+    name: str
+    phase: Literal["pre", "post"]
+    action: Literal["prepend", "append", "replace"]
+    text: str = ""
+    condition: Literal["always", "regex", "provider"] = "always"
+    pattern: str = ""
+    provider: str = ""
+    enabled: bool = True
+
+
 class AgentConfig(BaseModel):
     """Top-level configuration loaded from config.json."""
 
@@ -347,6 +360,7 @@ class AgentConfig(BaseModel):
     thread_binding: ThreadBindingConfig = Field(default_factory=ThreadBindingConfig)
     reply_to_mode: ReplyToMode = "first"
     resilience: ResilienceConfig = Field(default_factory=ResilienceConfig)
+    message_hooks: list[UserMessageHookConfig] = Field(default_factory=list)
     chat_overrides: dict[str, dict[str, object]] = Field(default_factory=dict)
 
     @property

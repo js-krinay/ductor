@@ -30,6 +30,7 @@ from klir.infra.inflight import InflightTracker
 from klir.orchestrator.commands import (
     cmd_cron,
     cmd_diagnose,
+    cmd_hooks,
     cmd_memory,
     cmd_model,
     cmd_reset,
@@ -56,6 +57,7 @@ from klir.orchestrator.hooks import (
 from klir.orchestrator.observers import ObserverManager
 from klir.orchestrator.providers import ProviderManager
 from klir.orchestrator.registry import CommandRegistry, OrchestratorResult
+from klir.orchestrator.user_hooks import UserHookEvaluator
 from klir.security import detect_suspicious_patterns
 from klir.session import SessionKey, SessionManager
 from klir.session.manager import SessionData
@@ -168,6 +170,7 @@ class Orchestrator:
         self._hook_registry.register(MAINMEMORY_REMINDER)
         self._hook_registry.register(DELEGATION_BRIEF)
         self._hook_registry.register(DELEGATION_REMINDER)
+        self._user_hooks = UserHookEvaluator(config.message_hooks)
         self._supervisor: AgentSupervisor | None = None  # Set by AgentSupervisor after creation
         self._task_hub: TaskHub | None = None  # Set by supervisor or __main__.py
         self._command_registry = CommandRegistry()
@@ -384,6 +387,11 @@ class Orchestrator:
         reg.register_async("/upgrade", cmd_upgrade)
         reg.register_async("/sessions", cmd_sessions)
         reg.register_async("/tasks", cmd_tasks)
+        reg.register_async("/hooks", cmd_hooks)
+
+    def _rebuild_user_hooks(self) -> None:
+        """Rebuild user hook evaluator from current config (hot-reload)."""
+        self._user_hooks = UserHookEvaluator(self._config.message_hooks)
 
     def register_multiagent_commands(self) -> None:
         """Register /agents, /agent_start, /agent_stop, /agent_restart commands.
@@ -652,6 +660,9 @@ class Orchestrator:
 
         if "chat_overrides" in hot:
             self._resolver.reload(config)
+
+        if "message_hooks" in hot:
+            self._rebuild_user_hooks()
 
         handler = getattr(self, "_config_hot_reload_handler", None)
         if handler is not None:

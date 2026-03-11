@@ -513,3 +513,53 @@ def test_paths_property(
     paths, config = workspace
     o = Orchestrator(config, paths)
     assert o.paths is paths
+
+
+# ---------------------------------------------------------------------------
+# Hot-reload: message_hooks triggers _rebuild_user_hooks
+# ---------------------------------------------------------------------------
+
+
+def test_hot_reload_message_hooks_calls_rebuild(orch: Orchestrator) -> None:
+    """_on_config_hot_reload rebuilds user hooks when message_hooks is in hot set."""
+    rebuild_calls: list[None] = []
+    original_rebuild = orch._rebuild_user_hooks
+
+    def _spy_rebuild() -> None:
+        rebuild_calls.append(None)
+        original_rebuild()
+
+    orch._rebuild_user_hooks = _spy_rebuild  # type: ignore[method-assign]
+
+    orch._on_config_hot_reload(orch._config, {"message_hooks": []})
+
+    assert len(rebuild_calls) == 1
+
+
+def test_hot_reload_other_field_does_not_rebuild_user_hooks(orch: Orchestrator) -> None:
+    """_on_config_hot_reload does NOT rebuild user hooks for unrelated field changes."""
+    rebuild_calls: list[None] = []
+    original_rebuild = orch._rebuild_user_hooks
+
+    def _spy_rebuild() -> None:
+        rebuild_calls.append(None)
+        original_rebuild()
+
+    orch._rebuild_user_hooks = _spy_rebuild  # type: ignore[method-assign]
+
+    orch._on_config_hot_reload(orch._config, {"chat_overrides": {}})
+
+    assert len(rebuild_calls) == 0
+
+
+def test_hot_reload_replaces_user_hook_evaluator(orch: Orchestrator) -> None:
+    """After hot-reload with message_hooks, the evaluator reflects new hooks."""
+    from klir.config import UserMessageHookConfig
+
+    old_evaluator = orch._user_hooks
+
+    new_hook = UserMessageHookConfig(name="test", phase="pre", action="prepend", text="HI: ")
+    orch._config.message_hooks = [new_hook]
+    orch._on_config_hot_reload(orch._config, {"message_hooks": [new_hook]})
+
+    assert orch._user_hooks is not old_evaluator

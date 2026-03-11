@@ -107,6 +107,7 @@ async def _prepare_normal(
         model=req_model,
     )
     prompt = orch._hook_registry.apply(text, hook_ctx)
+    prompt = orch._user_hooks.apply_pre(prompt, hook_ctx)
 
     timeout_secs = resolve_timeout(orch._config, "normal")
     request = AgentRequest(
@@ -368,6 +369,14 @@ async def normal(
         await _update_session(orch, session, response)
         logger.info("Normal flow completed")
         result = _finish_normal(response, session, orch._config.session_age_warning_hours)
+        post_ctx = HookContext(
+            chat_id=key.chat_id,
+            message_count=session.message_count,
+            is_new_session=False,
+            provider=session.provider,
+            model=session.model,
+        )
+        result.text = orch._user_hooks.apply_post(result.text, post_ctx)
         if session_recovered:
             result.text = f"{_SESSION_RECOVERED_MSG}\n\n{result.text}"
         return result
@@ -427,7 +436,16 @@ async def normal_streaming(
             )
         await _update_session(orch, session, response)
         logger.info("Streaming flow completed")
-        return _finish_normal(response, session, orch._config.session_age_warning_hours)
+        result = _finish_normal(response, session, orch._config.session_age_warning_hours)
+        post_ctx = HookContext(
+            chat_id=key.chat_id,
+            message_count=session.message_count,
+            is_new_session=False,
+            provider=session.provider,
+            model=session.model,
+        )
+        result.text = orch._user_hooks.apply_post(result.text, post_ctx)
+        return result
     finally:
         orch._inflight_tracker.complete(key.chat_id)
 

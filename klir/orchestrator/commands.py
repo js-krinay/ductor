@@ -354,3 +354,20 @@ async def _read_log_tail(log_path: Path, lines: int = 50) -> str:
             return "(could not read log file)"
 
     return await asyncio.to_thread(_read)
+
+
+async def cmd_hooks(orch: Orchestrator, _key: SessionKey, _text: str) -> OrchestratorResult:
+    """Handle /hooks: list configured user message hooks."""
+    hooks = orch._config.message_hooks
+    if not hooks:
+        return OrchestratorResult(
+            text="No user hooks configured.\n\nAdd hooks in config.json under `message_hooks`."
+        )
+
+    lines = ["*User Message Hooks*\n"]
+    for h in hooks:
+        status = "on" if h.enabled else "off"
+        lines.append(f"\u2022 **{h.name}** \u2014 {h.phase}/{h.action} [{status}]")
+        if h.condition != "always":
+            lines.append(f"  condition: {h.condition}={h.pattern or h.provider}")
+    return OrchestratorResult(text="\n".join(lines))
