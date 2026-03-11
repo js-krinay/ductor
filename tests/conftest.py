@@ -27,7 +27,7 @@ def _no_real_process_signals() -> object:
         ),
         patch(
             "klir.cli.process_registry.interrupt_process",
-            return_value=None,
+            return_value=True,
         ),
         patch(
             "klir.cli.executor.force_kill_process_tree",

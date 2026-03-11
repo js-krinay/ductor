@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from rich.console import Console
 from rich.panel import Panel
@@ -11,6 +12,7 @@ from rich.table import Table
 from klir.workspace.paths import KlirPaths, resolve_paths
 
 _console = Console()
+_logger = logging.getLogger(__name__)
 
 _AGENTS_SUBCOMMANDS = frozenset({"list", "add", "remove"})
 
@@ -70,6 +72,7 @@ def load_agents_registry(paths: KlirPaths) -> list[dict[str, object]]:
 
 def fetch_live_health() -> dict[str, dict[str, object]]:
     """Query the internal API for live agent health. Returns empty dict on failure."""
+    import urllib.error
     import urllib.request
 
     from klir.multiagent.internal_api import _DEFAULT_PORT
@@ -81,15 +84,18 @@ def fetch_live_health() -> dict[str, dict[str, object]]:
         try:
             cfg = json.loads(config_path.read_text(encoding="utf-8"))
             port = int(cfg.get("interagent_port", _DEFAULT_PORT))
-        except (json.JSONDecodeError, OSError, ValueError):
-            pass
+        except (json.JSONDecodeError, OSError, ValueError) as exc:
+            _logger.debug("Failed to read interagent_port from config: %s", exc)
 
     try:
         req = urllib.request.Request(f"http://127.0.0.1:{port}/interagent/health")
         opener = urllib.request.build_opener()
         with opener.open(req, timeout=2) as resp:
             data = json.loads(resp.read())
-    except Exception:
+    except (ConnectionRefusedError, OSError, urllib.error.URLError):
+        return {}
+    except Exception as exc:
+        _logger.debug("Unexpected error fetching agent health: %s", exc)
         return {}
     else:
         result: dict[str, dict[str, object]] = data.get("agents", {})

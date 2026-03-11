@@ -139,20 +139,20 @@ class ProcessRegistry:
         entries = self._processes.get(chat_id, [])
         if not entries:
             return 0
-        self._interrupted.add(chat_id)
         count = 0
         for tracked in entries:
             if tracked.process.returncode is not None:
                 continue
-            interrupt_process(tracked.process.pid)
-            logger.debug(
-                "SIGINT sent: pid=%s label=%s chat=%d",
-                tracked.process.pid,
-                tracked.label,
-                tracked.chat_id,
-            )
-            count += 1
+            if interrupt_process(tracked.process.pid):
+                logger.debug(
+                    "SIGINT sent: pid=%s label=%s chat=%d",
+                    tracked.process.pid,
+                    tracked.label,
+                    tracked.chat_id,
+                )
+                count += 1
         if count:
+            self._interrupted.add(chat_id)
             logger.info("Interrupted %d CLI process(es) for chat=%d", count, chat_id)
         return count
 
