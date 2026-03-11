@@ -20,7 +20,7 @@ from klir.workspace.skill_sync import (
     _is_managed_copy,
     _is_under,
     _resolve_canonical,
-    cleanup_ductor_links,
+    cleanup_klir_links,
     sync_bundled_skills,
     sync_skills,
     watch_skill_sync,
@@ -107,7 +107,7 @@ def test_discover_ignores_plain_files(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_canonical_ductor_priority(tmp_path: Path) -> None:
+def test_canonical_klir_priority(tmp_path: Path) -> None:
     klir = {"sk": tmp_path / "klir" / "sk"}
     claude = {"sk": tmp_path / "claude" / "sk"}
     codex = {"sk": tmp_path / "codex" / "sk"}
@@ -241,7 +241,7 @@ def _setup_three_dirs(
     return paths, claude_home / "skills", codex_home / "skills"
 
 
-def test_sync_claude_to_ductor(tmp_path: Path) -> None:
+def test_sync_claude_to_klir(tmp_path: Path) -> None:
     paths, claude_skills, _ = _setup_three_dirs(tmp_path)
     _make_skill(claude_skills, "from-claude")
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
@@ -252,7 +252,7 @@ def test_sync_claude_to_ductor(tmp_path: Path) -> None:
     assert link.resolve() == (claude_skills / "from-claude").resolve()
 
 
-def test_sync_codex_to_ductor(tmp_path: Path) -> None:
+def test_sync_codex_to_klir(tmp_path: Path) -> None:
     paths, _, codex_skills = _setup_three_dirs(tmp_path)
     _make_skill(codex_skills, "from-codex")
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
@@ -263,7 +263,7 @@ def test_sync_codex_to_ductor(tmp_path: Path) -> None:
     assert link.resolve() == (codex_skills / "from-codex").resolve()
 
 
-def test_sync_ductor_to_both(tmp_path: Path) -> None:
+def test_sync_klir_to_both(tmp_path: Path) -> None:
     paths, claude_skills, codex_skills = _setup_three_dirs(tmp_path)
     claude_skills.mkdir(parents=True, exist_ok=True)
     codex_skills.mkdir(parents=True, exist_ok=True)
@@ -277,7 +277,7 @@ def test_sync_ductor_to_both(tmp_path: Path) -> None:
         assert link.resolve() == (paths.skills_dir / "from-klir").resolve()
 
 
-def test_sync_gemini_to_ductor(tmp_path: Path) -> None:
+def test_sync_gemini_to_klir(tmp_path: Path) -> None:
     paths, _, _ = _setup_three_dirs(tmp_path)
     gemini_home = tmp_path / "fake_home" / ".gemini"
     gemini_home.mkdir(parents=True)
@@ -291,7 +291,7 @@ def test_sync_gemini_to_ductor(tmp_path: Path) -> None:
     assert link.resolve() == (gemini_skills / "from-gemini").resolve()
 
 
-def test_sync_ductor_to_all_three(tmp_path: Path) -> None:
+def test_sync_klir_to_all_three(tmp_path: Path) -> None:
     paths, claude_skills, codex_skills = _setup_three_dirs(tmp_path)
     gemini_home = tmp_path / "fake_home" / ".gemini"
     gemini_home.mkdir(parents=True)
@@ -348,9 +348,9 @@ def test_sync_external_symlink(tmp_path: Path) -> None:
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
         mock.return_value = {"claude": claude_skills, "codex": codex_skills}
         sync_skills(paths)
-    ductor_link = paths.skills_dir / "ext-skill"
-    assert ductor_link.is_symlink()
-    assert ductor_link.resolve() == external_real.resolve()
+    klir_link = paths.skills_dir / "ext-skill"
+    assert klir_link.is_symlink()
+    assert klir_link.resolve() == external_real.resolve()
 
 
 def test_sync_idempotent(tmp_path: Path) -> None:
@@ -506,7 +506,7 @@ def test_sync_preserves_external_symlink(tmp_path: Path) -> None:
     # User symlink in .claude pointing to external location
     (claude_skills / "my-skill").symlink_to(external)
 
-    # Ductor also has a skill with the same name
+    # Klir also has a skill with the same name
     _make_skill(paths.skills_dir, "my-skill")
 
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
@@ -531,7 +531,7 @@ def test_sync_replaces_internal_symlink(tmp_path: Path) -> None:
     # Claude has a symlink pointing to codex (inside sync dirs)
     (claude_skills / "shared").symlink_to(codex_skills / "shared")
 
-    # Ductor now has a real skill with the same name (higher priority)
+    # Klir now has a real skill with the same name (higher priority)
     _make_skill(paths.skills_dir, "shared")
 
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
@@ -628,11 +628,11 @@ def test_bundled_no_dir_noop(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Group 12: cleanup_ductor_links
+# Group 12: cleanup_klir_links
 # ---------------------------------------------------------------------------
 
 
-def test_cleanup_removes_ductor_links(tmp_path: Path) -> None:
+def test_cleanup_removes_klir_links(tmp_path: Path) -> None:
     paths, claude_skills, codex_skills = _setup_three_dirs(tmp_path)
     claude_skills.mkdir(parents=True, exist_ok=True)
     codex_skills.mkdir(parents=True, exist_ok=True)
@@ -644,7 +644,7 @@ def test_cleanup_removes_ductor_links(tmp_path: Path) -> None:
 
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
         mock.return_value = {"claude": claude_skills, "codex": codex_skills}
-        removed = cleanup_ductor_links(paths)
+        removed = cleanup_klir_links(paths)
 
     assert removed == 2
     assert not (claude_skills / "from-klir").exists()
@@ -661,7 +661,7 @@ def test_cleanup_preserves_external_links(tmp_path: Path) -> None:
 
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
         mock.return_value = {"claude": claude_skills}
-        removed = cleanup_ductor_links(paths)
+        removed = cleanup_klir_links(paths)
 
     assert removed == 0
     assert (claude_skills / "user-skill").is_symlink()
@@ -673,7 +673,7 @@ def test_cleanup_preserves_real_dirs(tmp_path: Path) -> None:
 
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
         mock.return_value = {"claude": claude_skills}
-        removed = cleanup_ductor_links(paths)
+        removed = cleanup_klir_links(paths)
 
     assert removed == 0
     assert (claude_skills / "real-skill").is_dir()
@@ -690,7 +690,7 @@ def test_cleanup_removes_bundled_links(tmp_path: Path) -> None:
 
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
         mock.return_value = {"claude": claude_skills}
-        removed = cleanup_ductor_links(paths)
+        removed = cleanup_klir_links(paths)
 
     assert removed == 1
     assert not (claude_skills / "bundled-one").exists()
@@ -700,7 +700,7 @@ def test_cleanup_no_providers(tmp_path: Path) -> None:
     paths = _make_paths(tmp_path)
     with patch("klir.workspace.skill_sync._cli_skill_dirs") as mock:
         mock.return_value = {}
-        removed = cleanup_ductor_links(paths)
+        removed = cleanup_klir_links(paths)
     assert removed == 0
 
 

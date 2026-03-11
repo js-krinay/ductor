@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/klir/bot/ductor_images/logo_text.png" alt="klir" width="100%" />
+  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/klir/bot/klir_images/logo_text.png" alt="klir" width="100%" />
 </p>
 
 <p align="center">

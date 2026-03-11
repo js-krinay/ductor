@@ -24,12 +24,12 @@ def parse_approval_callback(data: str) -> tuple[str, bool] | None:
     """Parse ``apr:<request_id>:yes|no`` callback data."""
     if not data.startswith(APR_PREFIX):
         return None
-    rest = data[len(APR_PREFIX):]
+    rest = data[len(APR_PREFIX) :]
     colon = rest.rfind(":")
     if colon < 0:
         return None
     request_id = rest[:colon]
-    action = rest[colon + 1:]
+    action = rest[colon + 1 :]
     if action == "yes":
         return request_id, True
     if action == "no":

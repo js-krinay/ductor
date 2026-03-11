@@ -256,9 +256,7 @@ class RulesSelector:
             try:
                 file_path.unlink()
                 removed_count += 1
-                logger.debug(
-                    "Removed stale file: %s", file_path.relative_to(self._paths.klir_home)
-                )
+                logger.debug("Removed stale file: %s", file_path.relative_to(self._paths.klir_home))
             except OSError:
                 logger.exception("Failed to remove stale file: %s", file_path)
 

@@ -1,4 +1,4 @@
-# Ductor Home
+# Klir Home
 
 This is the top-level `~/.klir` directory.
 The main Telegram assistant usually runs with cwd `workspace/`.

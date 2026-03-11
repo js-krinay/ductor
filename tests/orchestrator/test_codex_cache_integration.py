@@ -80,9 +80,7 @@ async def test_orchestrator_passes_cache_to_observers(
     mock_config = AgentConfig()
 
     with (
-        patch(
-            "klir.orchestrator.observers.CodexCacheObserver", return_value=mock_cache_observer
-        ),
+        patch("klir.orchestrator.observers.CodexCacheObserver", return_value=mock_cache_observer),
         patch("klir.orchestrator.observers.CronObserver", mock_cron_class),
         patch("klir.orchestrator.observers.WebhookObserver", mock_webhook_class),
         patch("klir.orchestrator.lifecycle.resolve_paths"),

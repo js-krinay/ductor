@@ -15,9 +15,7 @@ class TestResilienceIntegration:
         from klir.bot.session_factory import ResilientSession
         from klir.config import ResilienceConfig
 
-        cfg = ResilienceConfig(
-            max_retries=2, base_backoff_seconds=0.01, max_backoff_seconds=0.1
-        )
+        cfg = ResilienceConfig(max_retries=2, base_backoff_seconds=0.01, max_backoff_seconds=0.1)
         session = ResilientSession(resilience_config=cfg)
 
         mock_response = MagicMock()
@@ -32,9 +30,7 @@ class TestResilienceIntegration:
                 ]
             ),
         ):
-            result = await session.make_request(
-                bot=MagicMock(), method=MagicMock(), timeout=None
-            )
+            result = await session.make_request(bot=MagicMock(), method=MagicMock(), timeout=None)
             assert result is mock_response
 
     @pytest.mark.asyncio
@@ -43,24 +39,18 @@ class TestResilienceIntegration:
         from klir.bot.session_factory import ResilientSession
         from klir.config import ResilienceConfig
 
-        cfg = ResilienceConfig(
-            max_retries=1, base_backoff_seconds=0.01, max_backoff_seconds=0.1
-        )
+        cfg = ResilienceConfig(max_retries=1, base_backoff_seconds=0.01, max_backoff_seconds=0.1)
         session = ResilientSession(resilience_config=cfg)
 
         with (
             patch.object(
                 type(session).__bases__[0],
                 "make_request",
-                new=AsyncMock(
-                    side_effect=TelegramNetworkError(method=None, message="timeout")
-                ),
+                new=AsyncMock(side_effect=TelegramNetworkError(method=None, message="timeout")),
             ),
             pytest.raises(TelegramNetworkError),
         ):
-            await session.make_request(
-                bot=MagicMock(), method=MagicMock(), timeout=None
-            )
+            await session.make_request(bot=MagicMock(), method=MagicMock(), timeout=None)
 
     def test_full_config_round_trip(self) -> None:
         """Config -> ResilienceConfig -> ResilientSession pipeline."""

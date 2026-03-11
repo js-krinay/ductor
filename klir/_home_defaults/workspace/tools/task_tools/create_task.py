@@ -15,7 +15,7 @@ Options:
     --thinking LEVEL   Reasoning effort for codex (low, medium, high)
 
 Environment variables KLIR_AGENT_NAME and KLIR_INTERAGENT_PORT are
-automatically set by the Ductor framework.
+automatically set by the Klir framework.
 """
 
 from __future__ import annotations

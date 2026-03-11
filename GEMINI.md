@@ -72,7 +72,7 @@ Telegram Update
 - Rule sync updates existing `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` siblings recursively by mtime.
 - Skill sync spans `~/.klir/workspace/skills`, `~/.claude/skills`, `~/.codex/skills`, `~/.gemini/skills`.
   - normal mode: links
-  - Docker mode: managed copies (`.ductor_managed` marker)
+  - Docker mode: managed copies (`.klir_managed` marker)
 - Streaming fallback is automatic; `/stop` abort checks are enforced during event loop processing.
 - Session state is provider-isolated; `/new` resets only the active provider bucket.
 

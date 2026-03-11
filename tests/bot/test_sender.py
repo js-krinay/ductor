@@ -530,7 +530,9 @@ class TestReplyToMode:
         bot.send_message = AsyncMock()
 
         await send_rich(
-            bot, 1, "hello",
+            bot,
+            1,
+            "hello",
             SendRichOpts(reply_to_message_id=42, reply_to_mode="off"),
         )
         bot.send_message.assert_called_once()
@@ -546,7 +548,9 @@ class TestReplyToMode:
         # Send text long enough to produce 2 chunks (>4096 chars)
         long_text = "A" * 4000 + "\n\n" + "B" * 4000
         await send_rich(
-            bot, 1, long_text,
+            bot,
+            1,
+            long_text,
             SendRichOpts(reply_to_message_id=42, reply_to_mode="first"),
         )
         calls = bot.send_message.call_args_list
@@ -565,7 +569,9 @@ class TestReplyToMode:
 
         long_text = "A" * 4000 + "\n\n" + "B" * 4000
         await send_rich(
-            bot, 1, long_text,
+            bot,
+            1,
+            long_text,
             SendRichOpts(reply_to_message_id=42, reply_to_mode="all"),
         )
         calls = bot.send_message.call_args_list

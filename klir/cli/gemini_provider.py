@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 _DEFAULT_TIMEOUT = 300.0
 
 # Must match ``_KLIR_MOUNT`` in ``klir.infra.docker``.
-_CONTAINER_DUCTOR = "/klir"
+_CONTAINER_KLIR = "/klir"
 
 
 @dataclass(slots=True)
@@ -365,7 +365,7 @@ class GeminiCLI(BaseCLI):
         """Translate a host path under ``~/.klir/`` to its container mount."""
         prefix = str(resolve_paths().klir_home)
         if host_path.startswith(prefix):
-            return _CONTAINER_DUCTOR + host_path[len(prefix) :].replace("\\", "/")
+            return _CONTAINER_KLIR + host_path[len(prefix) :].replace("\\", "/")
         return None
 
     def _resolve_exec(

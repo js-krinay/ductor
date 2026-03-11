@@ -11,7 +11,7 @@ from klir.cli.param_resolver import (
     resolve_cli_config,
 )
 from klir.config import AgentConfig, reset_gemini_models, set_gemini_models
-from klir.errors import DuctorError
+from klir.errors import KlirError
 
 
 @pytest.fixture
@@ -106,7 +106,7 @@ def test_resolve_invalid_claude_model(
     """Should raise error for invalid Claude model."""
     overrides = TaskOverrides(model="invalid-model")
 
-    with pytest.raises(DuctorError, match="Invalid Claude model"):
+    with pytest.raises(KlirError, match="Invalid Claude model"):
         resolve_cli_config(base_config, codex_cache, task_overrides=overrides)
 
 
@@ -119,7 +119,7 @@ def test_resolve_invalid_codex_model(
         model="nonexistent-model",
     )
 
-    with pytest.raises(DuctorError, match="Invalid Codex model"):
+    with pytest.raises(KlirError, match="Invalid Codex model"):
         resolve_cli_config(base_config, codex_cache, task_overrides=overrides)
 
 
@@ -188,7 +188,7 @@ def test_resolve_gemini_invalid_against_discovered_models(
     set_gemini_models(frozenset({"gemini-2.5-pro"}))
     overrides = TaskOverrides(provider="gemini", model="gemini-3-pro-preview")
 
-    with pytest.raises(DuctorError, match="Invalid Gemini model"):
+    with pytest.raises(KlirError, match="Invalid Gemini model"):
         resolve_cli_config(base_config, codex_cache, task_overrides=overrides)
 
 

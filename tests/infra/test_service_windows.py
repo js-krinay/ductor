@@ -140,7 +140,7 @@ class TestInstallService:
     @patch("klir.infra.service_windows.is_service_installed", return_value=False)
     @patch("klir.infra.service_windows.is_service_available", return_value=True)
     @patch("klir.infra.service_windows._find_pythonw", return_value=None)
-    @patch("klir.infra.service_windows.find_ductor_binary", return_value="klir.exe")
+    @patch("klir.infra.service_windows.find_klir_binary", return_value="klir.exe")
     @patch("klir.infra.service_windows._task_xml_path")
     def test_install_fallback_to_binary(
         self,
@@ -166,7 +166,7 @@ class TestInstallService:
 
     @patch("klir.infra.service_windows.is_service_available", return_value=True)
     @patch("klir.infra.service_windows._find_pythonw", return_value=None)
-    @patch("klir.infra.service_windows.find_ductor_binary", return_value=None)
+    @patch("klir.infra.service_windows.find_klir_binary", return_value=None)
     def test_install_fails_without_binary(
         self, _binary: MagicMock, _pythonw: MagicMock, _avail: MagicMock
     ) -> None:
@@ -283,7 +283,7 @@ class TestPrintServiceLogs:
     ) -> None:
         logs_dir = tmp_path / "logs"
         logs_dir.mkdir()
-        log_file = logs_dir / "ductor_2026-02-21.log"
+        log_file = logs_dir / "klir_2026-02-21.log"
         log_file.write_text("line1\nline2\nline3\n", encoding="utf-8")
 
         paths_obj = MagicMock()

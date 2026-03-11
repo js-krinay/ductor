@@ -204,9 +204,7 @@ class TestCronObserverScheduling:
                 close()
             return pending_task
 
-        with patch(
-            "klir.cron.observer.asyncio.create_task", side_effect=_create_task
-        ) as create:
+        with patch("klir.cron.observer.asyncio.create_task", side_effect=_create_task) as create:
             observer.request_reschedule()
             observer.request_reschedule()
 

@@ -40,7 +40,9 @@ class TestApprovalService:
 
         svc = ApprovalService(_make_config())
         req_id = svc.request_approval(
-            tool_name="Write", tool_id="tool_1", chat_id=42,
+            tool_name="Write",
+            tool_id="tool_1",
+            chat_id=42,
         )
 
         result = svc.resolve(req_id, approved=True)
@@ -52,7 +54,9 @@ class TestApprovalService:
 
         svc = ApprovalService(_make_config())
         req_id = svc.request_approval(
-            tool_name="Write", tool_id="tool_1", chat_id=42,
+            tool_name="Write",
+            tool_id="tool_1",
+            chat_id=42,
         )
 
         result = svc.resolve(req_id, approved=False)

@@ -82,7 +82,9 @@ async def retry_async(
 
             if error_class is ErrorClass.PERMANENT:
                 logger.warning(
-                    "Permanent Telegram error%s: %s", log_ctx, exc,
+                    "Permanent Telegram error%s: %s",
+                    log_ctx,
+                    exc,
                 )
                 raise
 
@@ -102,9 +104,7 @@ async def retry_async(
                 )
                 raise
 
-            if error_class is ErrorClass.RATE_LIMITED and isinstance(
-                exc, TelegramRetryAfter
-            ):
+            if error_class is ErrorClass.RATE_LIMITED and isinstance(exc, TelegramRetryAfter):
                 delay: float = exc.retry_after
                 logger.warning(
                     "Rate limited%s, waiting %.1fs (attempt %d/%d)",

@@ -26,11 +26,7 @@ class TestPollParser:
     def test_parse_multiple_polls(self) -> None:
         from klir.bot.poll_parser import parse_polls
 
-        text = (
-            "[poll:Q1?|A|B|C]\n"
-            "Some text in between\n"
-            "[poll:Q2?|X|Y]"
-        )
+        text = "[poll:Q1?|A|B|C]\nSome text in between\n[poll:Q2?|X|Y]"
         polls = parse_polls(text)
         assert len(polls) == 2
 

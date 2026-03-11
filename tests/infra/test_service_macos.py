@@ -132,9 +132,7 @@ class TestInstallService:
     @patch("klir.infra.service_macos._run_launchctl")
     @patch("klir.infra.service_macos.is_service_installed", return_value=False)
     @patch("klir.infra.service_macos.is_service_available", return_value=True)
-    @patch(
-        "klir.infra.service_macos.find_ductor_binary", return_value="/usr/local/bin/klir"
-    )
+    @patch("klir.infra.service_macos.find_klir_binary", return_value="/usr/local/bin/klir")
     @patch("klir.infra.service_macos._plist_path")
     @patch("klir.infra.service_macos.resolve_paths")
     def test_install_success(
@@ -168,7 +166,7 @@ class TestInstallService:
         assert install_service(console) is False
 
     @patch("klir.infra.service_macos.is_service_available", return_value=True)
-    @patch("klir.infra.service_macos.find_ductor_binary", return_value=None)
+    @patch("klir.infra.service_macos.find_klir_binary", return_value=None)
     def test_install_fails_without_binary(self, _binary: MagicMock, _avail: MagicMock) -> None:
         console = MagicMock()
         assert install_service(console) is False
@@ -248,7 +246,7 @@ class TestPrintServiceLogs:
     ) -> None:
         logs_dir = tmp_path / "logs"
         logs_dir.mkdir()
-        log_file = logs_dir / "ductor_2026-02-22.log"
+        log_file = logs_dir / "klir_2026-02-22.log"
         log_file.write_text("line1\nline2\nline3\n", encoding="utf-8")
 
         paths_obj = MagicMock()

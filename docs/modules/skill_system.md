@@ -30,7 +30,7 @@ Bundled source: `klir/_home_defaults/workspace/skills/`.
 `sync_bundled_skills(paths)` mirrors bundled skills into each agent's workspace skill dir.
 
 - normal mode: links/junctions
-- Docker mode: managed copies (`.ductor_managed`)
+- Docker mode: managed copies (`.klir_managed`)
 
 ## Sync algorithm (`sync_skills`)
 
@@ -50,7 +50,7 @@ When `docker_active=True`:
 
 ## Cleanup on shutdown
 
-`cleanup_ductor_links(paths)` removes managed links under CLI skill dirs whose targets point to managed roots.
+`cleanup_klir_links(paths)` removes managed links under CLI skill dirs whose targets point to managed roots.
 
 ## Safety guarantees
 

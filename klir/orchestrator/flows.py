@@ -297,7 +297,7 @@ async def _gemini_missing_config_key_warning(
     orch: Orchestrator,
     request: AgentRequest,
 ) -> OrchestratorResult | None:
-    """Warn when Gemini API-key mode is selected but Ductor config key is empty."""
+    """Warn when Gemini API-key mode is selected but Klir config key is empty."""
     _model_name, provider_name = _request_target(orch, request)
     if provider_name != "gemini":
         return None

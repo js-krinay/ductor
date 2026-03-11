@@ -37,11 +37,13 @@ def parse_polls(text: str) -> list[PollDirective]:
         question = parts[0]
         options = parts[1 : _MAX_OPTIONS + 1]
 
-        results.append(PollDirective(
-            question=question,
-            options=options,
-            allows_multiple=allows_multiple,
-        ))
+        results.append(
+            PollDirective(
+                question=question,
+                options=options,
+                allows_multiple=allows_multiple,
+            )
+        )
 
     return results
 

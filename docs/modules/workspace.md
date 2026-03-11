@@ -167,7 +167,7 @@ Path traversal protection is enforced for create/delete operations.
 - `~/.codex/skills`
 - `~/.gemini/skills`
 
-Default mode uses symlinks/junctions. Docker mode uses managed directory copies (`.ductor_managed`) so paths resolve inside container namespace.
+Default mode uses symlinks/junctions. Docker mode uses managed directory copies (`.klir_managed`) so paths resolve inside container namespace.
 
 See `docs/modules/skill_system.md`.
 

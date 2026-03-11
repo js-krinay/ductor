@@ -103,7 +103,7 @@ def _send_posix_signal(targets: list[int], sig: signal.Signals) -> None:
             os.kill(target, sig)
 
 
-def kill_all_ductor_processes() -> int:
+def kill_all_klir_processes() -> int:
     """Find and force-kill remaining ``klir`` processes system-wide.
 
     On Windows this uses two strategies:
@@ -121,12 +121,12 @@ def kill_all_ductor_processes() -> int:
         return 0
 
     current = os.getpid()
-    killed = _kill_ductor_exe_windows(current)
+    killed = _kill_klir_exe_windows(current)
     killed += _kill_venv_python_windows(current)
     return killed
 
 
-def _kill_ductor_exe_windows(current_pid: int) -> int:
+def _kill_klir_exe_windows(current_pid: int) -> int:
     """Kill processes whose image name is ``klir.exe``."""
     try:
         result = subprocess.run(

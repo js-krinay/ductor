@@ -59,9 +59,7 @@ def create_bot_session(
     """Create an aiogram session with optional proxy and retry support."""
     if resilience_config is not None:
         if proxy_url:
-            logger.info(
-                "Creating resilient proxied bot session: %s", sanitize_proxy_url(proxy_url)
-            )
+            logger.info("Creating resilient proxied bot session: %s", sanitize_proxy_url(proxy_url))
         else:
             logger.info("Creating resilient bot session")
         return ResilientSession(

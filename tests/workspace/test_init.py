@@ -29,7 +29,7 @@ def _setup_home_defaults(fw_root: Path) -> None:
 
     # Top-level CLAUDE.md (klir home)
     ws.mkdir(parents=True)
-    (ws / "CLAUDE.md").write_text("# Ductor Home CLAUDE.md")
+    (ws / "CLAUDE.md").write_text("# Klir Home CLAUDE.md")
 
     config_dir = ws / "config"
     config_dir.mkdir()
@@ -163,9 +163,7 @@ def test_subdirectory_claude_md_updated_on_reinit(tmp_path: Path) -> None:
 
 
 @patch("klir.cli.auth.check_all_auth", return_value=_mock_all_authenticated())
-def test_subdirectory_agents_md_created_from_claude_md(
-    _mock_auth: object, tmp_path: Path
-) -> None:
+def test_subdirectory_agents_md_created_from_claude_md(_mock_auth: object, tmp_path: Path) -> None:
     """AGENTS.md is auto-created for every CLAUDE.md in subdirectories."""
     paths = _make_paths(tmp_path)
     init_workspace(paths)
@@ -261,12 +259,12 @@ def test_klir_home_claude_md_overwritten(tmp_path: Path) -> None:
 
     home_claude = paths.klir_home / "CLAUDE.md"
     assert home_claude.exists()
-    assert home_claude.read_text() == "# Ductor Home CLAUDE.md"
+    assert home_claude.read_text() == "# Klir Home CLAUDE.md"
 
     # Simulate user editing it -- should be overwritten on reinit
     home_claude.write_text("# User edit")
     init_workspace(paths)
-    assert home_claude.read_text() == "# Ductor Home CLAUDE.md"
+    assert home_claude.read_text() == "# Klir Home CLAUDE.md"
 
 
 # -- config smart-merge --

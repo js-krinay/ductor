@@ -25,9 +25,7 @@ _AUTHED = {
 
 
 async def test_model_list_returns_keyboard(orch: Orchestrator) -> None:
-    with patch(
-        "klir.orchestrator.selectors.model_selector.check_all_auth", return_value=_AUTHED
-    ):
+    with patch("klir.orchestrator.selectors.model_selector.check_all_auth", return_value=_AUTHED):
         result = await cmd_model(orch, SessionKey(chat_id=1), "/model")
     assert result.buttons is not None
     assert "Model Selector" in result.text

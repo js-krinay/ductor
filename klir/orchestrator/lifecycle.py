@@ -12,7 +12,7 @@ from klir.files.allowed_roots import resolve_allowed_roots
 from klir.infra.docker import DockerManager
 from klir.workspace.init import inject_runtime_environment
 from klir.workspace.paths import KlirPaths, resolve_paths
-from klir.workspace.skill_sync import cleanup_ductor_links, sync_bundled_skills, sync_skills
+from klir.workspace.skill_sync import cleanup_klir_links, sync_bundled_skills, sync_skills
 
 if TYPE_CHECKING:
     from klir.config import AgentConfig
@@ -186,7 +186,7 @@ async def shutdown(orch: Orchestrator) -> None:
         logger.info("Shutdown terminated %d active CLI process(es)", killed)
     if orch._api_stop is not None:
         await orch._api_stop()
-    await asyncio.to_thread(cleanup_ductor_links, orch._paths)
+    await asyncio.to_thread(cleanup_klir_links, orch._paths)
     await orch._observers.stop_all()
     if orch._docker:
         await orch._docker.teardown()

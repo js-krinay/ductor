@@ -246,11 +246,9 @@ def _gemini_key_auth_source(gemini_home: Path) -> tuple[Path | None, datetime | 
             return None, None
         return dotenv_file, datetime.fromtimestamp(dotenv_file.stat().st_mtime, tz=UTC)
 
-    ductor_key, ductor_config_path = read_ductor_gemini_api_key()
-    if ductor_key and ductor_config_path is not None:
-        return ductor_config_path, datetime.fromtimestamp(
-            ductor_config_path.stat().st_mtime, tz=UTC
-        )
+    klir_key, klir_config_path = read_klir_gemini_api_key()
+    if klir_key and klir_config_path is not None:
+        return klir_config_path, datetime.fromtimestamp(klir_config_path.stat().st_mtime, tz=UTC)
     return None, None
 
 
@@ -330,12 +328,12 @@ def read_gemini_selected_auth_type(settings_file: Path) -> str | None:
     return None
 
 
-def read_ductor_gemini_api_key() -> tuple[str | None, Path | None]:
+def read_klir_gemini_api_key() -> tuple[str | None, Path | None]:
     """Read ``gemini_api_key`` from ``~/.klir/config/config.json``.
 
     Returns ``(key, path)`` when configured, otherwise ``(None, None)``.
     """
-    config_path = _ductor_config_path()
+    config_path = _klir_config_path()
     if not config_path.is_file():
         return None, None
 
@@ -371,7 +369,7 @@ def gemini_uses_api_key_mode() -> bool:
     return read_gemini_selected_auth_type(settings_file) == "gemini-api-key"
 
 
-def _ductor_config_path() -> Path:
+def _klir_config_path() -> Path:
     from klir.workspace.paths import resolve_paths
 
     return resolve_paths().config_path

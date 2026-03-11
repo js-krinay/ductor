@@ -452,9 +452,7 @@ class TestOnMessage:
 
         msg = _make_message(text="Hello bot")
 
-        with patch(
-            "klir.bot.app.run_non_streaming_message", new_callable=AsyncMock
-        ) as mock_run:
+        with patch("klir.bot.app.run_non_streaming_message", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = "Non-streamed reply"
             await tg_bot._on_message(msg)
 
@@ -792,9 +790,7 @@ class TestCallbackQueryHandler:
 
         cb = _make_callback_query(data="Approve")
 
-        with patch(
-            "klir.bot.app.run_non_streaming_message", new_callable=AsyncMock
-        ) as mock_run:
+        with patch("klir.bot.app.run_non_streaming_message", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = "Non-streamed"
             await tg_bot._on_callback_query(cb)
 
@@ -1308,9 +1304,7 @@ class TestForumTopicPropagation:
 
         cb = _make_callback_query(data="Approve", topic_thread_id=77)
 
-        with patch(
-            "klir.bot.app.run_non_streaming_message", new_callable=AsyncMock
-        ) as mock_run:
+        with patch("klir.bot.app.run_non_streaming_message", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = "Reply"
             await tg_bot._on_callback_query(cb)
 
@@ -1325,9 +1319,7 @@ class TestForumTopicPropagation:
 
         msg = _make_message(text="Hello", topic_thread_id=55)
 
-        with patch(
-            "klir.bot.app.run_non_streaming_message", new_callable=AsyncMock
-        ) as mock_run:
+        with patch("klir.bot.app.run_non_streaming_message", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = "Reply"
             await tg_bot._on_message(msg)
 

@@ -51,7 +51,7 @@ def post_json(url: str, body: dict[str, object], *, timeout: int = 300) -> dict[
             return json.loads(resp.read().decode())  # type: ignore[no-any-return]
     except urllib.error.URLError as e:
         print(f"Error: Cannot reach task API at {url}: {e}", file=sys.stderr)
-        print("Make sure the Ductor bot is running with tasks enabled.", file=sys.stderr)
+        print("Make sure the Klir bot is running with tasks enabled.", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

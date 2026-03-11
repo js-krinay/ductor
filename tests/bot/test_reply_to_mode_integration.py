@@ -17,7 +17,9 @@ class TestReplyToModeResolution:
 
         cfg = AgentConfig(reply_to_mode="first")
         override = ChatOverrides(reply_to_mode="off")
-        resolved = override.reply_to_mode if override.reply_to_mode is not None else cfg.reply_to_mode
+        resolved = (
+            override.reply_to_mode if override.reply_to_mode is not None else cfg.reply_to_mode
+        )
         assert resolved == "off"
 
     def test_resolve_mode_chat_override_none_falls_back(self) -> None:
@@ -26,7 +28,9 @@ class TestReplyToModeResolution:
 
         cfg = AgentConfig(reply_to_mode="all")
         override = ChatOverrides()
-        resolved = override.reply_to_mode if override.reply_to_mode is not None else cfg.reply_to_mode
+        resolved = (
+            override.reply_to_mode if override.reply_to_mode is not None else cfg.reply_to_mode
+        )
         assert resolved == "all"
 
     def test_resolver_returns_global_when_no_override(self) -> None:

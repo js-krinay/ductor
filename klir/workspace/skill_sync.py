@@ -7,7 +7,7 @@ Includes bundled-skill linking (package → workspace), sync-time external-symli
 protection, and cleanup of klir-created links on shutdown.
 
 When Docker sandboxing is active, symlinks are replaced with directory copies
-(marked with ``.ductor_managed``) because absolute host paths do not resolve
+(marked with ``.klir_managed``) because absolute host paths do not resolve
 inside the container's mount namespace.
 
 Sync runs once during ``init_workspace`` and periodically as a background task.
@@ -34,7 +34,7 @@ _SKIP_DIRS: frozenset[str] = frozenset(
 )
 
 _SKILL_SYNC_INTERVAL = 30.0
-_MANAGED_MARKER = ".ductor_managed"
+_MANAGED_MARKER = ".klir_managed"
 
 
 def _is_under(child: Path, parent: Path) -> bool:
@@ -187,7 +187,7 @@ def _newest_mtime(directory: Path) -> float:
 
 
 def _ensure_copy(dest: Path, source: Path) -> bool:
-    """Copy *source* directory to *dest* with a ``.ductor_managed`` marker.
+    """Copy *source* directory to *dest* with a ``.klir_managed`` marker.
 
     Skips the copy when *dest* already has the marker and *source* has not
     been modified since the last copy (recursive mtime comparison).
@@ -376,7 +376,7 @@ def sync_bundled_skills(paths: KlirPaths, *, docker_active: bool = False) -> Non
             logger.warning("Failed to link bundled skill %s", source.name, exc_info=True)
 
 
-def cleanup_ductor_links(paths: KlirPaths) -> int:
+def cleanup_klir_links(paths: KlirPaths) -> int:
     """Remove symlinks created by klir in CLI skill directories.
 
     Only removes symlinks whose resolved target is under the klir workspace

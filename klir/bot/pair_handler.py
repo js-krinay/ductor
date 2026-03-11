@@ -23,7 +23,9 @@ async def handle_pair(message: Message, pairing_svc: PairingService) -> None:
     code = pairing_svc.generate_code(admin_user_id=user_id)
 
     if code is None:
-        await message.reply("Maximum active pairing codes reached. Wait for existing codes to expire.")
+        await message.reply(
+            "Maximum active pairing codes reached. Wait for existing codes to expire."
+        )
         return
 
     ttl = pairing_svc._cfg.code_ttl_minutes

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from klir.infra.service_base import (
     collect_nvm_bin_dirs,
     ensure_console,
-    find_ductor_binary,
+    find_klir_binary,
     print_binary_not_found,
     print_install_success,
     print_not_installed,
@@ -130,7 +130,7 @@ def install_service(console: Console | None = None) -> bool:
         )
         return False
 
-    binary = find_ductor_binary()
+    binary = find_klir_binary()
     if not binary:
         print_binary_not_found(console)
         return False

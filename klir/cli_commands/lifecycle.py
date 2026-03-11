@@ -95,9 +95,9 @@ def stop_bot() -> None:
             pid_file.unlink(missing_ok=True)
 
     # 3. Kill all remaining klir processes system-wide
-    from klir.infra.process_tree import kill_all_ductor_processes
+    from klir.infra.process_tree import kill_all_klir_processes
 
-    extra = kill_all_ductor_processes()
+    extra = kill_all_klir_processes()
     if extra:
         _console.print(f"[dim]Killed {extra} remaining klir process(es).[/dim]")
         stopped = True

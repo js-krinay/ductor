@@ -9,9 +9,7 @@ from klir.workspace.paths import KlirPaths
 
 def _paths(tmp_path: Path) -> KlirPaths:
     fw = tmp_path / "fw"
-    return KlirPaths(
-        klir_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw
-    )
+    return KlirPaths(klir_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw)
 
 
 def test_cron_tasks_dir(tmp_path: Path) -> None:

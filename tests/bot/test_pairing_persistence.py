@@ -10,10 +10,14 @@ class TestPairingPersistence:
     async def test_paired_user_added_to_config(self, tmp_path: Path) -> None:
         """When a user pairs, their ID should be persisted to config.json."""
         config_path = tmp_path / "config.json"
-        config_path.write_text(json.dumps({
-            "telegram_token": "test:token",
-            "allowed_user_ids": [100],
-        }))
+        config_path.write_text(
+            json.dumps(
+                {
+                    "telegram_token": "test:token",
+                    "allowed_user_ids": [100],
+                }
+            )
+        )
 
         from klir.config import update_config_file
 

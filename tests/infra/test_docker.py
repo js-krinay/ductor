@@ -395,9 +395,7 @@ class TestDockerManager:
             d.mkdir(parents=True, exist_ok=True)
         fw = tmp_path / "framework"
         fw.mkdir()
-        paths = KlirPaths(
-            klir_home=agent_home, home_defaults=fw / "workspace", framework_root=fw
-        )
+        paths = KlirPaths(klir_home=agent_home, home_defaults=fw / "workspace", framework_root=fw)
         mgr = DockerManager(docker_config, paths)
         run_args: list[str] = []
 

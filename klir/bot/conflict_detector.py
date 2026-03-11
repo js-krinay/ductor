@@ -39,8 +39,7 @@ class ConflictDetector:
             return
         self._count += 1
         logger.error(
-            "Telegram 409 conflict (#%d): another instance is likely polling "
-            "with the same token",
+            "Telegram 409 conflict (#%d): another instance is likely polling with the same token",
             self._count,
         )
 

@@ -17,7 +17,7 @@ def setup_framework(fw_root: Path) -> None:
     """Create minimal home-defaults template for testing."""
     ws = fw_root / "workspace"
     ws.mkdir(parents=True)
-    (ws / "CLAUDE.md").write_text("# Ductor Home")
+    (ws / "CLAUDE.md").write_text("# Klir Home")
 
     config_dir = ws / "config"
     config_dir.mkdir()

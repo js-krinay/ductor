@@ -1,31 +1,31 @@
 """Project-level exception hierarchy."""
 
 
-class DuctorError(Exception):
+class KlirError(Exception):
     """Base for all klir exceptions."""
 
 
-class CLIError(DuctorError):
+class CLIError(KlirError):
     """CLI execution failed."""
 
 
-class WorkspaceError(DuctorError):
+class WorkspaceError(KlirError):
     """Workspace initialization or access failed."""
 
 
-class SessionError(DuctorError):
+class SessionError(KlirError):
     """Session persistence or lifecycle failed."""
 
 
-class CronError(DuctorError):
+class CronError(KlirError):
     """Cron job scheduling or execution failed."""
 
 
-class StreamError(DuctorError):
+class StreamError(KlirError):
     """Streaming output failed."""
 
 
-class SecurityError(DuctorError):
+class SecurityError(KlirError):
     """Security violation detected."""
 
 
@@ -33,5 +33,5 @@ class PathValidationError(SecurityError):
     """File path failed validation."""
 
 
-class WebhookError(DuctorError):
+class WebhookError(KlirError):
     """Webhook server or dispatch failed."""

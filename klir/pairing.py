@@ -73,11 +73,13 @@ class PairingService:
         result = []
         for code, entry in self._codes.items():
             remaining = self._cfg.code_ttl_minutes * 60 - (now - entry["created_at"])
-            result.append({
-                "code": code,
-                "admin_user_id": entry["admin_user_id"],
-                "remaining_seconds": max(0, int(remaining)),
-            })
+            result.append(
+                {
+                    "code": code,
+                    "admin_user_id": entry["admin_user_id"],
+                    "remaining_seconds": max(0, int(remaining)),
+                }
+            )
         return result
 
     def _prune_expired(self) -> None:

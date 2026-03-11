@@ -129,9 +129,7 @@ class TestRetryAsync:
         from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
 
-        fn = AsyncMock(
-            side_effect=TelegramBadRequest(method=None, message="Bad Request")
-        )
+        fn = AsyncMock(side_effect=TelegramBadRequest(method=None, message="Bad Request"))
         cfg = ResilienceConfig(max_retries=3)
         with pytest.raises(TelegramBadRequest):
             await retry_async(fn, config=cfg)
@@ -142,12 +140,8 @@ class TestRetryAsync:
         from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
 
-        fn = AsyncMock(
-            side_effect=TelegramServerError(method=None, message="err")
-        )
-        cfg = ResilienceConfig(
-            max_retries=2, base_backoff_seconds=0.01, max_backoff_seconds=0.1
-        )
+        fn = AsyncMock(side_effect=TelegramServerError(method=None, message="err"))
+        cfg = ResilienceConfig(max_retries=2, base_backoff_seconds=0.01, max_backoff_seconds=0.1)
         with pytest.raises(TelegramServerError):
             await retry_async(fn, config=cfg)
         assert fn.await_count == 3  # initial + 2 retries
@@ -173,9 +167,7 @@ class TestRetryAsync:
         from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
 
-        fn = AsyncMock(
-            side_effect=TelegramConflictError(method=None, message="Conflict")
-        )
+        fn = AsyncMock(side_effect=TelegramConflictError(method=None, message="Conflict"))
         cfg = ResilienceConfig(max_retries=3)
         with pytest.raises(TelegramConflictError):
             await retry_async(fn, config=cfg)
@@ -193,9 +185,7 @@ class TestRetryAsync:
                 "ok",
             ]
         )
-        cfg = ResilienceConfig(
-            max_retries=3, base_backoff_seconds=0.01, max_backoff_seconds=0.1
-        )
+        cfg = ResilienceConfig(max_retries=3, base_backoff_seconds=0.01, max_backoff_seconds=0.1)
         result = await retry_async(fn, config=cfg)
         assert result == "ok"
         assert fn.await_count == 3

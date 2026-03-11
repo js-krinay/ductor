@@ -271,9 +271,7 @@ class TestSend:
         response_data = json.dumps({"response": "Hello!", "session_id": "sid-1"})
         proc = _make_process_mock(stdout=response_data.encode(), returncode=0)
 
-        with patch(
-            "klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc
-        ):
+        with patch("klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc):
             result = await cli.send("Hi")
 
         assert result.result == "Hello!"
@@ -286,9 +284,7 @@ class TestSend:
         # First call times out, second (after kill) returns empty
         proc.communicate.side_effect = [TimeoutError(), (b"", b"")]
 
-        with patch(
-            "klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc
-        ):
+        with patch("klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc):
             result = await cli.send("Hi", timeout_seconds=0.01)
 
         assert result.is_error
@@ -300,9 +296,7 @@ class TestSend:
         response_data = json.dumps({"response": "OK"})
         proc = _make_process_mock(stdout=response_data.encode(), returncode=0)
 
-        with patch(
-            "klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc
-        ):
+        with patch("klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc):
             result = await cli.send("test")
 
         assert not result.is_error
@@ -320,9 +314,7 @@ class TestSend:
 
         timeout_controller.run_with_timeout = AsyncMock(side_effect=_run_with_timeout)
 
-        with patch(
-            "klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc
-        ):
+        with patch("klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc):
             result = await cli.send("Hi", timeout_controller=timeout_controller)
 
         timeout_controller.run_with_timeout.assert_awaited_once()
@@ -345,9 +337,7 @@ class TestSendStreaming:
         ]
         proc = _make_streaming_process(lines)
 
-        with patch(
-            "klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc
-        ):
+        with patch("klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc):
             events = [event async for event in cli.send_streaming("Hi")]
 
         text_events = [e for e in events if isinstance(e, AssistantTextDelta)]
@@ -369,9 +359,7 @@ class TestSendStreaming:
         # kill_all with no registered processes still sets the abort flag
         await reg.kill_all(99)
 
-        with patch(
-            "klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc
-        ):
+        with patch("klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc):
             events = [event async for event in cli.send_streaming("Hi")]
 
         # Should have stopped early due to abort
@@ -384,9 +372,7 @@ class TestSendStreaming:
         lines = [json.dumps({"type": "message", "role": "model", "content": "partial"})]
         proc = _make_streaming_process(lines, stderr=b"boom", returncode=1)
 
-        with patch(
-            "klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc
-        ):
+        with patch("klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc):
             events = [event async for event in cli.send_streaming("Hi")]
 
         result_events = [e for e in events if isinstance(e, ResultEvent)]
@@ -407,9 +393,7 @@ class TestSendStreaming:
         timeout_controller.start_warning_loop = MagicMock(return_value=None)
         timeout_controller.try_extend = MagicMock(return_value=False)
 
-        with patch(
-            "klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc
-        ):
+        with patch("klir.cli.gemini_provider.asyncio.create_subprocess_exec", return_value=proc):
             events = [
                 event
                 async for event in cli.send_streaming("Hi", timeout_controller=timeout_controller)

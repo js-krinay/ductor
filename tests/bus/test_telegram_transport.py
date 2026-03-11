@@ -135,9 +135,7 @@ class TestHeartbeatDelivery:
             result_text="Something happened",
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         mock_send.assert_awaited_once()
@@ -199,9 +197,7 @@ class TestBackgroundDelivery:
             elapsed_seconds=12.5,
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         bot._orch.named_sessions.update_after_response.assert_called_once_with(
@@ -222,9 +218,7 @@ class TestBackgroundDelivery:
             elapsed_seconds=60.0,
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         text = mock_send.call_args[0][2]
@@ -241,9 +235,7 @@ class TestBackgroundDelivery:
             elapsed_seconds=0.0,
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         text = mock_send.call_args[0][2]
@@ -259,9 +251,7 @@ class TestBackgroundDelivery:
             metadata={"task_id": "abc123"},
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         text = mock_send.call_args[0][2]
@@ -280,9 +270,7 @@ class TestBackgroundDelivery:
             metadata={"task_id": "xyz"},
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         text = mock_send.call_args[0][2]
@@ -298,9 +286,7 @@ class TestBackgroundDelivery:
             metadata={"task_id": "t1"},
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         text = mock_send.call_args[0][2]
@@ -323,9 +309,7 @@ class TestInteragentDelivery:
             metadata={"recipient": "sub-agent", "error": "timeout"},
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         mock_send.assert_awaited_once()
@@ -342,9 +326,7 @@ class TestInteragentDelivery:
             metadata={"provider_switch_notice": "Switched to gemini"},
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         assert mock_send.await_count == 2
@@ -373,9 +355,7 @@ class TestTaskResultDelivery:
             metadata={"name": "research", "task_id": "t1"},
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         assert mock_send.await_count == 2
@@ -393,9 +373,7 @@ class TestTaskResultDelivery:
             metadata={"name": "build", "error": "OOM"},
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         note = mock_send.call_args_list[0][0][2]
@@ -410,9 +388,7 @@ class TestTaskResultDelivery:
             metadata={"name": "cleanup"},
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         note = mock_send.call_args_list[0][0][2]
@@ -434,9 +410,7 @@ class TestTaskQuestionDelivery:
             metadata={"task_id": "q1"},
         )
 
-        with patch(
-            "klir.bus.telegram_transport.send_rich", new_callable=AsyncMock
-        ) as mock_send:
+        with patch("klir.bus.telegram_transport.send_rich", new_callable=AsyncMock) as mock_send:
             await transport.deliver(env)
 
         assert mock_send.await_count == 2

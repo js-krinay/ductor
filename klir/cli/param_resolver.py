@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from klir.errors import DuctorError
+from klir.errors import KlirError
 
 if TYPE_CHECKING:
     from klir.cli.codex_cache import CodexModelCache
@@ -24,13 +24,13 @@ def _validate_gemini_model(model: str) -> None:
         return
     if gemini_models and model not in gemini_models:
         msg = f"Invalid Gemini model: {model}. Must be one of {sorted(gemini_models)}"
-        raise DuctorError(msg)
+        raise KlirError(msg)
     if not gemini_models and not _looks_like_gemini_model(model):
         msg = (
             f"Invalid Gemini model: {model}. Must use a Gemini model ID "
             "(e.g. gemini-2.5-pro) or Gemini alias."
         )
-        raise DuctorError(msg)
+        raise KlirError(msg)
 
 
 @dataclass(frozen=True)
@@ -81,7 +81,7 @@ def resolve_cli_config(
         TaskExecutionConfig with resolved and validated settings
 
     Raises:
-        DuctorError: If model validation fails
+        KlirError: If model validation fails
     """
     overrides = task_overrides or TaskOverrides()
 
@@ -95,16 +95,16 @@ def resolve_cli_config(
     if provider == "claude":
         if model not in CLAUDE_MODELS:
             msg = f"Invalid Claude model: {model}. Must be one of {sorted(CLAUDE_MODELS)}"
-            raise DuctorError(msg)
+            raise KlirError(msg)
     elif provider == "gemini":
         _validate_gemini_model(model)
     else:  # codex
         if codex_cache is None:
             msg = "Codex cache is required for Codex model validation"
-            raise DuctorError(msg)
+            raise KlirError(msg)
         if not codex_cache.validate_model(model):
             msg = f"Invalid Codex model: {model}"
-            raise DuctorError(msg)
+            raise KlirError(msg)
 
     # 4. Resolve reasoning effort (Codex only)
     reasoning_effort = ""

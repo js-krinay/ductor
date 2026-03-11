@@ -14,7 +14,7 @@ from rich.panel import Panel
 
 from klir.infra.service_base import (
     ensure_console,
-    find_ductor_binary,
+    find_klir_binary,
     print_binary_not_found,
     print_install_success,
     print_no_service,
@@ -140,7 +140,7 @@ def _generate_task_xml(command: str, arguments: str = "") -> str:
 
 def _task_xml_path() -> Path:
     """Temp path for the task XML definition."""
-    return resolve_paths().klir_home / "ductor_task.xml"
+    return resolve_paths().klir_home / "klir_task.xml"
 
 
 def is_service_available() -> bool:
@@ -183,7 +183,7 @@ def install_service(console: Console | None = None) -> bool:
         command = pythonw
         arguments = "-m klir"
     else:
-        binary = find_ductor_binary()
+        binary = find_klir_binary()
         if not binary:
             print_binary_not_found(console)
             return False

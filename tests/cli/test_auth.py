@@ -390,9 +390,7 @@ def test_check_gemini_auth_selected_type_gemini_api_key(
     assert result.auth_file == settings
 
 
-def test_check_gemini_auth_ductor_config_key(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_check_gemini_auth_klir_config_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import klir.cli.auth as _auth_mod
 
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -401,17 +399,17 @@ def test_check_gemini_auth_ductor_config_key(
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
 
-    ductor_config = tmp_path / ".klir" / "config" / "config.json"
-    ductor_config.parent.mkdir(parents=True)
-    ductor_config.write_text('{"gemini_api_key":"from-klir-config"}')
+    klir_config = tmp_path / ".klir" / "config" / "config.json"
+    klir_config.parent.mkdir(parents=True)
+    klir_config.write_text('{"gemini_api_key":"from-klir-config"}')
 
     result = check_gemini_auth()
 
     assert result.status == AuthStatus.AUTHENTICATED
-    assert result.auth_file == ductor_config
+    assert result.auth_file == klir_config
 
 
-def test_check_gemini_auth_ductor_config_null_string_ignored(
+def test_check_gemini_auth_klir_config_null_string_ignored(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     import klir.cli.auth as _auth_mod
@@ -422,9 +420,9 @@ def test_check_gemini_auth_ductor_config_null_string_ignored(
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
 
-    ductor_config = tmp_path / ".klir" / "config" / "config.json"
-    ductor_config.parent.mkdir(parents=True)
-    ductor_config.write_text('{"gemini_api_key":"null"}')
+    klir_config = tmp_path / ".klir" / "config" / "config.json"
+    klir_config.parent.mkdir(parents=True)
+    klir_config.write_text('{"gemini_api_key":"null"}')
 
     result = check_gemini_auth()
 

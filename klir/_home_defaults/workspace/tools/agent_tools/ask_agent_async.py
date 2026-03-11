@@ -10,7 +10,7 @@ to make the sub-agent reply in its own Telegram chat via this tool.
 
 Uses the internal localhost HTTP API to communicate with the bus.
 Environment variables KLIR_AGENT_NAME, KLIR_INTERAGENT_PORT, and
-KLIR_INTERAGENT_HOST are automatically set by the Ductor framework.
+KLIR_INTERAGENT_HOST are automatically set by the Klir framework.
 
 Usage:
     python3 ask_agent_async.py [--new] [--summary "Short description"] TARGET_AGENT "Your message here"
@@ -91,7 +91,7 @@ def main() -> None:
     except urllib.error.URLError as e:
         print(f"Error: Cannot reach inter-agent API at {url}: {e}", file=sys.stderr)
         print(
-            "Make sure the Ductor supervisor is running with multi-agent support.", file=sys.stderr
+            "Make sure the Klir supervisor is running with multi-agent support.", file=sys.stderr
         )
         sys.exit(1)
     except Exception as e:

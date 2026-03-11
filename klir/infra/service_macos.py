@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from klir.infra.service_base import (
     collect_nvm_bin_dirs,
     ensure_console,
-    find_ductor_binary,
+    find_klir_binary,
     print_binary_not_found,
     print_install_success,
     print_no_service,
@@ -128,7 +128,7 @@ def install_service(console: Console | None = None) -> bool:
         console.print("[bold red]launchctl not found. Service install requires macOS.[/bold red]")
         return False
 
-    binary = find_ductor_binary()
+    binary = find_klir_binary()
     if not binary:
         print_binary_not_found(console)
         return False

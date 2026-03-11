@@ -31,7 +31,7 @@ def ensure_console(console: Console | None) -> Console:
 # ---------------------------------------------------------------------------
 
 
-def find_ductor_binary() -> str | None:
+def find_klir_binary() -> str | None:
     """Find the klir binary in PATH. Shared across all backends."""
     return shutil.which("klir")
 
