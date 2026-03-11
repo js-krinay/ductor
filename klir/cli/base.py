@@ -88,6 +88,7 @@ class CLIConfig:
     images: list[str] = field(default_factory=list)
     instructions: str | None = None
     reasoning_effort: str = "medium"
+    thinking_level: str | None = None
     # Process tracking (shared across providers):
     process_registry: ProcessRegistry | None = None
     chat_id: int = 0

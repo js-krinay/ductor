@@ -17,15 +17,21 @@ class LockPool:
     the ad-hoc ``bot.sequential.get_lock()`` calls in result delivery.
     """
 
+    # Lock key type: (chat_id,), (chat_id, topic_id), or
+    # (chat_id, topic_id, user_id).  Kept as a broad tuple to avoid
+    # mypy headaches with union narrowing.
+    _LockKey = tuple[int | None, ...]
+
     def __init__(self, *, max_locks: int = _MAX_LOCKS) -> None:
-        self._locks: dict[tuple[int, int | None], asyncio.Lock] = {}
+        self._locks: dict[LockPool._LockKey, asyncio.Lock] = {}
         self._max = max_locks
 
-    def get(self, key: tuple[int, int | None] | int) -> asyncio.Lock:
+    def get(self, key: _LockKey | int) -> asyncio.Lock:
         """Return the lock for *key*, creating one if needed.
 
-        Accepts either a ``(chat_id, topic_id)`` tuple or a plain
-        ``chat_id`` integer for backward compatibility.
+        Accepts a ``(chat_id, topic_id)`` tuple, a
+        ``(chat_id, topic_id, user_id)`` tuple, or a plain ``chat_id``
+        integer for backward compatibility.
         """
         k = self._normalize(key)
         if k not in self._locks:
@@ -33,14 +39,14 @@ class LockPool:
             self._locks[k] = asyncio.Lock()
         return self._locks[k]
 
-    def is_locked(self, key: tuple[int, int | None] | int) -> bool:
+    def is_locked(self, key: _LockKey | int) -> bool:
         """Return True if the lock for *key* is currently held."""
         lock = self._locks.get(self._normalize(key))
         return lock.locked() if lock else False
 
     def any_locked_for_chat(self, chat_id: int) -> bool:
         """Return True if any topic-scoped lock for *chat_id* is held."""
-        return any(lock.locked() for (cid, _), lock in self._locks.items() if cid == chat_id)
+        return any(lock.locked() for k, lock in self._locks.items() if k[0] == chat_id)
 
     def __len__(self) -> int:
         return len(self._locks)
@@ -48,8 +54,13 @@ class LockPool:
     # -- Internal helpers ------------------------------------------------------
 
     @staticmethod
-    def _normalize(key: tuple[int, int | None] | int) -> tuple[int, int | None]:
-        return key if isinstance(key, tuple) else (key, None)
+    def _normalize(key: _LockKey | int) -> _LockKey:
+        if isinstance(key, int):
+            return (key, None, None)
+        # Pad 2-tuples to 3-tuples for consistent lookup
+        if len(key) == 2:
+            return (*key, None)
+        return key
 
     def _evict_if_needed(self) -> None:
         if len(self._locks) < self._max:

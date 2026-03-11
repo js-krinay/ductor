@@ -118,6 +118,7 @@ async def _prepare_normal(
         chat_id=key.chat_id,
         topic_id=key.topic_id,
         resume_session=None if is_new else session.session_id,
+        thinking_level=session.thinking_level,
         timeout_seconds=timeout_secs,
         timeout_controller=_make_timeout_controller(orch, "normal"),
     )

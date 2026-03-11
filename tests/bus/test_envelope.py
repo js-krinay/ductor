@@ -53,12 +53,20 @@ def test_envelope_defaults() -> None:
 
 def test_envelope_lock_key_without_topic() -> None:
     env = Envelope(origin=Origin.HEARTBEAT, chat_id=42)
-    assert env.lock_key == (42, None)
+    assert env.lock_key == (42, None, None)
 
 
 def test_envelope_lock_key_with_topic() -> None:
     env = Envelope(origin=Origin.INTERAGENT, chat_id=42, topic_id=7)
-    assert env.lock_key == (42, 7)
+    assert env.lock_key == (42, 7, None)
+
+
+def test_envelope_lock_key_is_3_tuple() -> None:
+    """Envelope.lock_key must be a 3-tuple consistent with SessionKey.lock_key."""
+    env = Envelope(origin=Origin.CRON, chat_id=99, topic_id=5)
+    key = env.lock_key
+    assert len(key) == 3
+    assert key == (99, 5, None)
 
 
 def test_envelope_created_at_is_set() -> None:

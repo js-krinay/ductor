@@ -30,6 +30,7 @@ from klir.log_context import set_log_context
 if TYPE_CHECKING:
     from aiogram import Bot
 
+    from klir.config import AgentConfig
     from klir.config_resolver import ChatConfigResolver
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ QUICK_COMMANDS: frozenset[str] = frozenset(
         "/hooks",
         "/where",
         "/leave",
+        "/think",
     }
 )
 
@@ -194,9 +196,11 @@ class SequentialMiddleware(BaseMiddleware):
         self,
         lock_pool: LockPool | None = None,
         topic_names: TopicNameCache | None = None,
+        config: AgentConfig | None = None,
     ) -> None:
         self._lock_pool = lock_pool if lock_pool is not None else LockPool()
         self._topic_names = topic_names
+        self._config = config
         self._dedup = DedupeCache()
         self._abort_handler: AbortHandler | None = None
         self._abort_all_handler: AbortAllHandler | None = None
@@ -231,12 +235,12 @@ class SequentialMiddleware(BaseMiddleware):
         """Register a callback for read-only commands dispatched *before* the lock."""
         self._quick_command_handler = handler
 
-    def get_lock(self, lock_key: tuple[int, int | None] | int) -> asyncio.Lock:
+    def get_lock(self, lock_key: tuple[int | None, ...] | int) -> asyncio.Lock:
         """Return the per-session lock, creating it if needed.
 
-        Accepts either a ``(chat_id, topic_id)`` tuple (from
-        ``SessionKey.lock_key``) or a plain ``chat_id`` integer for
-        backward compatibility.
+        Accepts a ``(chat_id, topic_id)`` or ``(chat_id, topic_id, user_id)``
+        tuple (from ``SessionKey.lock_key``) or a plain ``chat_id`` integer
+        for backward compatibility.
 
         Used by webhook wake dispatch to queue behind active conversations.
         """
@@ -350,7 +354,7 @@ class SequentialMiddleware(BaseMiddleware):
             logger.debug("Message deduplicated msg_id=%d", event.message_id)
             return None
 
-        session_key = get_session_key(event)
+        session_key = get_session_key(event, config=self._config)
         lock = self.get_lock(session_key.lock_key)
         entry: _QueueEntry | None = None
 

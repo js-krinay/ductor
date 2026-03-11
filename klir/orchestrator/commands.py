@@ -22,10 +22,45 @@ if TYPE_CHECKING:
     from klir.orchestrator.core import Orchestrator
     from klir.session.key import SessionKey
 
+THINKING_LEVELS = frozenset({"off", "minimal", "low", "medium", "high"})
+
+COMPACT_PROMPT = (
+    "Summarize our entire conversation so far into a concise context block. "
+    "Keep key decisions, facts, preferences, and open threads. "
+    "Drop greetings, small talk, and resolved tangents. "
+    "Present the summary as a structured note I can use to continue seamlessly."
+)
+
 logger = logging.getLogger(__name__)
 
 
 # -- Command wrappers (registered by Orchestrator._register_commands) --
+
+
+async def cmd_think(orch: Orchestrator, key: SessionKey, text: str) -> OrchestratorResult:
+    """Handle /think [level]: get or set reasoning effort."""
+    parts = text.split(None, 1)
+    session = await orch._sessions.get_active(key)
+
+    if len(parts) < 2:
+        current = session.thinking_level if session else None
+        label = current or "default"
+        return OrchestratorResult(
+            text=f"Thinking level: *{label}*\n\nValid: {', '.join(sorted(THINKING_LEVELS))}"
+        )
+
+    level = parts[1].strip().lower()
+    if level not in THINKING_LEVELS:
+        return OrchestratorResult(
+            text=f"Invalid level `{level}`. Valid: {', '.join(sorted(THINKING_LEVELS))}"
+        )
+
+    if not session:
+        return OrchestratorResult(text="No active session. Send a message first.")
+
+    session.thinking_level = None if level == "off" else level
+    await orch._sessions.save_session(session)
+    return OrchestratorResult(text=f"Thinking level set to *{level}*")
 
 
 async def cmd_reset(orch: Orchestrator, key: SessionKey, _text: str) -> OrchestratorResult:
@@ -34,6 +69,33 @@ async def cmd_reset(orch: Orchestrator, key: SessionKey, _text: str) -> Orchestr
     await orch._process_registry.kill_all(key.chat_id)
     provider = await orch.reset_active_provider_session(key)
     return OrchestratorResult(text=new_session_text(provider))
+
+
+async def cmd_compact(orch: Orchestrator, key: SessionKey, _text: str) -> OrchestratorResult:
+    """Handle /compact: summarize and compress session context."""
+    session = await orch._sessions.get_active(key)
+    if not session or not session.session_id:
+        return OrchestratorResult(text="No active session to compact.")
+
+    from klir.cli.types import AgentRequest
+
+    request = AgentRequest(
+        prompt=COMPACT_PROMPT,
+        model_override=session.model,
+        provider_override=session.provider,
+        chat_id=key.chat_id,
+        topic_id=key.topic_id,
+        resume_session=session.session_id,
+        timeout_seconds=120.0,
+    )
+    response = await orch._cli_service.execute(request)
+    if response.is_error:
+        return OrchestratorResult(text=f"Compact failed: {response.result}")
+
+    await orch._sessions.update_session(
+        session, cost_usd=response.cost_usd, tokens=response.total_tokens
+    )
+    return OrchestratorResult(text=response.result)
 
 
 async def cmd_status(orch: Orchestrator, key: SessionKey, _text: str) -> OrchestratorResult:

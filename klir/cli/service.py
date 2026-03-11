@@ -318,6 +318,7 @@ class CLIService:
                 max_budget_usd=self._config.max_budget_usd,
                 permission_mode=self._config.permission_mode,
                 reasoning_effort=self._config.reasoning_effort,
+                thinking_level=request.thinking_level,
                 gemini_api_key=self._config.gemini_api_key,
                 docker_container=self._config.docker_container,
                 process_registry=self._process_registry,

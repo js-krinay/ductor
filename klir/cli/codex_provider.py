@@ -130,8 +130,9 @@ class CodexCLI(BaseCLI):
 
         if cfg.model:
             cmd += ["--model", cfg.model]
-        if cfg.reasoning_effort and cfg.reasoning_effort != "default":
-            cmd += ["-c", f"model_reasoning_effort={cfg.reasoning_effort}"]
+        effective_effort = cfg.thinking_level or cfg.reasoning_effort
+        if effective_effort and effective_effort != "default":
+            cmd += ["-c", f"model_reasoning_effort={effective_effort}"]
         if cfg.instructions:
             cmd += ["--instructions", cfg.instructions]
         for img in cfg.images:

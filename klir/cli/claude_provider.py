@@ -68,6 +68,9 @@ class ClaudeCodeCLI(BaseCLI):
             str(cfg.max_budget_usd) if cfg.max_budget_usd is not None else None,
         )
 
+        if cfg.thinking_level:
+            _add_opt(cmd, "--thinking", cfg.thinking_level)
+
         if cfg.allowed_tools:
             cmd += ["--allowedTools", *cfg.allowed_tools]
         if cfg.disallowed_tools:

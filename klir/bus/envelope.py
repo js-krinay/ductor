@@ -84,6 +84,11 @@ class Envelope:
     session_id: str = ""
 
     @property
-    def lock_key(self) -> tuple[int, int | None]:
-        """Key for per-session lock acquisition."""
-        return (self.chat_id, self.topic_id)
+    def lock_key(self) -> tuple[int, int | None, None]:
+        """Key for per-session lock acquisition.
+
+        Returns a 3-tuple ``(chat_id, topic_id, None)`` consistent with
+        ``SessionKey.lock_key`` format so LockPool never needs to normalise.
+        Envelopes are not user-isolated, so the third element is always None.
+        """
+        return (self.chat_id, self.topic_id, None)

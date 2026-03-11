@@ -57,6 +57,7 @@ class AgentRequest:
     process_label: str = "main"
     resume_session: str | None = None
     continue_session: bool = False
+    thinking_level: str | None = None
     timeout_seconds: float | None = None
     timeout_controller: TimeoutController | None = None
 

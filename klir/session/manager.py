@@ -90,21 +90,25 @@ class SessionData:
 
     chat_id: int
     topic_id: int | None
+    user_id: int | None
     topic_name: str | None
     provider: str
     model: str
     created_at: str
     last_active: str
+    thinking_level: str | None
     provider_sessions: dict[str, ProviderSessionData] = field(default_factory=dict)
 
     def __init__(self, chat_id: int, **raw: object) -> None:
         """Create session data from current or legacy serialized fields."""
         topic_id = _as_optional_int(raw.pop("topic_id", None))
+        user_id = _as_optional_int(raw.pop("user_id", None))
         topic_name = _as_optional_str(raw.pop("topic_name", None))
         provider = _as_str(raw.pop("provider", "claude"), default="claude")
         model = _as_str(raw.pop("model", "opus"), default="opus")
         created_at = _as_str(raw.pop("created_at", ""), default="")
         last_active = _as_str(raw.pop("last_active", ""), default="")
+        thinking_level = _as_optional_str(raw.pop("thinking_level", None))
         provider_sessions = _as_mapping(raw.pop("provider_sessions", None))
 
         # Backward compatibility for old JSON/tests.
@@ -115,6 +119,7 @@ class SessionData:
 
         self.chat_id = chat_id
         self.topic_id = topic_id
+        self.user_id = user_id
         self.topic_name = topic_name
         self.provider = provider
         self.model = model
@@ -122,6 +127,7 @@ class SessionData:
         now = datetime.now(UTC).isoformat()
         self.created_at = created_at or now
         self.last_active = last_active or now
+        self.thinking_level = thinking_level
 
         migrated = self._coerce_provider_sessions(provider_sessions)
         has_legacy_fields = any(
@@ -142,7 +148,7 @@ class SessionData:
     @property
     def session_key(self) -> SessionKey:
         """Composite key for this session."""
-        return SessionKey(chat_id=self.chat_id, topic_id=self.topic_id)
+        return SessionKey(chat_id=self.chat_id, topic_id=self.topic_id, user_id=self.user_id)
 
     @property
     def session_id(self) -> str:
@@ -277,6 +283,13 @@ class SessionManager:
         session.topic_name = self._topic_name_resolver(session.chat_id, session.topic_id)
         return True
 
+    async def save_session(self, session: SessionData) -> None:
+        """Persist a single session's current state to disk."""
+        async with self._lock:
+            sessions = await self._load()
+            sessions[session.session_key.storage_key] = session
+            await self._save(sessions)
+
     async def resolve_session(
         self,
         key: SessionKey,
@@ -323,6 +336,7 @@ class SessionManager:
         new = SessionData(
             chat_id=key.chat_id,
             topic_id=key.topic_id,
+            user_id=key.user_id,
             topic_name=topic_name,
             provider=prov,
             model=model_name,
@@ -362,6 +376,7 @@ class SessionManager:
         new = SessionData(
             chat_id=key.chat_id,
             topic_id=key.topic_id,
+            user_id=key.user_id,
             provider=prov,
             model=model_name,
             provider_sessions={},
@@ -385,6 +400,7 @@ class SessionManager:
             current = SessionData(
                 chat_id=key.chat_id,
                 topic_id=key.topic_id,
+                user_id=key.user_id,
                 provider=provider,
                 model=model,
                 provider_sessions={},
@@ -581,6 +597,8 @@ class SessionManager:
                 parsed = SessionKey.parse(k)
                 if "topic_id" not in v and parsed.topic_id is not None:
                     v["topic_id"] = parsed.topic_id
+                if "user_id" not in v and parsed.user_id is not None:
+                    v["user_id"] = parsed.user_id
                 result[k] = SessionData(**v)
             return result
 

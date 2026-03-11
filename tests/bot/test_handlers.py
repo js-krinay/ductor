@@ -155,6 +155,7 @@ class TestHandleNewSession:
 
         orchestrator = MagicMock()
         orchestrator.reset_active_provider_session = AsyncMock(return_value="claude")
+        orchestrator.config.peer_isolation = False
         bot = MagicMock()
         bot.send_message = AsyncMock()
 

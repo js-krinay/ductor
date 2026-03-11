@@ -28,6 +28,7 @@ from klir.errors import (
 from klir.infra.docker import DockerManager
 from klir.infra.inflight import InflightTracker
 from klir.orchestrator.commands import (
+    cmd_compact,
     cmd_cron,
     cmd_diagnose,
     cmd_hooks,
@@ -37,6 +38,7 @@ from klir.orchestrator.commands import (
     cmd_sessions,
     cmd_status,
     cmd_tasks,
+    cmd_think,
     cmd_upgrade,
 )
 from klir.orchestrator.directives import parse_directives
@@ -376,6 +378,12 @@ class Orchestrator:
     def _register_commands(self) -> None:
         reg = self._command_registry
         reg.register_async("/new", cmd_reset)
+        reg.register_async("/compact", cmd_compact)
+        # Both entries are intentional: "/think" (exact) handles the bare
+        # command, "/think " (trailing space, prefix match) handles
+        # "/think high" etc. — same pattern as "/model" + "/model ".
+        reg.register_async("/think", cmd_think)
+        reg.register_async("/think ", cmd_think)
         # /stop is handled entirely by the Middleware abort path (before the lock)
         # and never reaches the orchestrator command registry.
         reg.register_async("/status", cmd_status)

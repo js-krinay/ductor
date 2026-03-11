@@ -209,7 +209,7 @@ class TelegramBot:
 
         self._bus.register_transport(TelegramTransport(self))
         self._sequential = SequentialMiddleware(
-            lock_pool=self._lock_pool, topic_names=self._topic_names
+            lock_pool=self._lock_pool, topic_names=self._topic_names, config=self._config
         )
         self._sequential.set_bot(self._bot)
         self._sequential.set_abort_handler(self._on_abort)
@@ -801,7 +801,7 @@ class TelegramBot:
             return True
 
         if text_lower.startswith("/model"):
-            key = get_session_key(message)
+            key = get_session_key(message, config=self._config)
             if self._sequential.is_busy(chat_id) or self._orch.is_chat_busy(chat_id):
                 await send_rich(
                     self._bot,
@@ -1065,7 +1065,7 @@ class TelegramBot:
             return
 
         chat_id = msg.chat.id
-        key = get_session_key(msg)
+        key = get_session_key(msg, config=self._config)
         thread_id = get_thread_id(msg)
         set_log_context(operation="cb", chat_id=chat_id)
         logger.info("Callback data=%s", data[:40])
@@ -1285,7 +1285,7 @@ class TelegramBot:
             if fwd_ctx:
                 text = prepend_forward_context(fwd_ctx, text)
 
-        key = get_session_key(message)
+        key = get_session_key(message, config=self._config)
         if key.topic_id is not None:
             self._topic_names.touch(key.chat_id, key.topic_id)
         thread_id = get_thread_id(message)
@@ -1310,7 +1310,7 @@ class TelegramBot:
         if text is None:
             return
 
-        key = get_session_key(message)
+        key = get_session_key(message, config=self._config)
         thread_id = get_thread_id(message)
 
         try:

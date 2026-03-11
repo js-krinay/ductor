@@ -440,3 +440,54 @@ async def test_list_active_for_chat_excludes_stale(tmp_path: Path) -> None:
     with time_machine.travel("2099-01-01 00:00:00", tick=False):
         result = await mgr.list_active_for_chat(-100)
         assert len(result) == 0
+
+
+async def test_peer_isolated_sessions_get_separate_storage_keys(tmp_path: Path) -> None:
+    """Two users in the same chat get distinct storage keys when user_id is set."""
+    mgr = _make_manager(tmp_path, idle_timeout_minutes=30)
+
+    key_user1 = SessionKey(chat_id=100, user_id=1)
+    key_user2 = SessionKey(chat_id=100, user_id=2)
+
+    s1, new1 = await mgr.resolve_session(key=key_user1)
+    await _simulate_cli_response(mgr, s1, "session-user1")
+
+    s2, new2 = await mgr.resolve_session(key=key_user2)
+    await _simulate_cli_response(mgr, s2, "session-user2")
+
+    # Both should be created as new sessions
+    assert new1 is True
+    assert new2 is True
+
+    # They must have distinct storage keys
+    assert key_user1.storage_key != key_user2.storage_key
+
+    # Reloading each key returns the correct session
+    r1, _ = await mgr.resolve_session(key=key_user1)
+    r2, _ = await mgr.resolve_session(key=key_user2)
+    assert r1.session_id == "session-user1"
+    assert r2.session_id == "session-user2"
+
+
+async def test_session_data_user_id_round_trips(tmp_path: Path) -> None:
+    """user_id is persisted and restored from JSON storage."""
+    from dataclasses import asdict
+
+    mgr = _make_manager(tmp_path, idle_timeout_minutes=30)
+    key = SessionKey(chat_id=100, user_id=42)
+
+    s, _ = await mgr.resolve_session(key=key)
+    assert s.user_id == 42
+    assert s.session_key.user_id == 42
+
+    # Verify the session_key property includes user_id
+    assert s.session_key == key
+
+    # Verify user_id is in serialized form
+    d = asdict(s)
+    assert d["user_id"] == 42
+
+    # Reload from disk — user_id must survive round-trip
+    mgr2 = _make_manager(tmp_path, idle_timeout_minutes=30)
+    loaded, _ = await mgr2.resolve_session(key=key)
+    assert loaded.user_id == 42

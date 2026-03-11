@@ -40,6 +40,15 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT = 300.0
 
+# Mapping from symbolic thinking level names to numeric token budgets accepted
+# by the Gemini CLI --thinking-budget flag.
+_THINKING_BUDGET: dict[str, int] = {
+    "minimal": 1024,
+    "low": 4096,
+    "medium": 8192,
+    "high": 24576,
+}
+
 # Must match ``_KLIR_MOUNT`` in ``klir.infra.docker``.
 _CONTAINER_KLIR = "/klir"
 
@@ -101,6 +110,10 @@ class GeminiCLI(BaseCLI):
             cmd += ["--resume", "latest"]
         if cfg.allowed_tools:
             cmd += ["--allowed-tools", *cfg.allowed_tools]
+        if cfg.thinking_level:
+            budget = _THINKING_BUDGET.get(cfg.thinking_level)
+            if budget is not None:
+                cmd += ["--thinking-budget", str(budget)]
         if cfg.cli_parameters:
             cmd.extend(cfg.cli_parameters)
 

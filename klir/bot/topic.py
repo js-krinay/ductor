@@ -12,7 +12,7 @@ from klir.session.key import SessionKey
 if TYPE_CHECKING:
     from aiogram.types import Message
 
-    from klir.config import ThreadBindingConfig
+    from klir.config import AgentConfig, ThreadBindingConfig
     from klir.session.manager import SessionData
 
 logger = logging.getLogger(__name__)
@@ -32,12 +32,19 @@ def get_thread_id(message: Message | None) -> int | None:
     return None
 
 
-def get_session_key(message: Message) -> SessionKey:
+def get_session_key(
+    message: Message,
+    *,
+    config: AgentConfig | None = None,
+) -> SessionKey:
     """Build a transport-agnostic ``SessionKey`` from a Telegram message.
 
     Forum topic messages get per-topic keys (``topic_id=message_thread_id``).
     Regular chats and non-topic supergroup messages get flat keys
     (``topic_id=None``).
+
+    When *config* has ``peer_isolation`` enabled, the sender's user ID is
+    included in the key so each user gets an isolated session.
     """
     topic_id = message.message_thread_id if message.is_topic_message else None
     if message.message_thread_id is not None:
@@ -47,7 +54,10 @@ def get_session_key(message: Message) -> SessionKey:
             message.message_thread_id,
             topic_id,
         )
-    return SessionKey(chat_id=message.chat.id, topic_id=topic_id)
+    user_id = None
+    if config and config.peer_isolation and message.from_user:
+        user_id = message.from_user.id
+    return SessionKey(chat_id=message.chat.id, topic_id=topic_id, user_id=user_id)
 
 
 def get_topic_name_from_message(message: Message) -> str | None:

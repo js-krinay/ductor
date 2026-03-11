@@ -88,7 +88,7 @@ async def handle_command(orchestrator: Orchestrator, bot: Bot, message: Message)
     """Route an orchestrator command (e.g. /status, /model)."""
     if not message.text:
         return
-    key = get_session_key(message)
+    key = get_session_key(message, config=orchestrator.config)
     chat_id = key.chat_id
     thread_id = get_thread_id(message)
     logger.info("Command dispatched cmd=%s", message.text.strip()[:40])
@@ -153,7 +153,7 @@ async def handle_new_session(
         )
         return
 
-    key = get_session_key(message)
+    key = get_session_key(message, config=orchestrator.config)
     async with TypingContext(bot, chat_id, thread_id=thread_id):
         provider = await orchestrator.reset_active_provider_session(key)
     await send_rich(

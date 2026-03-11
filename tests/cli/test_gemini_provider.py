@@ -137,6 +137,48 @@ class TestBuildCommand:
         assert "-p" not in cmd
         assert "--prompt" not in cmd
 
+    def test_thinking_budget_high(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """thinking_level 'high' maps to numeric token budget 24576."""
+        cli = _make_cli(monkeypatch, thinking_level="high")
+        cmd = cli._build_command()
+        assert "--thinking-budget" in cmd
+        idx = cmd.index("--thinking-budget")
+        assert cmd[idx + 1] == "24576"
+
+    def test_thinking_budget_low(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """thinking_level 'low' maps to numeric token budget 4096."""
+        cli = _make_cli(monkeypatch, thinking_level="low")
+        cmd = cli._build_command()
+        assert "--thinking-budget" in cmd
+        idx = cmd.index("--thinking-budget")
+        assert cmd[idx + 1] == "4096"
+
+    def test_thinking_budget_medium(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """thinking_level 'medium' maps to numeric token budget 8192."""
+        cli = _make_cli(monkeypatch, thinking_level="medium")
+        cmd = cli._build_command()
+        idx = cmd.index("--thinking-budget")
+        assert cmd[idx + 1] == "8192"
+
+    def test_thinking_budget_minimal(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """thinking_level 'minimal' maps to numeric token budget 1024."""
+        cli = _make_cli(monkeypatch, thinking_level="minimal")
+        cmd = cli._build_command()
+        idx = cmd.index("--thinking-budget")
+        assert cmd[idx + 1] == "1024"
+
+    def test_thinking_budget_unknown_level_skipped(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Unknown thinking level strings are not forwarded to the CLI."""
+        cli = _make_cli(monkeypatch, thinking_level="turbo")
+        cmd = cli._build_command()
+        assert "--thinking-budget" not in cmd
+
+    def test_thinking_budget_absent_when_no_level(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """No --thinking-budget flag when thinking_level is not set."""
+        cli = _make_cli(monkeypatch)
+        cmd = cli._build_command()
+        assert "--thinking-budget" not in cmd
+
 
 class TestPrepareEnv:
     def test_prepends_cli_parent_when_cli_path_is_absolute(
