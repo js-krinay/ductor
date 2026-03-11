@@ -82,8 +82,8 @@ class DockerConfig(BaseModel):
     """Settings for Docker-based CLI sandboxing."""
 
     enabled: bool = False
-    image_name: str = "ductor-sandbox"
-    container_name: str = "ductor-sandbox"
+    image_name: str = "klir-sandbox"
+    container_name: str = "klir-sandbox"
     auto_build: bool = True
     mount_host_cache: bool = False
     mounts: list[str] = Field(default_factory=list)
@@ -310,7 +310,7 @@ class AgentConfig(BaseModel):
     log_level: str = "INFO"
     provider: str = "claude"
     model: str = "opus"
-    ductor_home: str = "~/.ductor"
+    klir_home: str = "~/.ductor"
     idle_timeout_minutes: int = 1440
     session_age_warning_hours: int = 12
     daily_reset_hour: int = 4

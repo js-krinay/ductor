@@ -160,7 +160,7 @@ class TestPrepareEnv:
     def test_host_to_container_path_normalizes_windows_separators(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        fake_paths = type("P", (), {"ductor_home": Path(r"C:\Users\ZOZN109\.ductor")})()
+        fake_paths = type("P", (), {"klir_home": Path(r"C:\Users\ZOZN109\.ductor")})()
         monkeypatch.setattr(
             "klir.cli.gemini_provider.resolve_paths",
             lambda: fake_paths,

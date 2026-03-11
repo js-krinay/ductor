@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from klir.cleanup.observer import CleanupObserver, _delete_old_files
 from klir.config import AgentConfig, CleanupConfig
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 # -- _delete_old_files (sync helper) --
 
@@ -91,8 +91,8 @@ def _make_config(*, enabled: bool = True, check_hour: int = 3) -> AgentConfig:
     )
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
-    return DuctorPaths(ductor_home=tmp_path)
+def _make_paths(tmp_path: Path) -> KlirPaths:
+    return KlirPaths(klir_home=tmp_path)
 
 
 async def test_start_disabled_does_not_spawn_task(tmp_path: Path) -> None:

@@ -16,7 +16,7 @@ from klir.infra.task_runner import run_oneshot_task
 if TYPE_CHECKING:
     from klir.cli.param_resolver import TaskExecutionConfig
     from klir.cli.service import CLIService
-    from klir.workspace.paths import DuctorPaths
+    from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class BackgroundObserver:
 
     def __init__(
         self,
-        paths: DuctorPaths,
+        paths: KlirPaths,
         *,
         timeout_seconds: float,
         cli_service: CLIService | None = None,

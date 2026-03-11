@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from klir.workspace.paths import DuctorPaths, resolve_paths
+from klir.workspace.paths import KlirPaths, resolve_paths
 
 _console = Console()
 
@@ -56,9 +56,9 @@ def print_agents_help() -> None:
     _console.print()
 
 
-def load_agents_registry(paths: DuctorPaths) -> list[dict[str, object]]:
+def load_agents_registry(paths: KlirPaths) -> list[dict[str, object]]:
     """Load sub-agent definitions from agents.json (raw dicts)."""
-    agents_path = paths.ductor_home / "agents.json"
+    agents_path = paths.klir_home / "agents.json"
     if not agents_path.is_file():
         return []
     try:
@@ -169,7 +169,7 @@ def agents_list() -> None:
         _console.print("[dim]Use 'ductor agents add <name>' to create one.[/dim]")
         return
     # Check if bot is running for live health
-    pid_file = paths.ductor_home / "bot.pid"
+    pid_file = paths.klir_home / "bot.pid"
     bot_running = False
     if pid_file.exists():
         try:
@@ -247,7 +247,7 @@ def agents_add(rest: list[str]) -> None:
 
     from klir.infra.json_store import atomic_json_save
 
-    agents_path = paths.ductor_home / "agents.json"
+    agents_path = paths.klir_home / "agents.json"
     atomic_json_save(agents_path, agents)
 
     _console.print(f"[green]Agent '{name}' added to agents.json.[/green]")
@@ -282,10 +282,10 @@ def agents_remove(rest: list[str]) -> None:
     from klir.infra.json_store import atomic_json_save
 
     remaining = [a for a in agents if str(a.get("name", "")).lower() != name]
-    agents_path = paths.ductor_home / "agents.json"
+    agents_path = paths.klir_home / "agents.json"
     atomic_json_save(agents_path, remaining)
     _console.print(f"[green]Agent '{name}' removed from agents.json.[/green]")
-    _console.print(f"[dim]Workspace data remains at {paths.ductor_home / 'agents' / name}[/dim]")
+    _console.print(f"[dim]Workspace data remains at {paths.klir_home / 'agents' / name}[/dim]")
 
 
 def cmd_agents(args: list[str]) -> None:

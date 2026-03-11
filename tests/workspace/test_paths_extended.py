@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 
-def _paths(tmp_path: Path) -> DuctorPaths:
+def _paths(tmp_path: Path) -> KlirPaths:
     fw = tmp_path / "fw"
-    return DuctorPaths(
-        ductor_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw
+    return KlirPaths(
+        klir_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw
     )
 
 

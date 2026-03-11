@@ -128,7 +128,7 @@ def docker_set_enabled(*, enabled: bool) -> None:
     atomic_json_save(config_path, data)
 
     if not enabled:
-        container = str(docker.get("container_name", "ductor-sandbox"))
+        container = str(docker.get("container_name", "klir-sandbox"))
         _stop_docker_container(container)
 
     state = "[green]enabled[/green]" if enabled else "[dim]disabled[/dim]"
@@ -145,8 +145,8 @@ def docker_rebuild() -> None:
         return
 
     result = docker_read_config()
-    container = "ductor-sandbox"
-    image = "ductor-sandbox"
+    container = "klir-sandbox"
+    image = "klir-sandbox"
     if result is not None:
         _, data = result
         docker = data.get("docker", {})
@@ -334,12 +334,12 @@ def docker_container_name() -> str:
     """Return the configured Docker container name or default."""
     result = docker_read_config()
     if result is None:
-        return "ductor-sandbox"
+        return "klir-sandbox"
     _, data = result
     docker = data.get("docker", {})
     if isinstance(docker, dict):
-        return str(docker.get("container_name", "ductor-sandbox"))
-    return "ductor-sandbox"
+        return str(docker.get("container_name", "klir-sandbox"))
+    return "klir-sandbox"
 
 
 # -- extras subcommands -----------------------------------------------------

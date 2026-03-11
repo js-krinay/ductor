@@ -13,7 +13,7 @@ from klir.config import AgentConfig
 from klir.errors import CLIError, CronError, SessionError, StreamError, WorkspaceError
 from klir.orchestrator.core import Orchestrator
 from klir.session.key import SessionKey
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 
 @pytest.fixture
@@ -138,7 +138,7 @@ async def test_abort_returns_count(orch: Orchestrator) -> None:
 
 
 async def test_create_with_authenticated_provider(
-    workspace: tuple[DuctorPaths, AgentConfig],
+    workspace: tuple[KlirPaths, AgentConfig],
 ) -> None:
     paths, config = workspace
     claude_auth = AuthResult("claude", AuthStatus.AUTHENTICATED)
@@ -164,7 +164,7 @@ async def test_create_with_authenticated_provider(
 
 
 async def test_create_no_authenticated_providers(
-    workspace: tuple[DuctorPaths, AgentConfig],
+    workspace: tuple[KlirPaths, AgentConfig],
 ) -> None:
     paths, config = workspace
     claude_auth = AuthResult("claude", AuthStatus.NOT_FOUND)
@@ -190,7 +190,7 @@ async def test_create_no_authenticated_providers(
 
 
 async def test_create_installed_but_not_authenticated(
-    workspace: tuple[DuctorPaths, AgentConfig],
+    workspace: tuple[KlirPaths, AgentConfig],
 ) -> None:
     paths, config = workspace
     claude_auth = AuthResult("claude", AuthStatus.INSTALLED)
@@ -216,7 +216,7 @@ async def test_create_installed_but_not_authenticated(
 
 
 async def test_create_both_providers_authenticated(
-    workspace: tuple[DuctorPaths, AgentConfig],
+    workspace: tuple[KlirPaths, AgentConfig],
 ) -> None:
     paths, config = workspace
     claude_auth = AuthResult("claude", AuthStatus.AUTHENTICATED)
@@ -242,7 +242,7 @@ async def test_create_both_providers_authenticated(
 
 
 async def test_create_starts_cron_and_heartbeat(
-    workspace: tuple[DuctorPaths, AgentConfig],
+    workspace: tuple[KlirPaths, AgentConfig],
 ) -> None:
     paths, config = workspace
     claude_auth = AuthResult("claude", AuthStatus.AUTHENTICATED)
@@ -508,7 +508,7 @@ async def test_suspicious_input_still_routes(orch: Orchestrator) -> None:
 
 
 def test_paths_property(
-    workspace: tuple[DuctorPaths, AgentConfig],
+    workspace: tuple[KlirPaths, AgentConfig],
 ) -> None:
     paths, config = workspace
     o = Orchestrator(config, paths)

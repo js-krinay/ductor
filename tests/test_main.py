@@ -11,7 +11,7 @@ import pytest
 
 from klir.config import AgentConfig
 from klir.infra.version import get_current_version
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 # Shorthand module paths for patching the new submodules.
 _LIFECYCLE = "klir.cli_commands.lifecycle"
@@ -32,7 +32,7 @@ class TestLoadConfig:
         (fw / "config.example.json").write_text(json.dumps(example))
 
         with patch("klir.__main__.resolve_paths") as mock_paths:
-            paths = DuctorPaths(ductor_home=home, home_defaults=fw / "workspace", framework_root=fw)
+            paths = KlirPaths(klir_home=home, home_defaults=fw / "workspace", framework_root=fw)
             mock_paths.return_value = paths
             with patch("klir.__main__.init_workspace"):
                 config = load_config()
@@ -52,7 +52,7 @@ class TestLoadConfig:
         (config_dir / "config.json").write_text(json.dumps(user_cfg))
 
         with patch("klir.__main__.resolve_paths") as mock_paths:
-            paths = DuctorPaths(ductor_home=home, home_defaults=fw / "workspace", framework_root=fw)
+            paths = KlirPaths(klir_home=home, home_defaults=fw / "workspace", framework_root=fw)
             mock_paths.return_value = paths
             with patch("klir.__main__.init_workspace"):
                 config = load_config()
@@ -72,7 +72,7 @@ class TestLoadConfig:
         (config_dir / "config.json").write_text(json.dumps(old_cfg))
 
         with patch("klir.__main__.resolve_paths") as mock_paths:
-            paths = DuctorPaths(ductor_home=home, home_defaults=fw / "workspace", framework_root=fw)
+            paths = KlirPaths(klir_home=home, home_defaults=fw / "workspace", framework_root=fw)
             mock_paths.return_value = paths
             with patch("klir.__main__.init_workspace"):
                 config = load_config()
@@ -90,7 +90,7 @@ class TestLoadConfig:
         fw.mkdir()
 
         with patch("klir.__main__.resolve_paths") as mock_paths:
-            paths = DuctorPaths(ductor_home=home, home_defaults=fw / "workspace", framework_root=fw)
+            paths = KlirPaths(klir_home=home, home_defaults=fw / "workspace", framework_root=fw)
             mock_paths.return_value = paths
             with patch("klir.__main__.init_workspace"):
                 config = load_config()
@@ -112,7 +112,7 @@ class TestLoadConfig:
         (config_dir / "config.json").write_text(json.dumps(user_cfg), encoding="utf-8")
 
         with patch("klir.__main__.resolve_paths") as mock_paths:
-            paths = DuctorPaths(ductor_home=home, home_defaults=fw / "workspace", framework_root=fw)
+            paths = KlirPaths(klir_home=home, home_defaults=fw / "workspace", framework_root=fw)
             mock_paths.return_value = paths
             with patch("klir.__main__.init_workspace"):
                 config = load_config()
@@ -127,8 +127,8 @@ class TestIsConfigured:
         from klir.__main__ import _is_configured
 
         with patch("klir.__main__.resolve_paths") as mock_paths:
-            paths = DuctorPaths(
-                ductor_home=tmp_path / "home",
+            paths = KlirPaths(
+                klir_home=tmp_path / "home",
                 home_defaults=tmp_path / "fw" / "workspace",
                 framework_root=tmp_path / "fw",
             )
@@ -145,8 +145,8 @@ class TestIsConfigured:
         (config_dir / "config.json").write_text(json.dumps(cfg))
 
         with patch("klir.__main__.resolve_paths") as mock_paths:
-            paths = DuctorPaths(
-                ductor_home=home,
+            paths = KlirPaths(
+                klir_home=home,
                 home_defaults=tmp_path / "fw" / "workspace",
                 framework_root=tmp_path / "fw",
             )
@@ -158,14 +158,14 @@ class TestRunTelegram:
     async def test_exits_on_missing_token(self, tmp_path: Path) -> None:
         from klir.__main__ import run_telegram
 
-        config = AgentConfig(telegram_token="", ductor_home=str(tmp_path))
+        config = AgentConfig(telegram_token="", klir_home=str(tmp_path))
         with pytest.raises(SystemExit):
             await run_telegram(config)
 
     async def test_exits_on_placeholder_token(self, tmp_path: Path) -> None:
         from klir.__main__ import run_telegram
 
-        config = AgentConfig(telegram_token="YOUR_TOKEN_HERE", ductor_home=str(tmp_path))
+        config = AgentConfig(telegram_token="YOUR_TOKEN_HERE", klir_home=str(tmp_path))
         with pytest.raises(SystemExit):
             await run_telegram(config)
 
@@ -173,7 +173,7 @@ class TestRunTelegram:
         from klir.__main__ import run_telegram
 
         config = AgentConfig(
-            telegram_token="valid:token", allowed_user_ids=[], ductor_home=str(tmp_path)
+            telegram_token="valid:token", allowed_user_ids=[], klir_home=str(tmp_path)
         )
         with pytest.raises(SystemExit):
             await run_telegram(config)
@@ -182,7 +182,7 @@ class TestRunTelegram:
         from klir.__main__ import run_telegram
 
         config = AgentConfig(
-            telegram_token="valid:token", allowed_user_ids=[123], ductor_home=str(tmp_path)
+            telegram_token="valid:token", allowed_user_ids=[123], klir_home=str(tmp_path)
         )
         mock_supervisor = MagicMock()
         mock_supervisor.start = AsyncMock(return_value=0)
@@ -204,14 +204,14 @@ class TestRunTelegram:
         mock_supervisor.stop_all.assert_called_once()
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
+def _make_paths(tmp_path: Path) -> KlirPaths:
     home = tmp_path / "home"
     fw = tmp_path / "fw"
     fw.mkdir(parents=True, exist_ok=True)
-    return DuctorPaths(ductor_home=home, home_defaults=fw / "workspace", framework_root=fw)
+    return KlirPaths(klir_home=home, home_defaults=fw / "workspace", framework_root=fw)
 
 
-def _write_config(paths: DuctorPaths, data: dict[str, object]) -> None:
+def _write_config(paths: KlirPaths, data: dict[str, object]) -> None:
     paths.config_path.parent.mkdir(parents=True, exist_ok=True)
     paths.config_path.write_text(json.dumps(data), encoding="utf-8")
 
@@ -248,8 +248,8 @@ class TestStopBot:
         from klir.cli_commands.lifecycle import stop_bot
 
         paths = _make_paths(tmp_path)
-        paths.ductor_home.mkdir(parents=True)
-        pid_file = paths.ductor_home / "bot.pid"
+        paths.klir_home.mkdir(parents=True)
+        pid_file = paths.klir_home / "bot.pid"
         pid_file.write_text("12345", encoding="utf-8")
         with (
             patch(f"{_LIFECYCLE}.resolve_paths", return_value=paths),
@@ -263,7 +263,7 @@ class TestStopBot:
         from klir.cli_commands.lifecycle import stop_bot
 
         paths = _make_paths(tmp_path)
-        paths.ductor_home.mkdir(parents=True)
+        paths.klir_home.mkdir(parents=True)
         with patch(f"{_LIFECYCLE}.resolve_paths", return_value=paths):
             stop_bot()
 
@@ -271,7 +271,7 @@ class TestStopBot:
         from klir.cli_commands.lifecycle import stop_bot
 
         paths = _make_paths(tmp_path)
-        paths.ductor_home.mkdir(parents=True)
+        paths.klir_home.mkdir(parents=True)
         _write_config(
             paths,
             {
@@ -295,7 +295,7 @@ class TestUpgradeCli:
         from klir.cli_commands.lifecycle import upgrade
 
         paths = _make_paths(tmp_path)
-        paths.ductor_home.mkdir(parents=True)
+        paths.klir_home.mkdir(parents=True)
         with (
             patch("klir.infra.install.detect_install_mode", return_value="pipx"),
             patch(f"{_LIFECYCLE}.resolve_paths", return_value=paths),
@@ -314,7 +314,7 @@ class TestUpgradeCli:
         from klir.cli_commands.lifecycle import upgrade
 
         paths = _make_paths(tmp_path)
-        paths.ductor_home.mkdir(parents=True)
+        paths.klir_home.mkdir(parents=True)
         with (
             patch("klir.infra.install.detect_install_mode", return_value="pip"),
             patch(f"{_LIFECYCLE}.resolve_paths", return_value=paths),
@@ -333,7 +333,7 @@ class TestUpgradeCli:
         from klir.cli_commands.lifecycle import upgrade
 
         paths = _make_paths(tmp_path)
-        paths.ductor_home.mkdir(parents=True)
+        paths.klir_home.mkdir(parents=True)
         current = get_current_version()
         with (
             patch("klir.infra.install.detect_install_mode", return_value="pipx"),
@@ -352,7 +352,7 @@ class TestUpgradeCli:
         from klir.cli_commands.lifecycle import upgrade
 
         paths = _make_paths(tmp_path)
-        paths.ductor_home.mkdir(parents=True)
+        paths.klir_home.mkdir(parents=True)
         with (
             patch("klir.infra.install.detect_install_mode", return_value="pip"),
             patch(f"{_LIFECYCLE}.resolve_paths", return_value=paths),
@@ -425,7 +425,7 @@ class TestStartBotRestart:
             patch("klir.logging_config.setup_logging"),
             patch("klir.__main__.load_config", return_value=self._mock_config()),
             patch(f"{_LIFECYCLE}.asyncio.run", side_effect=_mock_asyncio_run(42)),
-            patch.dict("os.environ", {"DUCTOR_SUPERVISOR": "1"}),
+            patch.dict("os.environ", {"KLIR_SUPERVISOR": "1"}),
             pytest.raises(SystemExit) as exc_info,
         ):
             start_bot()
@@ -517,7 +517,7 @@ class TestUninstall:
         from klir.cli_commands.lifecycle import uninstall
 
         paths = _make_paths(tmp_path)
-        paths.ductor_home.mkdir(parents=True)
+        paths.klir_home.mkdir(parents=True)
         _write_config(paths, {"telegram_token": "x", "allowed_user_ids": [1]})
         with (
             patch(f"{_LIFECYCLE}.resolve_paths", return_value=paths),
@@ -528,13 +528,13 @@ class TestUninstall:
         ):
             mock_confirm.return_value.ask.return_value = True
             uninstall()
-        assert not paths.ductor_home.exists()
+        assert not paths.klir_home.exists()
 
     def test_uninstall_cancelled(self, tmp_path: Path) -> None:
         from klir.cli_commands.lifecycle import uninstall
 
         paths = _make_paths(tmp_path)
-        paths.ductor_home.mkdir(parents=True)
+        paths.klir_home.mkdir(parents=True)
         _write_config(paths, {"telegram_token": "x", "allowed_user_ids": [1]})
         with (
             patch(f"{_LIFECYCLE}.resolve_paths", return_value=paths),
@@ -542,7 +542,7 @@ class TestUninstall:
         ):
             mock_confirm.return_value.ask.return_value = False
             uninstall()
-        assert paths.ductor_home.exists()
+        assert paths.klir_home.exists()
 
 
 class TestMainDispatch:

@@ -21,7 +21,7 @@ from klir.security.paths import is_path_safe
 from klir.text.response_format import SEP, fmt
 
 if TYPE_CHECKING:
-    from klir.workspace.paths import DuctorPaths
+    from klir.workspace.paths import KlirPaths
 
 SF_PREFIX = "sf:"
 SF_FILE_PREFIX = "sf!"
@@ -35,13 +35,13 @@ def is_file_browser_callback(data: str) -> bool:
     return data.startswith((SF_PREFIX, SF_FILE_PREFIX))
 
 
-async def file_browser_start(paths: DuctorPaths) -> tuple[str, InlineKeyboardMarkup]:
+async def file_browser_start(paths: KlirPaths) -> tuple[str, InlineKeyboardMarkup]:
     """Build the initial ``/showfiles`` response for the root directory."""
     return await asyncio.to_thread(_build_view, paths, "")
 
 
 async def handle_file_browser_callback(
-    paths: DuctorPaths,
+    paths: KlirPaths,
     data: str,
 ) -> tuple[str, InlineKeyboardMarkup | None, str | None]:
     """Route a ``sf:`` or ``sf!`` callback.
@@ -52,7 +52,7 @@ async def handle_file_browser_callback(
     """
     if data.startswith(SF_FILE_PREFIX):
         rel = data[len(SF_FILE_PREFIX) :]
-        abs_dir = (paths.ductor_home / rel).resolve() if rel else paths.ductor_home.resolve()
+        abs_dir = (paths.klir_home / rel).resolve() if rel else paths.klir_home.resolve()
         prompt = (
             f"List all files in {abs_dir}/ and send me whichever one I ask for. "
             "Deliver files using file tags."
@@ -69,9 +69,9 @@ async def handle_file_browser_callback(
 # ---------------------------------------------------------------------------
 
 
-def _build_view(paths: DuctorPaths, rel: str) -> tuple[str, InlineKeyboardMarkup]:
+def _build_view(paths: KlirPaths, rel: str) -> tuple[str, InlineKeyboardMarkup]:
     """Build the text + keyboard for a directory listing."""
-    base = paths.ductor_home.resolve()
+    base = paths.klir_home.resolve()
     target = (base / rel).resolve() if rel else base
 
     if not is_path_safe(target, [base]) or not target.is_dir():

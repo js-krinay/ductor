@@ -44,30 +44,30 @@ def _build_subprocess_env(config: CLIConfig) -> dict[str, str] | None:
 
     # Merge user secrets (low priority — never override existing vars).
     working_dir = Path(config.working_dir)
-    ductor_home = working_dir.parent if working_dir.name == "workspace" else working_dir
-    env_file = ductor_home / ".env"
+    klir_home = working_dir.parent if working_dir.name == "workspace" else working_dir
+    env_file = klir_home / ".env"
     for key, value in load_env_secrets(env_file).items():
         if key not in env:
             env[key] = value
 
-    env["DUCTOR_AGENT_NAME"] = config.agent_name
-    env["DUCTOR_AGENT_ROLE"] = "main" if config.agent_name == "main" else "sub"
-    env["DUCTOR_INTERAGENT_PORT"] = str(config.interagent_port)
+    env["KLIR_AGENT_NAME"] = config.agent_name
+    env["KLIR_AGENT_ROLE"] = "main" if config.agent_name == "main" else "sub"
+    env["KLIR_INTERAGENT_PORT"] = str(config.interagent_port)
     if config.chat_id:
-        env["DUCTOR_CHAT_ID"] = str(config.chat_id)
+        env["KLIR_CHAT_ID"] = str(config.chat_id)
     if config.topic_id:
-        env["DUCTOR_TOPIC_ID"] = str(config.topic_id)
+        env["KLIR_TOPIC_ID"] = str(config.topic_id)
     working_dir = Path(config.working_dir)
-    ductor_home = working_dir.parent if working_dir.name == "workspace" else working_dir
-    env["DUCTOR_HOME"] = str(ductor_home)
+    klir_home = working_dir.parent if working_dir.name == "workspace" else working_dir
+    env["KLIR_HOME"] = str(klir_home)
     # Shared knowledge is always at the main agent's home level.
-    # For main: ductor_home itself. For sub-agents: ../../ from agents/<name>/.
+    # For main: klir_home itself. For sub-agents: ../../ from agents/<name>/.
     if config.agent_name == "main":
-        env["DUCTOR_SHARED_MEMORY_PATH"] = str(ductor_home / "SHAREDMEMORY.md")
+        env["KLIR_SHARED_MEMORY_PATH"] = str(klir_home / "SHAREDMEMORY.md")
     else:
         # Sub-agent home is <main_home>/agents/<name>/
-        main_home = ductor_home.parent.parent
-        env["DUCTOR_SHARED_MEMORY_PATH"] = str(main_home / "SHAREDMEMORY.md")
+        main_home = klir_home.parent.parent
+        env["KLIR_SHARED_MEMORY_PATH"] = str(main_home / "SHAREDMEMORY.md")
     return env
 
 

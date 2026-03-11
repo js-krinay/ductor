@@ -13,15 +13,15 @@ from shutil import which
 from typing import TYPE_CHECKING, ClassVar
 
 from klir.config import DockerConfig
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 if TYPE_CHECKING:
     from rich.console import Console
 
 logger = logging.getLogger(__name__)
 
-_DUCTOR_MOUNT = "/ductor"
-_CONTAINER_WS = f"{_DUCTOR_MOUNT}/workspace"
+_KLIR_MOUNT = "/ductor"
+_CONTAINER_WS = f"{_KLIR_MOUNT}/workspace"
 _MOUNT_PREFIX = "/mnt"
 
 
@@ -103,7 +103,7 @@ class DockerManager:
 
     _setup_lock: ClassVar[asyncio.Lock] = asyncio.Lock()
 
-    def __init__(self, config: DockerConfig, paths: DuctorPaths) -> None:
+    def __init__(self, config: DockerConfig, paths: KlirPaths) -> None:
         self._config = config
         self._paths = paths
         self._container: str | None = None
@@ -300,9 +300,9 @@ class DockerManager:
         # Sub-agent homes live at <root>/agents/<name>/; the container must see
         # the full tree so every agent can access its own workspace via paths
         # like /ductor/agents/<name>/workspace.
-        ductor_home = self._paths.ductor_home
-        if ductor_home.parent.name == "agents":
-            ductor_home = ductor_home.parent.parent
+        klir_home = self._paths.klir_home
+        if klir_home.parent.name == "agents":
+            klir_home = klir_home.parent.parent
 
         cmd: list[str] = [
             "docker",
@@ -314,9 +314,9 @@ class DockerManager:
             _CONTAINER_WS,
             # Mount the ENTIRE ~/.ductor so the CLI sees all framework files.
             "-v",
-            f"{ductor_home}:{_DUCTOR_MOUNT}",
+            f"{klir_home}:{_KLIR_MOUNT}",
             "-e",
-            f"DUCTOR_HOME={_DUCTOR_MOUNT}",
+            f"KLIR_HOME={_KLIR_MOUNT}",
             # Allow inter-agent communication from inside the container back
             # to the host's InternalAgentAPI (127.0.0.1:8799).
             "--add-host=host.docker.internal:host-gateway",

@@ -37,10 +37,10 @@ def mock_codex_cache() -> CodexModelCache:
 @pytest.fixture
 def observer(tmp_path: Path, mock_codex_cache: CodexModelCache) -> CronObserver:
     """Create a CronObserver with mock dependencies."""
-    from klir.workspace.paths import DuctorPaths
+    from klir.workspace.paths import KlirPaths
 
     # Mock paths
-    paths = MagicMock(spec=DuctorPaths)
+    paths = MagicMock(spec=KlirPaths)
     paths.cron_jobs_path = tmp_path / "cron_jobs.json"
     paths.cron_tasks_dir = tmp_path / "cron_tasks"
     paths.cron_tasks_dir.mkdir(exist_ok=True)

@@ -13,16 +13,16 @@ from klir.cli.param_resolver import TaskOverrides, resolve_cli_config
 from klir.config import AgentConfig
 from klir.cron.execution import build_cmd
 from klir.cron.manager import CronJob, CronManager
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 
 @pytest.fixture
-def mock_paths(tmp_path: Path) -> DuctorPaths:
-    """Create mock DuctorPaths for testing."""
-    home = tmp_path / "ductor_home"
+def mock_paths(tmp_path: Path) -> KlirPaths:
+    """Create mock KlirPaths for testing."""
+    home = tmp_path / "klir_home"
     fw = tmp_path / "fw"
-    paths = DuctorPaths(
-        ductor_home=home,
+    paths = KlirPaths(
+        klir_home=home,
         home_defaults=fw / "workspace",
         framework_root=fw,
     )
@@ -63,7 +63,7 @@ def base_config() -> AgentConfig:
 
 
 async def test_cron_task_model_override(
-    mock_paths: DuctorPaths,
+    mock_paths: KlirPaths,
     base_config: AgentConfig,
     mock_codex_cache: CodexModelCache,
 ) -> None:
@@ -109,7 +109,7 @@ async def test_cron_task_model_override(
 
 
 async def test_cron_task_cli_parameters(
-    mock_paths: DuctorPaths,
+    mock_paths: KlirPaths,
     base_config: AgentConfig,
     mock_codex_cache: CodexModelCache,
 ) -> None:
@@ -155,7 +155,7 @@ async def test_cron_task_cli_parameters(
 
 
 async def test_cron_task_reasoning_effort(
-    mock_paths: DuctorPaths,
+    mock_paths: KlirPaths,
     base_config: AgentConfig,
     mock_codex_cache: CodexModelCache,
 ) -> None:
@@ -203,7 +203,7 @@ async def test_cron_task_reasoning_effort(
 
 
 async def test_cron_task_fallback_to_global(
-    mock_paths: DuctorPaths,
+    mock_paths: KlirPaths,
     mock_codex_cache: CodexModelCache,
 ) -> None:
     """Verify that tasks without overrides use global config."""
@@ -255,7 +255,7 @@ async def test_cron_task_fallback_to_global(
 
 
 async def test_cron_task_provider_switch(
-    mock_paths: DuctorPaths,
+    mock_paths: KlirPaths,
     base_config: AgentConfig,
     mock_codex_cache: CodexModelCache,
 ) -> None:

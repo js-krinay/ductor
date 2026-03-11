@@ -8,7 +8,7 @@ import shutil
 import venv
 from pathlib import Path
 
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ def _validate_name(name: str) -> str:
 
 
 def create_cron_task(
-    paths: DuctorPaths,
+    paths: KlirPaths,
     name: str,
     title: str,
     description: str,
@@ -211,14 +211,14 @@ def ensure_task_rule_files(cron_tasks_dir: Path) -> int:
     return created
 
 
-def list_cron_tasks(paths: DuctorPaths) -> list[str]:
+def list_cron_tasks(paths: KlirPaths) -> list[str]:
     """Return sorted names of all cron task directories."""
     if not paths.cron_tasks_dir.is_dir():
         return []
     return sorted(d.name for d in paths.cron_tasks_dir.iterdir() if d.is_dir())
 
 
-def delete_cron_task(paths: DuctorPaths, name: str) -> bool:
+def delete_cron_task(paths: KlirPaths, name: str) -> bool:
     """Delete a cron task folder and all its contents. Returns False if not found."""
     safe_name = _validate_name(name)
     task_dir = (paths.cron_tasks_dir / safe_name).resolve()

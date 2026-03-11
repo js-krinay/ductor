@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 from klir.workspace.skill_sync import (
     _MANAGED_MARKER,
     _clean_broken_links,
@@ -27,9 +27,9 @@ from klir.workspace.skill_sync import (
 )
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
-    return DuctorPaths(
-        ductor_home=tmp_path / "ductor_home",
+def _make_paths(tmp_path: Path) -> KlirPaths:
+    return KlirPaths(
+        klir_home=tmp_path / "klir_home",
         home_defaults=tmp_path / "fw" / "_home_defaults",
         framework_root=tmp_path / "fw",
     )
@@ -231,7 +231,7 @@ def test_clean_nonexistent_dir(tmp_path: Path) -> None:
 
 def _setup_three_dirs(
     tmp_path: Path,
-) -> tuple[DuctorPaths, Path, Path]:
+) -> tuple[KlirPaths, Path, Path]:
     paths = _make_paths(tmp_path)
     paths.skills_dir.mkdir(parents=True)
     claude_home = tmp_path / "fake_home" / ".claude"
@@ -415,7 +415,7 @@ async def test_watch_cancellation(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Group 7: DuctorPaths.skills_dir property
+# Group 7: KlirPaths.skills_dir property
 # ---------------------------------------------------------------------------
 
 

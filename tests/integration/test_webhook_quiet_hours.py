@@ -15,17 +15,17 @@ from klir.config import AgentConfig, HeartbeatConfig, WebhookConfig
 from klir.webhook.manager import WebhookManager
 from klir.webhook.models import WebhookEntry
 from klir.webhook.observer import WebhookObserver
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
+def _make_paths(tmp_path: Path) -> KlirPaths:
     fw = tmp_path / "fw"
-    paths = DuctorPaths(
-        ductor_home=tmp_path / "home",
+    paths = KlirPaths(
+        klir_home=tmp_path / "home",
         home_defaults=fw / "workspace",
         framework_root=fw,
     )
@@ -33,7 +33,7 @@ def _make_paths(tmp_path: Path) -> DuctorPaths:
     return paths
 
 
-def _make_manager(paths: DuctorPaths) -> WebhookManager:
+def _make_manager(paths: KlirPaths) -> WebhookManager:
     return WebhookManager(hooks_path=paths.webhooks_path)
 
 
@@ -50,7 +50,7 @@ def _make_codex_cache() -> CodexModelCache:
 
 
 def _make_observer(
-    paths: DuctorPaths,
+    paths: KlirPaths,
     mgr: WebhookManager,
     **config_overrides: Any,
 ) -> WebhookObserver:
@@ -62,7 +62,7 @@ def _make_observer(
     )
 
 
-def _add_hook(mgr: WebhookManager, paths: DuctorPaths, **overrides: Any) -> WebhookEntry:
+def _add_hook(mgr: WebhookManager, paths: KlirPaths, **overrides: Any) -> WebhookEntry:
     defaults: dict[str, Any] = {
         "id": "test-hook",
         "title": "Test Hook",

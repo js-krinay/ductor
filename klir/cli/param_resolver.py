@@ -132,6 +132,6 @@ def resolve_cli_config(
         reasoning_effort=reasoning_effort,
         cli_parameters=cli_parameters,
         permission_mode=base_config.permission_mode,
-        working_dir=base_config.ductor_home,
+        working_dir=base_config.klir_home,
         file_access=base_config.file_access,
     )

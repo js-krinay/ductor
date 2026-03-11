@@ -224,7 +224,7 @@ def _resolve_log_path(orch: Orchestrator) -> Path:
     """
     log_path = orch.paths.logs_dir / "agent.log"
     if not log_path.exists():
-        main_logs = orch.paths.ductor_home.parent.parent / "logs" / "agent.log"
+        main_logs = orch.paths.klir_home.parent.parent / "logs" / "agent.log"
         if main_logs.exists():
             return main_logs
     return log_path

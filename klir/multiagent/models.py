@@ -74,7 +74,7 @@ def merge_sub_agent_config(
     overrides = sub.model_dump(exclude_none=True, exclude={"name"})
     base.update(overrides)
 
-    base["ductor_home"] = str(agent_home)
+    base["klir_home"] = str(agent_home)
     base["telegram_token"] = sub.telegram_token
     base["allowed_user_ids"] = sub.allowed_user_ids or []
     base["allowed_group_ids"] = sub.allowed_group_ids or []

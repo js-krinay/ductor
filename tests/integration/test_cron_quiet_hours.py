@@ -13,17 +13,17 @@ from klir.cli.codex_cache import CodexModelCache
 from klir.config import AgentConfig, HeartbeatConfig
 from klir.cron.manager import CronJob, CronManager
 from klir.cron.observer import CronObserver
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
+def _make_paths(tmp_path: Path) -> KlirPaths:
     fw = tmp_path / "fw"
-    paths = DuctorPaths(
-        ductor_home=tmp_path / "home",
+    paths = KlirPaths(
+        klir_home=tmp_path / "home",
         home_defaults=fw / "workspace",
         framework_root=fw,
     )
@@ -31,7 +31,7 @@ def _make_paths(tmp_path: Path) -> DuctorPaths:
     return paths
 
 
-def _make_manager(paths: DuctorPaths) -> CronManager:
+def _make_manager(paths: KlirPaths) -> CronManager:
     return CronManager(jobs_path=paths.cron_jobs_path)
 
 
@@ -44,7 +44,7 @@ def _make_codex_cache() -> CodexModelCache:
 
 
 def _make_observer(
-    paths: DuctorPaths,
+    paths: KlirPaths,
     mgr: CronManager,
     **config_overrides: Any,
 ) -> CronObserver:
@@ -56,7 +56,7 @@ def _make_observer(
     )
 
 
-def _add_job(mgr: CronManager, paths: DuctorPaths, **overrides: Any) -> CronJob:
+def _add_job(mgr: CronManager, paths: KlirPaths, **overrides: Any) -> CronJob:
     defaults: dict[str, Any] = {
         "id": "test-job",
         "title": "Test Job",

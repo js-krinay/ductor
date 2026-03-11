@@ -12,13 +12,13 @@ from klir.workspace.cron_tasks import (
     ensure_task_rule_files,
     list_cron_tasks,
 )
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
+def _make_paths(tmp_path: Path) -> KlirPaths:
     fw = tmp_path / "fw"
-    paths = DuctorPaths(
-        ductor_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw
+    paths = KlirPaths(
+        klir_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw
     )
     paths.cron_tasks_dir.mkdir(parents=True)
     return paths

@@ -31,7 +31,7 @@ from klir.webhook.manager import WebhookManager
 from klir.webhook.models import WebhookResult
 from klir.webhook.observer import WebhookObserver
 from klir.workspace.init import watch_rule_files
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 from klir.workspace.skill_sync import watch_skill_sync
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 class ObserverManager:
     """Owns all background observers and manages their lifecycle."""
 
-    def __init__(self, config: AgentConfig, paths: DuctorPaths) -> None:
+    def __init__(self, config: AgentConfig, paths: KlirPaths) -> None:
         self._config = config
         self._paths = paths
         self.heartbeat = HeartbeatObserver(config)

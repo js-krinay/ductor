@@ -54,7 +54,7 @@ def _no_real_process_signals() -> object:
 
 
 @pytest.fixture
-def tmp_ductor_home(tmp_path: Path) -> Path:
+def tmp_klir_home(tmp_path: Path) -> Path:
     """Temporary ~/.ductor equivalent."""
     home = tmp_path / ".ductor"
     home.mkdir()
@@ -62,8 +62,8 @@ def tmp_ductor_home(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def tmp_workspace(tmp_ductor_home: Path) -> Path:
+def tmp_workspace(tmp_klir_home: Path) -> Path:
     """Temporary workspace directory."""
-    ws = tmp_ductor_home / "workspace"
+    ws = tmp_klir_home / "workspace"
     ws.mkdir()
     return ws

@@ -482,10 +482,10 @@ class TestPerAgentTasksDir:
         self, registry: TaskRegistry, tmp_path: Path
     ) -> None:
         """Task folders land in the submitting agent's workspace."""
-        from klir.workspace.paths import DuctorPaths
+        from klir.workspace.paths import KlirPaths
 
         agent_home = tmp_path / "agents" / "test"
-        agent_paths = DuctorPaths(ductor_home=agent_home)
+        agent_paths = KlirPaths(klir_home=agent_home)
 
         hub = TaskHub(
             registry,

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from klir.infra.atomic_io import atomic_text_save
 from klir.workspace.cron_tasks import ensure_task_rule_files
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 from klir.workspace.rules_selector import RulesSelector
 from klir.workspace.skill_sync import sync_bundled_skills, sync_skills
 
@@ -52,8 +52,8 @@ _SKIP_DIRS = frozenset({".venv", ".git", ".mypy_cache", "__pycache__", "node_mod
 # ---------------------------------------------------------------------------
 
 
-def _sync_home_defaults(paths: DuctorPaths) -> None:
-    """Walk the home-defaults template and copy to ``ductor_home``.
+def _sync_home_defaults(paths: KlirPaths) -> None:
+    """Walk the home-defaults template and copy to ``klir_home``.
 
     The template at ``<repo>/workspace/`` mirrors ``~/.ductor/`` exactly.
     Zone rules per file:
@@ -67,11 +67,11 @@ def _sync_home_defaults(paths: DuctorPaths) -> None:
     if not paths.home_defaults.is_dir():
         logger.warning("Home defaults directory not found: %s", paths.home_defaults)
         return
-    _walk_and_copy(paths.home_defaults, paths.ductor_home)
+    _walk_and_copy(paths.home_defaults, paths.klir_home)
     # Ensure logs dir exists for the main agent only.  Sub-agents share the
     # central log file and don't need their own logs directory.
     # Sub-agent homes live under <main_home>/agents/<name>/.
-    if paths.ductor_home.parent.name != "agents":
+    if paths.klir_home.parent.name != "agents":
         paths.logs_dir.mkdir(parents=True, exist_ok=True)
 
 
@@ -200,7 +200,7 @@ def _sync_group(directory: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _smart_merge_config(paths: DuctorPaths) -> None:
+def _smart_merge_config(paths: KlirPaths) -> None:
     """Create config from example or merge new keys into existing."""
     if not paths.config_example_path.exists():
         return
@@ -235,7 +235,7 @@ def _smart_merge_config(paths: DuctorPaths) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _migrate_tasks_to_cron_tasks(paths: DuctorPaths) -> None:
+def _migrate_tasks_to_cron_tasks(paths: KlirPaths) -> None:
     """One-time migration: rename tasks/ to cron_tasks/ if needed."""
     old_tasks = paths.workspace / "tasks"
     if old_tasks.is_dir() and not paths.cron_tasks_dir.exists():
@@ -243,7 +243,7 @@ def _migrate_tasks_to_cron_tasks(paths: DuctorPaths) -> None:
         logger.info("Migrated workspace/tasks/ -> workspace/cron_tasks/")
 
 
-def _clean_orphan_symlinks(paths: DuctorPaths) -> None:
+def _clean_orphan_symlinks(paths: KlirPaths) -> None:
     """Remove broken symlinks in the workspace root."""
     if not paths.workspace.is_dir():
         return
@@ -275,18 +275,18 @@ _REQUIRED_DIRS = (
 )
 
 
-def _ensure_required_dirs(paths: DuctorPaths) -> None:
+def _ensure_required_dirs(paths: KlirPaths) -> None:
     """Create any required directories that are missing."""
     for rel in _REQUIRED_DIRS:
-        d = paths.ductor_home / rel
+        d = paths.klir_home / rel
         if not d.is_dir():
             d.mkdir(parents=True, exist_ok=True)
             logger.info("Created missing directory: %s", d)
 
 
-def init_workspace(paths: DuctorPaths) -> None:
+def init_workspace(paths: KlirPaths) -> None:
     """Initialize the workspace: defaults sync, rule sync, config merge, cleanup."""
-    logger.info("Workspace init started home=%s", paths.ductor_home)
+    logger.info("Workspace init started home=%s", paths.klir_home)
     _migrate_tasks_to_cron_tasks(paths)
     sync_bundled_skills(paths)
     _sync_home_defaults(paths)
@@ -433,7 +433,7 @@ def _build_identity_notice(agent_name: str) -> str:
 
 
 def inject_runtime_environment(
-    paths: DuctorPaths,
+    paths: KlirPaths,
     *,
     docker_container: str,
     agent_name: str = "main",

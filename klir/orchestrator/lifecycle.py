@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from klir.files.allowed_roots import resolve_allowed_roots
 from klir.infra.docker import DockerManager
 from klir.workspace.init import inject_runtime_environment
-from klir.workspace.paths import DuctorPaths, resolve_paths
+from klir.workspace.paths import KlirPaths, resolve_paths
 from klir.workspace.skill_sync import cleanup_ductor_links, sync_bundled_skills, sync_skills
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _docker_skill_resync(paths: DuctorPaths) -> None:
+def _docker_skill_resync(paths: KlirPaths) -> None:
     """Re-run skill sync with copies so skills resolve inside Docker."""
     sync_bundled_skills(paths, docker_active=True)
     sync_skills(paths, docker_active=True)
@@ -38,12 +38,12 @@ async def create_orchestrator(
     """
     from klir.orchestrator.core import Orchestrator
 
-    paths = resolve_paths(ductor_home=config.ductor_home)
+    paths = resolve_paths(klir_home=config.klir_home)
 
     # Only set the process-wide env var for the main agent to avoid
     # race conditions in multi-agent mode (sub-agents use per-subprocess env).
     if agent_name == "main":
-        os.environ["DUCTOR_HOME"] = str(paths.ductor_home)
+        os.environ["KLIR_HOME"] = str(paths.klir_home)
 
     docker_container = ""
     docker_mgr: DockerManager | None = None
@@ -116,7 +116,7 @@ async def create_orchestrator(
 async def start_api_server(
     orch: Orchestrator,
     config: AgentConfig,
-    paths: DuctorPaths,
+    paths: KlirPaths,
 ) -> None:
     """Initialize and start the direct WebSocket API server."""
     try:

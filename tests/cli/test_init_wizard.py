@@ -7,14 +7,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 from klir.cli.init_wizard import _write_config, run_onboarding
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
+def _make_paths(tmp_path: Path) -> KlirPaths:
     fw = tmp_path / "framework"
     fw.mkdir(parents=True, exist_ok=True)
-    return DuctorPaths(
-        ductor_home=tmp_path / "home",
+    return KlirPaths(
+        klir_home=tmp_path / "home",
         home_defaults=fw / "workspace",
         framework_root=fw,
     )

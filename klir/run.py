@@ -91,7 +91,7 @@ async def _run_child(cmd: list[str]) -> tuple[int, bool]:
 
 async def supervisor() -> None:
     """Main supervisor loop with crash recovery."""
-    os.environ["DUCTOR_SUPERVISOR"] = "1"
+    os.environ["KLIR_SUPERVISOR"] = "1"
     fast_crash_count = 0
     cmd = [sys.executable, "-m", "klir"]
 

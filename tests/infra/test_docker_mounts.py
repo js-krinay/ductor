@@ -11,7 +11,7 @@ import pytest
 
 from klir.config import DockerConfig
 from klir.infra.docker import resolve_mount_target
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 # ---------------------------------------------------------------------------
 # resolve_mount_target
@@ -119,7 +119,7 @@ class TestResolveMountTarget:
 
 
 @pytest.fixture
-def docker_paths(tmp_path: Path) -> DuctorPaths:
+def docker_paths(tmp_path: Path) -> KlirPaths:
     home = tmp_path / ".ductor"
     home.mkdir()
     ws = home / "workspace"
@@ -127,13 +127,13 @@ def docker_paths(tmp_path: Path) -> DuctorPaths:
     (ws / "tools").mkdir()
     fw = tmp_path / "framework"
     fw.mkdir()
-    return DuctorPaths(ductor_home=home, home_defaults=fw / "workspace", framework_root=fw)
+    return KlirPaths(klir_home=home, home_defaults=fw / "workspace", framework_root=fw)
 
 
 class TestDockerManagerMounts:
     """Integration tests: verify mounts appear in the docker run command."""
 
-    async def test_single_mount_in_run_cmd(self, tmp_path: Path, docker_paths: DuctorPaths) -> None:
+    async def test_single_mount_in_run_cmd(self, tmp_path: Path, docker_paths: KlirPaths) -> None:
         proj = tmp_path / "myapp"
         proj.mkdir()
 
@@ -168,7 +168,7 @@ class TestDockerManagerMounts:
         assert f"{proj}:/mnt/myapp:rw" in run_str
 
     async def test_multiple_mounts_in_run_cmd(
-        self, tmp_path: Path, docker_paths: DuctorPaths
+        self, tmp_path: Path, docker_paths: KlirPaths
     ) -> None:
         proj_a = tmp_path / "alpha"
         proj_a.mkdir()
@@ -207,7 +207,7 @@ class TestDockerManagerMounts:
         assert f"{proj_b}:/mnt/beta:rw" in run_str
 
     async def test_duplicate_basenames_get_suffix(
-        self, tmp_path: Path, docker_paths: DuctorPaths
+        self, tmp_path: Path, docker_paths: KlirPaths
     ) -> None:
         a = tmp_path / "x" / "proj"
         a.mkdir(parents=True)
@@ -246,7 +246,7 @@ class TestDockerManagerMounts:
         assert f"{b}:/mnt/proj_2:rw" in run_str
 
     async def test_nonexistent_mount_silently_skipped(
-        self, tmp_path: Path, docker_paths: DuctorPaths
+        self, tmp_path: Path, docker_paths: KlirPaths
     ) -> None:
         config = DockerConfig(enabled=True, mounts=["/does/not/exist"])
         from klir.infra.docker import DockerManager
@@ -279,7 +279,7 @@ class TestDockerManagerMounts:
         run_str = " ".join(run_args)
         assert "/mnt/" not in run_str  # No user mount appeared.
 
-    async def test_empty_mounts_list(self, docker_paths: DuctorPaths) -> None:
+    async def test_empty_mounts_list(self, docker_paths: KlirPaths) -> None:
         config = DockerConfig(enabled=True, mounts=[])
         from klir.infra.docker import DockerManager
 

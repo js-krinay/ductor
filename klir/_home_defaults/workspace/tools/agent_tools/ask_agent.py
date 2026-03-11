@@ -8,8 +8,8 @@ The response ALWAYS comes back to YOU (the calling agent). There is no way
 to make the sub-agent reply in its own Telegram chat via this tool.
 
 Uses the internal localhost HTTP API to communicate with the bus.
-Environment variables DUCTOR_AGENT_NAME, DUCTOR_INTERAGENT_PORT, and
-DUCTOR_INTERAGENT_HOST are automatically set by the Ductor framework.
+Environment variables KLIR_AGENT_NAME, KLIR_INTERAGENT_PORT, and
+KLIR_INTERAGENT_HOST are automatically set by the Ductor framework.
 
 Usage:
     python3 ask_agent.py [--new] TARGET_AGENT "Your message here"
@@ -41,9 +41,9 @@ def main() -> None:
 
     target = args[0]
     message = args[1]
-    port = os.environ.get("DUCTOR_INTERAGENT_PORT", "8799")
-    host = os.environ.get("DUCTOR_INTERAGENT_HOST", "127.0.0.1")
-    sender = os.environ.get("DUCTOR_AGENT_NAME", "unknown")
+    port = os.environ.get("KLIR_INTERAGENT_PORT", "8799")
+    host = os.environ.get("KLIR_INTERAGENT_HOST", "127.0.0.1")
+    sender = os.environ.get("KLIR_AGENT_NAME", "unknown")
 
     url = f"http://{host}:{port}/interagent/send"
     body: dict[str, object] = {"from": sender, "to": target, "message": message}

@@ -23,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +289,7 @@ def _link_skill_everywhere(
             logger.warning("Failed to sync skill %s in %s", skill_name, loc_name, exc_info=True)
 
 
-def sync_skills(paths: DuctorPaths, *, docker_active: bool = False) -> None:
+def sync_skills(paths: KlirPaths, *, docker_active: bool = False) -> None:
     """Multi-way skill directory sync: ductor workspace <-> CLI skill dirs.
 
     Syncs between ductor workspace, ~/.claude/skills, ~/.codex/skills,
@@ -328,7 +328,7 @@ def sync_skills(paths: DuctorPaths, *, docker_active: bool = False) -> None:
             logger.info("Cleaned %d broken skill link(s) in %s", removed, base_dir)
 
 
-def _iter_bundled_entries(paths: DuctorPaths) -> list[tuple[Path, Path]]:
+def _iter_bundled_entries(paths: KlirPaths) -> list[tuple[Path, Path]]:
     """Return ``(source, target)`` pairs for each bundled skill."""
     bundled = paths.bundled_skills_dir
     if not bundled.is_dir():
@@ -343,7 +343,7 @@ def _iter_bundled_entries(paths: DuctorPaths) -> list[tuple[Path, Path]]:
     return pairs
 
 
-def sync_bundled_skills(paths: DuctorPaths, *, docker_active: bool = False) -> None:
+def sync_bundled_skills(paths: KlirPaths, *, docker_active: bool = False) -> None:
     """Sync bundled skills from the package into the ductor workspace.
 
     Creates symlinks (or copies when *docker_active*) from
@@ -376,7 +376,7 @@ def sync_bundled_skills(paths: DuctorPaths, *, docker_active: bool = False) -> N
             logger.warning("Failed to link bundled skill %s", source.name, exc_info=True)
 
 
-def cleanup_ductor_links(paths: DuctorPaths) -> int:
+def cleanup_ductor_links(paths: KlirPaths) -> int:
     """Remove symlinks created by ductor in CLI skill directories.
 
     Only removes symlinks whose resolved target is under the ductor workspace
@@ -412,7 +412,7 @@ def cleanup_ductor_links(paths: DuctorPaths) -> int:
 
 
 async def watch_skill_sync(
-    paths: DuctorPaths,
+    paths: KlirPaths,
     *,
     docker_active: bool = False,
     interval: float = _SKILL_SYNC_INTERVAL,

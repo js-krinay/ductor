@@ -384,8 +384,8 @@ class TestExtrasCliRemove:
 
 
 def _make_docker_paths(tmp_path: Path) -> tuple[Path, object]:
-    """Create DuctorPaths and framework dir for Docker manager tests."""
-    from klir.workspace.paths import DuctorPaths
+    """Create KlirPaths and framework dir for Docker manager tests."""
+    from klir.workspace.paths import KlirPaths
 
     home = tmp_path / ".ductor"
     home.mkdir()
@@ -393,7 +393,7 @@ def _make_docker_paths(tmp_path: Path) -> tuple[Path, object]:
     (home / "workspace" / "tools").mkdir()
     fw = tmp_path / "framework"
     fw.mkdir()
-    paths = DuctorPaths(ductor_home=home, home_defaults=fw / "workspace", framework_root=fw)
+    paths = KlirPaths(klir_home=home, home_defaults=fw / "workspace", framework_root=fw)
     return fw, paths
 
 

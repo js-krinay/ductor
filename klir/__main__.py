@@ -144,7 +144,7 @@ async def run_telegram(config: AgentConfig) -> int:
 
     Returns the exit code from the bot (``0`` = clean, ``42`` = restart requested).
     """
-    paths = resolve_paths(ductor_home=config.ductor_home)
+    paths = resolve_paths(klir_home=config.klir_home)
 
     missing_token = not config.telegram_token or config.telegram_token.startswith("YOUR_")
     needs_users = not config.allowed_user_ids
@@ -158,7 +158,7 @@ async def run_telegram(config: AgentConfig) -> int:
     from klir.infra.pidlock import acquire_lock, release_lock
     from klir.multiagent.supervisor import AgentSupervisor
 
-    acquire_lock(pid_file=paths.ductor_home / "bot.pid", kill_existing=True)
+    acquire_lock(pid_file=paths.klir_home / "bot.pid", kill_existing=True)
 
     supervisor = AgentSupervisor(config)
     supervisor.set_notification_sender(send_rich)
@@ -189,7 +189,7 @@ async def run_telegram(config: AgentConfig) -> int:
         for sig in installed_signals:
             loop.remove_signal_handler(sig)
         await supervisor.stop_all()
-        release_lock(pid_file=paths.ductor_home / "bot.pid")
+        release_lock(pid_file=paths.klir_home / "bot.pid")
     return exit_code
 
 
@@ -225,7 +225,7 @@ def _cmd_setup(verbose: bool) -> None:
     _stop_bot()
     paths = resolve_paths()
     if _is_configured():
-        run_smart_reset(paths.ductor_home)
+        run_smart_reset(paths.klir_home)
     service_installed = run_onboarding()
     if service_installed:
         return

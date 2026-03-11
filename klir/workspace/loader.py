@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,6 @@ def read_file(path: Path) -> str | None:
         return None
 
 
-def read_mainmemory(paths: DuctorPaths) -> str:
+def read_mainmemory(paths: KlirPaths) -> str:
     """Read MAINMEMORY.md, returning empty string if missing."""
     return read_file(paths.mainmemory_path) or ""

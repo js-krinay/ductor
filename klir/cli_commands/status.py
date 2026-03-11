@@ -14,7 +14,7 @@ from rich.table import Table
 from rich.text import Text
 
 from klir.infra.platform import is_windows
-from klir.workspace.paths import DuctorPaths, resolve_paths
+from klir.workspace.paths import KlirPaths, resolve_paths
 
 _console = Console()
 
@@ -33,7 +33,7 @@ class StatusSummary:
     error_count: int
 
 
-def build_status_lines(status: StatusSummary, *, paths: DuctorPaths) -> list[str]:
+def build_status_lines(status: StatusSummary, *, paths: KlirPaths) -> list[str]:
     """Assemble the status panel content lines."""
     lines: list[str] = []
     if status.bot_running:
@@ -53,7 +53,7 @@ def build_status_lines(status: StatusSummary, *, paths: DuctorPaths) -> list[str
         lines.append("Errors:    [green]0[/green]")
     lines.append("")
     lines.append("[bold]Paths:[/bold]")
-    lines.append(f"  Home:       [cyan]{paths.ductor_home}[/cyan]")
+    lines.append(f"  Home:       [cyan]{paths.klir_home}[/cyan]")
     lines.append(f"  Config:     [cyan]{paths.config_path}[/cyan]")
     lines.append(f"  Workspace:  [cyan]{paths.workspace}[/cyan]")
     lines.append(f"  Logs:       [cyan]{paths.logs_dir}[/cyan]")
@@ -96,10 +96,10 @@ def print_status() -> None:
     docker_enabled = isinstance(docker_cfg, dict) and bool(docker_cfg.get("enabled"))
     docker_name: str | None = None
     if docker_enabled and isinstance(docker_cfg, dict):
-        docker_name = str(docker_cfg.get("container_name", "ductor-sandbox"))
+        docker_name = str(docker_cfg.get("container_name", "klir-sandbox"))
 
     # Running state
-    pid_file = paths.ductor_home / "bot.pid"
+    pid_file = paths.klir_home / "bot.pid"
     bot_running = False
     bot_pid: int | None = None
     bot_uptime = ""

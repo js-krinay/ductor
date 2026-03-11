@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from klir.cli.codex_cache import CodexModelCache
     from klir.config import AgentConfig
     from klir.cron.manager import CronJob
-    from klir.workspace.paths import DuctorPaths
+    from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class CronObserver(BaseTaskObserver):
 
     def __init__(
         self,
-        paths: DuctorPaths,
+        paths: KlirPaths,
         manager: CronManager,
         *,
         config: AgentConfig,

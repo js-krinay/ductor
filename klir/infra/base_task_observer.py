@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from klir.cli.param_resolver import TaskExecutionConfig
     from klir.config import AgentConfig
     from klir.infra.task_runner import TaskResult
-    from klir.workspace.paths import DuctorPaths
+    from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class BaseTaskObserver:
 
     def __init__(
         self,
-        paths: DuctorPaths,
+        paths: KlirPaths,
         config: AgentConfig,
         codex_cache: CodexModelCache,
     ) -> None:

@@ -25,17 +25,17 @@ def test_docker_wrap_with_container() -> None:
         "-w",
         "/ductor/workspace",
         "-e",
-        "DUCTOR_CHAT_ID=42",
+        "KLIR_CHAT_ID=42",
         "-e",
-        "DUCTOR_AGENT_NAME=main",
+        "KLIR_AGENT_NAME=main",
         "-e",
-        "DUCTOR_INTERAGENT_PORT=8799",
+        "KLIR_INTERAGENT_PORT=8799",
         "-e",
-        "DUCTOR_HOME=/ductor",
+        "KLIR_HOME=/ductor",
         "-e",
-        "DUCTOR_SHARED_MEMORY_PATH=/ductor/SHAREDMEMORY.md",
+        "KLIR_SHARED_MEMORY_PATH=/ductor/SHAREDMEMORY.md",
         "-e",
-        "DUCTOR_INTERAGENT_HOST=host.docker.internal",
+        "KLIR_INTERAGENT_HOST=host.docker.internal",
         "my-sandbox",
         "claude",
         "-p",
@@ -55,17 +55,17 @@ def test_docker_wrap_interactive() -> None:
         "-w",
         "/ductor/workspace",
         "-e",
-        "DUCTOR_CHAT_ID=42",
+        "KLIR_CHAT_ID=42",
         "-e",
-        "DUCTOR_AGENT_NAME=main",
+        "KLIR_AGENT_NAME=main",
         "-e",
-        "DUCTOR_INTERAGENT_PORT=8799",
+        "KLIR_INTERAGENT_PORT=8799",
         "-e",
-        "DUCTOR_HOME=/ductor",
+        "KLIR_HOME=/ductor",
         "-e",
-        "DUCTOR_SHARED_MEMORY_PATH=/ductor/SHAREDMEMORY.md",
+        "KLIR_SHARED_MEMORY_PATH=/ductor/SHAREDMEMORY.md",
         "-e",
-        "DUCTOR_INTERAGENT_HOST=host.docker.internal",
+        "KLIR_INTERAGENT_HOST=host.docker.internal",
         "my-sandbox",
         "gemini",
         "--output-format",
@@ -85,7 +85,7 @@ def test_docker_wrap_injects_chat_id() -> None:
     cmd = ["codex", "exec"]
     cfg = CLIConfig(docker_container="box", chat_id=999, working_dir="/w")
     result_cmd, _ = docker_wrap(cmd, cfg)
-    assert "DUCTOR_CHAT_ID=999" in result_cmd
+    assert "KLIR_CHAT_ID=999" in result_cmd
 
 
 def test_docker_wrap_extra_env() -> None:
@@ -113,10 +113,10 @@ def test_docker_wrap_sub_agent_container_paths() -> None:
     # -w sets correct sub-agent workspace
     w_idx = result_cmd.index("-w")
     assert result_cmd[w_idx + 1] == "/ductor/agents/test/workspace"
-    # DUCTOR_HOME is the sub-agent home inside the container
-    assert "DUCTOR_HOME=/ductor/agents/test" in result_cmd
+    # KLIR_HOME is the sub-agent home inside the container
+    assert "KLIR_HOME=/ductor/agents/test" in result_cmd
     # Shared memory is at the root
-    assert "DUCTOR_SHARED_MEMORY_PATH=/ductor/SHAREDMEMORY.md" in result_cmd
+    assert "KLIR_SHARED_MEMORY_PATH=/ductor/SHAREDMEMORY.md" in result_cmd
 
 
 def test_docker_wrap_main_agent_container_paths() -> None:
@@ -131,8 +131,8 @@ def test_docker_wrap_main_agent_container_paths() -> None:
     result_cmd, _ = docker_wrap(cmd, cfg)
     w_idx = result_cmd.index("-w")
     assert result_cmd[w_idx + 1] == "/ductor/workspace"
-    assert "DUCTOR_HOME=/ductor" in result_cmd
-    assert "DUCTOR_SHARED_MEMORY_PATH=/ductor/SHAREDMEMORY.md" in result_cmd
+    assert "KLIR_HOME=/ductor" in result_cmd
+    assert "KLIR_SHARED_MEMORY_PATH=/ductor/SHAREDMEMORY.md" in result_cmd
 
 
 def test_docker_wrap_sub_agent_windows_paths_are_posix() -> None:
@@ -147,4 +147,4 @@ def test_docker_wrap_sub_agent_windows_paths_are_posix() -> None:
     result_cmd, _ = docker_wrap(cmd, cfg, interactive=True)
     w_idx = result_cmd.index("-w")
     assert result_cmd[w_idx + 1] == "/ductor/agents/seismic-bot/workspace"
-    assert "DUCTOR_HOME=/ductor/agents/seismic-bot" in result_cmd
+    assert "KLIR_HOME=/ductor/agents/seismic-bot" in result_cmd

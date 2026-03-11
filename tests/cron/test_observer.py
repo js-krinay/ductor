@@ -21,19 +21,19 @@ from klir.cron.execution import (
 )
 from klir.cron.manager import CronJob, CronManager
 from klir.cron.observer import CronObserver
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
+def _make_paths(tmp_path: Path) -> KlirPaths:
     fw = tmp_path / "fw"
-    paths = DuctorPaths(
-        ductor_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw
+    paths = KlirPaths(
+        klir_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw
     )
     paths.cron_tasks_dir.mkdir(parents=True)
     return paths
 
 
-def _make_manager(paths: DuctorPaths) -> CronManager:
+def _make_manager(paths: KlirPaths) -> CronManager:
     return CronManager(jobs_path=paths.cron_jobs_path)
 
 
@@ -57,7 +57,7 @@ def _make_codex_cache() -> CodexModelCache:
 
 
 def _make_observer(
-    paths: DuctorPaths,
+    paths: KlirPaths,
     mgr: CronManager,
     *,
     codex_cache: CodexModelCache | None = None,
@@ -84,7 +84,7 @@ def _make_job(job_id: str = "daily", **overrides: Any) -> CronJob:
     return CronJob(**defaults)
 
 
-def _write_jobs(paths: DuctorPaths, jobs: list[CronJob]) -> None:
+def _write_jobs(paths: KlirPaths, jobs: list[CronJob]) -> None:
     """Write jobs directly to JSON file."""
     data = {"jobs": [j.to_dict() for j in jobs]}
     paths.cron_jobs_path.parent.mkdir(parents=True, exist_ok=True)

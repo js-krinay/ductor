@@ -15,7 +15,7 @@ from klir.infra.base_observer import BaseObserver
 
 if TYPE_CHECKING:
     from klir.config import AgentConfig, CleanupConfig
-    from klir.workspace.paths import DuctorPaths
+    from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class CleanupObserver(BaseObserver):
     ``start()`` / ``stop()`` with an asyncio background task.
     """
 
-    def __init__(self, config: AgentConfig, paths: DuctorPaths) -> None:
+    def __init__(self, config: AgentConfig, paths: KlirPaths) -> None:
         super().__init__()
         self._config = config
         self._paths = paths

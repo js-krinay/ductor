@@ -80,7 +80,7 @@ from klir.multiagent.bus import AsyncInterAgentResult
 from klir.session.key import SessionKey
 from klir.tasks.models import TaskResult
 from klir.text.response_format import SEP, fmt
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 if TYPE_CHECKING:
     from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
@@ -292,7 +292,7 @@ class TelegramBot:
         """Shared lock pool (used by middleware, bus, and API server)."""
         return self._lock_pool
 
-    def file_roots(self, paths: DuctorPaths) -> list[Path] | None:
+    def file_roots(self, paths: KlirPaths) -> list[Path] | None:
         """Allowed root directories for ``<file:...>`` tag sends."""
         return resolve_allowed_roots(self._config.file_access, paths.workspace)
 
@@ -381,7 +381,7 @@ class TelegramBot:
         current = list(self._config.allowed_user_ids)
         if user_id not in current:
             current.append(user_id)
-            config_path = DuctorPaths(self._config.ductor_home).config_json
+            config_path = KlirPaths(self._config.klir_home).config_json
             await update_config_file_async(config_path, allowed_user_ids=current)
             self._config.allowed_user_ids = current
             logger.info("Paired user %d added to allowed_user_ids", user_id)
@@ -1031,7 +1031,7 @@ class TelegramBot:
 
         chat_id = message.chat.id
         paths = self._orch.paths
-        sentinel = paths.ductor_home / "restart-sentinel.json"
+        sentinel = paths.klir_home / "restart-sentinel.json"
         await asyncio.to_thread(
             write_restart_sentinel, chat_id, "Restart completed.", sentinel_path=sentinel
         )
@@ -1524,7 +1524,7 @@ class TelegramBot:
     async def _watch_restart_marker(self) -> None:
         """Poll for restart-requested marker file."""
         paths = self._orch.paths
-        marker = paths.ductor_home / "restart-requested"
+        marker = paths.klir_home / "restart-requested"
         try:
             while True:
                 await asyncio.sleep(2.0)

@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from klir.cli.auth import AuthResult, AuthStatus
 from klir.workspace.init import init_workspace, inject_runtime_environment
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 
 def _mock_all_authenticated() -> dict[str, AuthResult]:
@@ -65,11 +65,11 @@ def _setup_home_defaults(fw_root: Path) -> None:
     (fw_root / "config.example.json").write_text('{"provider": "claude", "model": "opus"}')
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
+def _make_paths(tmp_path: Path) -> KlirPaths:
     fw_root = tmp_path / "framework"
     _setup_home_defaults(fw_root)
-    return DuctorPaths(
-        ductor_home=tmp_path / "ductor_home",
+    return KlirPaths(
+        klir_home=tmp_path / "klir_home",
         home_defaults=fw_root / "workspace",
         framework_root=fw_root,
     )
@@ -254,12 +254,12 @@ def test_does_not_overwrite_user_tool_scripts(tmp_path: Path) -> None:
     assert (user_dir / "my_tool.py").read_text() == "# my custom version"
 
 
-def test_ductor_home_claude_md_overwritten(tmp_path: Path) -> None:
-    """The ductor_home/CLAUDE.md is Zone 2 (always overwritten)."""
+def test_klir_home_claude_md_overwritten(tmp_path: Path) -> None:
+    """The klir_home/CLAUDE.md is Zone 2 (always overwritten)."""
     paths = _make_paths(tmp_path)
     init_workspace(paths)
 
-    home_claude = paths.ductor_home / "CLAUDE.md"
+    home_claude = paths.klir_home / "CLAUDE.md"
     assert home_claude.exists()
     assert home_claude.read_text() == "# Ductor Home CLAUDE.md"
 
@@ -338,10 +338,10 @@ def test_cleans_orphan_symlinks(tmp_path: Path) -> None:
 def test_inject_docker_notice(_mock_auth: object, tmp_path: Path) -> None:
     paths = _make_paths(tmp_path)
     init_workspace(paths)
-    inject_runtime_environment(paths, docker_container="ductor-sandbox")
+    inject_runtime_environment(paths, docker_container="klir-sandbox")
     content = (paths.workspace / "CLAUDE.md").read_text()
     assert "DOCKER CONTAINER" in content
-    assert "ductor-sandbox" in content
+    assert "klir-sandbox" in content
     # AGENTS.md mirror should also have it
     agents = (paths.workspace / "AGENTS.md").read_text()
     assert "DOCKER CONTAINER" in agents

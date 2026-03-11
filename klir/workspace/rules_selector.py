@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from klir.workspace.paths import DuctorPaths
+    from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class RulesSelector:
         selector.deploy_rules()
     """
 
-    def __init__(self, paths: DuctorPaths) -> None:
+    def __init__(self, paths: KlirPaths) -> None:
         from klir.cli.auth import AuthStatus, check_all_auth
 
         self._paths = paths
@@ -168,7 +168,7 @@ class RulesSelector:
                 continue
 
             # Deploy based on auth status
-            dst_dir = self._paths.ductor_home / rel_path
+            dst_dir = self._paths.klir_home / rel_path
             dst_dir.mkdir(parents=True, exist_ok=True)
 
             try:
@@ -244,9 +244,9 @@ class RulesSelector:
         Returns:
             Number of files removed
         """
-        cron_tasks_path = self._paths.ductor_home / "workspace" / "cron_tasks"
+        cron_tasks_path = self._paths.klir_home / "workspace" / "cron_tasks"
         removed_count = 0
-        for file_path in self._paths.ductor_home.rglob(filename):
+        for file_path in self._paths.klir_home.rglob(filename):
             if not file_path.is_file():
                 continue
             # Protect user-owned cron task rule files
@@ -257,7 +257,7 @@ class RulesSelector:
                 file_path.unlink()
                 removed_count += 1
                 logger.debug(
-                    "Removed stale file: %s", file_path.relative_to(self._paths.ductor_home)
+                    "Removed stale file: %s", file_path.relative_to(self._paths.klir_home)
                 )
             except OSError:
                 logger.exception("Failed to remove stale file: %s", file_path)

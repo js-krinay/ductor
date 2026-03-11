@@ -102,7 +102,7 @@ class CLIConfig:
     interagent_port: int = 8799
 
 
-_CONTAINER_DUCTOR_MOUNT = "/ductor"
+_CONTAINER_KLIR_MOUNT = "/ductor"
 
 
 def _to_container_path(host_path: Path, main_home: Path) -> str:
@@ -112,8 +112,8 @@ def _to_container_path(host_path: Path, main_home: Path) -> str:
     """
     rel = host_path.relative_to(main_home)
     if str(rel) == ".":
-        return _CONTAINER_DUCTOR_MOUNT
-    return f"{_CONTAINER_DUCTOR_MOUNT}/{rel.as_posix()}"
+        return _CONTAINER_KLIR_MOUNT
+    return f"{_CONTAINER_KLIR_MOUNT}/{rel.as_posix()}"
 
 
 def docker_wrap(
@@ -135,16 +135,16 @@ def docker_wrap(
         logger.debug("docker_wrap container=%s", config.docker_container)
         stdin_flag: list[str] = ["-i"] if interactive else []
         working_dir = Path(config.working_dir)
-        ductor_home = working_dir.parent if working_dir.name == "workspace" else working_dir
+        klir_home = working_dir.parent if working_dir.name == "workspace" else working_dir
 
         # Resolve root ductor home for host → container path mapping.
         # Sub-agents live at <root>/agents/<name>/; the Docker mount is the root.
-        main_home = ductor_home
+        main_home = klir_home
         if main_home.parent.name == "agents":
             main_home = main_home.parent.parent
 
         container_cwd = _to_container_path(working_dir, main_home)
-        container_home = _to_container_path(ductor_home, main_home)
+        container_home = _to_container_path(klir_home, main_home)
         container_shared = _to_container_path(main_home / "SHAREDMEMORY.md", main_home)
 
         # Merge user secrets from .env (low priority — never override).
@@ -163,20 +163,20 @@ def docker_wrap(
 
         env_flags: list[str] = [
             "-e",
-            f"DUCTOR_CHAT_ID={config.chat_id}",
+            f"KLIR_CHAT_ID={config.chat_id}",
             "-e",
-            f"DUCTOR_AGENT_NAME={config.agent_name}",
+            f"KLIR_AGENT_NAME={config.agent_name}",
             "-e",
-            f"DUCTOR_INTERAGENT_PORT={config.interagent_port}",
+            f"KLIR_INTERAGENT_PORT={config.interagent_port}",
             "-e",
-            f"DUCTOR_HOME={container_home}",
+            f"KLIR_HOME={container_home}",
             "-e",
-            f"DUCTOR_SHARED_MEMORY_PATH={container_shared}",
+            f"KLIR_SHARED_MEMORY_PATH={container_shared}",
             "-e",
-            "DUCTOR_INTERAGENT_HOST=host.docker.internal",
+            "KLIR_INTERAGENT_HOST=host.docker.internal",
         ]
         if config.topic_id:
-            env_flags += ["-e", f"DUCTOR_TOPIC_ID={config.topic_id}"]
+            env_flags += ["-e", f"KLIR_TOPIC_ID={config.topic_id}"]
         if extra_env:
             for key, value in extra_env.items():
                 env_flags += ["-e", f"{key}={value}"]

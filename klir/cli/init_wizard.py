@@ -530,7 +530,7 @@ def run_onboarding() -> bool:
         Panel(
             "[bold green]Setup complete![/bold green]\n\n"
             "[bold]Your ductor files:[/bold]\n\n"
-            f"  Home:       [cyan]{paths.ductor_home}[/cyan]\n"
+            f"  Home:       [cyan]{paths.klir_home}[/cyan]\n"
             f"  Config:     [cyan]{config_path}[/cyan]\n"
             f"  Workspace:  [cyan]{paths.workspace}[/cyan]\n"
             f"  Logs:       [cyan]{paths.logs_dir}[/cyan]\n\n"
@@ -551,12 +551,12 @@ def run_onboarding() -> bool:
     return service_installed
 
 
-def run_smart_reset(ductor_home: Path) -> None:
+def run_smart_reset(klir_home: Path) -> None:
     """Read existing config, handle Docker cleanup, and delete workspace."""
     console = Console()
     console.print()
 
-    config_path = ductor_home / "config" / "config.json"
+    config_path = klir_home / "config" / "config.json"
 
     # Read Docker config from existing setup
     docker_container: str | None = None
@@ -566,8 +566,8 @@ def run_smart_reset(ductor_home: Path) -> None:
             data = json.loads(config_path.read_text(encoding="utf-8"))
             docker = data.get("docker", {})
             if isinstance(docker, dict) and docker.get("enabled"):
-                docker_container = str(docker.get("container_name", "ductor-sandbox"))
-                docker_image = str(docker.get("image_name", "ductor-sandbox"))
+                docker_container = str(docker.get("container_name", "klir-sandbox"))
+                docker_image = str(docker.get("image_name", "klir-sandbox"))
         except (json.JSONDecodeError, OSError):
             pass
 
@@ -576,7 +576,7 @@ def run_smart_reset(ductor_home: Path) -> None:
         Panel(
             "[bold yellow]You already have a configured setup.[/bold yellow]\n\n"
             "Re-running onboarding will perform a [bold red]full reset[/bold red]:\n\n"
-            f"  [dim]{ductor_home}[/dim] will be deleted entirely.\n"
+            f"  [dim]{klir_home}[/dim] will be deleted entirely.\n"
             "  All sessions, configs, memory, and cron tasks will be lost.",
             title="[bold yellow]Existing Setup Detected[/bold yellow]",
             border_style="yellow",
@@ -634,10 +634,10 @@ def run_smart_reset(ductor_home: Path) -> None:
 
     from klir.infra.fs import robust_rmtree
 
-    robust_rmtree(ductor_home)
-    if ductor_home.exists():
+    robust_rmtree(klir_home)
+    if klir_home.exists():
         console.print(
-            f"[yellow]Warning: Could not fully delete {ductor_home}. Remove manually.[/yellow]\n"
+            f"[yellow]Warning: Could not fully delete {klir_home}. Remove manually.[/yellow]\n"
         )
     else:
         console.print("[dim]Workspace deleted.[/dim]\n")

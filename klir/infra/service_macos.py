@@ -90,7 +90,7 @@ def _generate_plist_data(binary_path: str) -> dict[str, Any]:
         "EnvironmentVariables": {
             "PATH": ":".join(path_dirs),
             "HOME": str(home),
-            "DUCTOR_SUPERVISOR": "1",
+            "KLIR_SUPERVISOR": "1",
         },
         "StandardOutPath": str(paths.logs_dir / "service.log"),
         "StandardErrorPath": str(paths.logs_dir / "service.err"),

@@ -76,7 +76,7 @@ def _make_orchestrator(
 
     paths = MagicMock()
     paths.workspace = Path("/tmp/test-workspace")
-    paths.ductor_home = Path("/tmp/test-ductor")
+    paths.klir_home = Path("/tmp/test-ductor")
     paths.telegram_files_dir = Path("/tmp/test-workspace/telegram_files")
     orch.paths = paths
     return orch
@@ -1110,7 +1110,7 @@ class TestWatchRestartMarker:
 
         tg_bot, _ = _make_tg_bot()
         orch = _make_orchestrator()
-        orch.paths.ductor_home = tmp_path
+        orch.paths.klir_home = tmp_path
         tg_bot._orchestrator = orch
         # stop_polling raises CancelledError to break the while-True loop,
         # matching production behavior where shutdown cancels the task.

@@ -19,12 +19,12 @@ from pathlib import Path
 def _agents_path() -> Path:
     """Resolve agents.json path (always in main agent home).
 
-    Sub-agents have DUCTOR_HOME = ~/.ductor/agents/<name>/, so we navigate
-    up to the main home. Main agent's DUCTOR_HOME points directly to ~/.ductor/.
+    Sub-agents have KLIR_HOME = ~/.ductor/agents/<name>/, so we navigate
+    up to the main home. Main agent's KLIR_HOME points directly to ~/.ductor/.
     """
     import os
 
-    home = Path(os.environ.get("DUCTOR_HOME", str(Path.home() / ".ductor")))
+    home = Path(os.environ.get("KLIR_HOME", str(Path.home() / ".ductor")))
     direct = home / "agents.json"
     if direct.is_file():
         return direct
@@ -40,10 +40,10 @@ _CLAUDE_MODELS = ("haiku", "sonnet", "opus")
 
 
 def _main_home() -> Path:
-    """Resolve the main agent's DUCTOR_HOME."""
+    """Resolve the main agent's KLIR_HOME."""
     import os
 
-    home = Path(os.environ.get("DUCTOR_HOME", str(Path.home() / ".ductor")))
+    home = Path(os.environ.get("KLIR_HOME", str(Path.home() / ".ductor")))
     if home.name != ".ductor" and (home.parent.parent / "config").is_dir():
         return home.parent.parent
     return home

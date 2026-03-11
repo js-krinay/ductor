@@ -13,7 +13,7 @@ from klir.workspace.init import sync_rule_files as sync_rule_files
 from klir.workspace.init import watch_rule_files as watch_rule_files
 from klir.workspace.loader import read_file as read_file
 from klir.workspace.loader import read_mainmemory as read_mainmemory
-from klir.workspace.paths import DuctorPaths as DuctorPaths
+from klir.workspace.paths import KlirPaths as KlirPaths
 from klir.workspace.paths import resolve_paths as resolve_paths
 from klir.workspace.skill_sync import cleanup_ductor_links as cleanup_ductor_links
 from klir.workspace.skill_sync import sync_bundled_skills as sync_bundled_skills
@@ -21,7 +21,7 @@ from klir.workspace.skill_sync import sync_skills as sync_skills
 from klir.workspace.skill_sync import watch_skill_sync as watch_skill_sync
 
 __all__ = [
-    "DuctorPaths",
+    "KlirPaths",
     "cleanup_ductor_links",
     "create_cron_task",
     "delete_cron_task",

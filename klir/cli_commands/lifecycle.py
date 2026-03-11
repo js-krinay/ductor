@@ -77,7 +77,7 @@ def stop_bot() -> None:
 
     # 2. Kill PID-file instance
     paths = resolve_paths()
-    pid_file = paths.ductor_home / "bot.pid"
+    pid_file = paths.klir_home / "bot.pid"
     stopped = False
 
     if pid_file.exists():
@@ -116,7 +116,7 @@ def stop_bot() -> None:
             data = json.loads(config_path.read_text(encoding="utf-8"))
             docker = data.get("docker", {})
             if isinstance(docker, dict) and docker.get("enabled"):
-                container = str(docker.get("container_name", "ductor-sandbox"))
+                container = str(docker.get("container_name", "klir-sandbox"))
                 _stop_docker_container(container)
         except (json.JSONDecodeError, OSError):
             pass
@@ -141,7 +141,7 @@ def start_bot(verbose: bool = False) -> None:
     except KeyboardInterrupt:
         exit_code = 0
     if exit_code == EXIT_RESTART:
-        if os.environ.get("DUCTOR_SUPERVISOR") or os.environ.get("INVOCATION_ID"):
+        if os.environ.get("KLIR_SUPERVISOR") or os.environ.get("INVOCATION_ID"):
             sys.exit(EXIT_RESTART)
         _re_exec_bot()
     elif exit_code:
@@ -190,7 +190,7 @@ def uninstall() -> None:
             data = json.loads(paths.config_path.read_text(encoding="utf-8"))
             docker = data.get("docker", {})
             if isinstance(docker, dict) and docker.get("enabled") and shutil.which("docker"):
-                image = str(docker.get("image_name", "ductor-sandbox"))
+                image = str(docker.get("image_name", "klir-sandbox"))
                 _console.print(f"[dim]Removing Docker image '{image}'...[/dim]")
                 subprocess.run(
                     ["docker", "rmi", image],
@@ -202,16 +202,16 @@ def uninstall() -> None:
             pass
 
     # 3. Delete workspace
-    ductor_home = paths.ductor_home
-    if ductor_home.exists():
-        robust_rmtree(ductor_home)
-        if ductor_home.exists():
+    klir_home = paths.klir_home
+    if klir_home.exists():
+        robust_rmtree(klir_home)
+        if klir_home.exists():
             _console.print(
-                f"[yellow]Warning: Could not fully delete {ductor_home} "
+                f"[yellow]Warning: Could not fully delete {klir_home} "
                 "(some files may be locked). Remove manually.[/yellow]"
             )
         else:
-            _console.print(f"[green]Deleted {ductor_home}[/green]")
+            _console.print(f"[green]Deleted {klir_home}[/green]")
 
     # 4. Uninstall package
     _console.print("[dim]Uninstalling ductor package...[/dim]")

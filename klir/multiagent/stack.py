@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from klir.config import AgentConfig
 from klir.workspace.init import init_workspace
-from klir.workspace.paths import DuctorPaths, resolve_paths
+from klir.workspace.paths import KlirPaths, resolve_paths
 
 if TYPE_CHECKING:
     from klir.bot.app import TelegramBot
@@ -26,7 +26,7 @@ class AgentStack:
 
     name: str
     config: AgentConfig
-    paths: DuctorPaths
+    paths: KlirPaths
     bot: TelegramBot
     is_main: bool = False
 
@@ -45,7 +45,7 @@ class AgentStack:
         """
         import asyncio
 
-        paths = resolve_paths(ductor_home=config.ductor_home)
+        paths = resolve_paths(klir_home=config.klir_home)
         await asyncio.to_thread(init_workspace, paths)
 
         from klir.bot.app import TelegramBot
@@ -54,7 +54,7 @@ class AgentStack:
         logger.info(
             "AgentStack created: name=%s home=%s main=%s",
             name,
-            paths.ductor_home,
+            paths.klir_home,
             is_main,
         )
         return cls(name=name, config=config, paths=paths, bot=bot, is_main=is_main)

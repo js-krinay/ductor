@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _TELEGRAM_FILES = Path(
-    os.environ.get("DUCTOR_HOME", str(Path.home() / ".ductor"))
+    os.environ.get("KLIR_HOME", str(Path.home() / ".ductor"))
 ).expanduser() / "workspace" / "telegram_files"
 
 

@@ -27,13 +27,13 @@ def detect_agent_name() -> str:
         if agent_home.parent.name == "agents":
             return agent_home.name
     # Fallback to env var
-    return os.environ.get("DUCTOR_AGENT_NAME", "main")
+    return os.environ.get("KLIR_AGENT_NAME", "main")
 
 
 def get_api_url(path: str) -> str:
     """Build internal API URL from environment."""
-    port = os.environ.get("DUCTOR_INTERAGENT_PORT", "8799")
-    host = os.environ.get("DUCTOR_INTERAGENT_HOST", "127.0.0.1")
+    port = os.environ.get("KLIR_INTERAGENT_PORT", "8799")
+    host = os.environ.get("KLIR_INTERAGENT_HOST", "127.0.0.1")
     return f"http://{host}:{port}{path}"
 
 

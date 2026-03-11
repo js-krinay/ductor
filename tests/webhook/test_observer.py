@@ -16,19 +16,19 @@ from klir.config import AgentConfig, WebhookConfig
 from klir.webhook.manager import WebhookManager
 from klir.webhook.models import WebhookEntry, WebhookResult, render_template
 from klir.webhook.observer import _SAFETY_END, _SAFETY_START, WebhookObserver
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 
-def _make_paths(tmp_path: Path) -> DuctorPaths:
+def _make_paths(tmp_path: Path) -> KlirPaths:
     fw = tmp_path / "fw"
-    paths = DuctorPaths(
-        ductor_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw
+    paths = KlirPaths(
+        klir_home=tmp_path / "home", home_defaults=fw / "workspace", framework_root=fw
     )
     paths.cron_tasks_dir.mkdir(parents=True)
     return paths
 
 
-def _make_manager(paths: DuctorPaths) -> WebhookManager:
+def _make_manager(paths: KlirPaths) -> WebhookManager:
     return WebhookManager(hooks_path=paths.webhooks_path)
 
 
@@ -58,7 +58,7 @@ def _make_hook(hook_id: str = "test-hook", **overrides: Any) -> WebhookEntry:
 
 
 def _make_observer(
-    paths: DuctorPaths,
+    paths: KlirPaths,
     mgr: WebhookManager,
     *,
     codex_cache: CodexModelCache | None = None,

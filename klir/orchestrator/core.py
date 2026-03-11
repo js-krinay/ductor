@@ -61,7 +61,7 @@ from klir.session import SessionKey, SessionManager
 from klir.session.manager import SessionData
 from klir.session.named import NamedSessionRegistry
 from klir.webhook.manager import WebhookManager
-from klir.workspace.paths import DuctorPaths
+from klir.workspace.paths import KlirPaths
 
 if TYPE_CHECKING:
     from klir.background import BackgroundObserver
@@ -116,14 +116,14 @@ class Orchestrator:
     def __init__(
         self,
         config: AgentConfig,
-        paths: DuctorPaths,
+        paths: KlirPaths,
         *,
         docker_container: str = "",
         agent_name: str = "main",
         interagent_port: int = 8799,
     ) -> None:
         self._config = config
-        self._paths: DuctorPaths = paths
+        self._paths: KlirPaths = paths
         self._docker: DockerManager | None = None
         self._resolver = ChatConfigResolver(config)
         self._providers = ProviderManager(config)
@@ -174,7 +174,7 @@ class Orchestrator:
         self._register_commands()
 
     @property
-    def paths(self) -> DuctorPaths:
+    def paths(self) -> KlirPaths:
         """Public access to resolved workspace paths."""
         return self._paths
 
@@ -602,7 +602,7 @@ class Orchestrator:
     async def _start_api_server(
         self,
         config: AgentConfig,
-        paths: DuctorPaths,
+        paths: KlirPaths,
     ) -> None:
         """Initialize and start the direct WebSocket API server."""
         from klir.orchestrator.lifecycle import start_api_server

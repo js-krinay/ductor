@@ -1,7 +1,7 @@
 """Central path resolution for the workspace layout.
 
 This module is the SINGLE SOURCE OF TRUTH for all paths in the framework.
-Every path the framework needs is either a field or property of ``DuctorPaths``.
+Every path the framework needs is either a field or property of ``KlirPaths``.
 """
 
 from __future__ import annotations
@@ -23,29 +23,29 @@ def _default_framework_root() -> Path:
 
 
 @dataclass(frozen=True)
-class DuctorPaths:
+class KlirPaths:
     """Resolved, immutable paths for the workspace layout.
 
     All framework paths are derived from three roots:
 
-    - ``ductor_home``:    User data directory (default ``~/.ductor``).
-    - ``home_defaults``:  Bundled template that mirrors ``ductor_home`` (package-internal).
+    - ``klir_home``:    User data directory (default ``~/.ductor``).
+    - ``home_defaults``:  Bundled template that mirrors ``klir_home`` (package-internal).
     - ``framework_root``: Repository root (for Dockerfile, config.example.json).
     """
 
-    ductor_home: Path
+    klir_home: Path
     home_defaults: Path = field(default_factory=_default_home_defaults)
     framework_root: Path = field(default_factory=_default_framework_root)
 
-    # -- User data paths (inside ductor_home) --
+    # -- User data paths (inside klir_home) --
 
     @property
     def workspace(self) -> Path:
-        return self.ductor_home / "workspace"
+        return self.klir_home / "workspace"
 
     @property
     def config_dir(self) -> Path:
-        return self.ductor_home / "config"
+        return self.klir_home / "config"
 
     @property
     def config_path(self) -> Path:
@@ -53,19 +53,19 @@ class DuctorPaths:
 
     @property
     def sessions_path(self) -> Path:
-        return self.ductor_home / "sessions.json"
+        return self.klir_home / "sessions.json"
 
     @property
     def cron_jobs_path(self) -> Path:
-        return self.ductor_home / "cron_jobs.json"
+        return self.klir_home / "cron_jobs.json"
 
     @property
     def webhooks_path(self) -> Path:
-        return self.ductor_home / "webhooks.json"
+        return self.klir_home / "webhooks.json"
 
     @property
     def logs_dir(self) -> Path:
-        return self.ductor_home / "logs"
+        return self.klir_home / "logs"
 
     @property
     def cron_tasks_dir(self) -> Path:
@@ -112,28 +112,28 @@ class DuctorPaths:
     @property
     def tasks_registry_path(self) -> Path:
         """Task registry persistence."""
-        return self.ductor_home / "tasks.json"
+        return self.klir_home / "tasks.json"
 
     @property
     def chat_activity_path(self) -> Path:
-        return self.ductor_home / "chat_activity.json"
+        return self.klir_home / "chat_activity.json"
 
     @property
     def named_sessions_path(self) -> Path:
-        return self.ductor_home / "named_sessions.json"
+        return self.klir_home / "named_sessions.json"
 
     @property
     def startup_state_path(self) -> Path:
-        return self.ductor_home / "startup_state.json"
+        return self.klir_home / "startup_state.json"
 
     @property
     def inflight_turns_path(self) -> Path:
-        return self.ductor_home / "inflight_turns.json"
+        return self.klir_home / "inflight_turns.json"
 
     @property
     def env_file(self) -> Path:
         """User-managed ``.env`` for external API secrets."""
-        return self.ductor_home / ".env"
+        return self.klir_home / ".env"
 
     @property
     def mainmemory_path(self) -> Path:
@@ -159,24 +159,24 @@ class DuctorPaths:
 
 
 def resolve_paths(
-    ductor_home: str | Path | None = None,
+    klir_home: str | Path | None = None,
     *,
     framework_root: str | Path | None = None,
     home_defaults: str | Path | None = None,
-) -> DuctorPaths:
-    """Build DuctorPaths from explicit values, env vars, or defaults.
+) -> KlirPaths:
+    """Build KlirPaths from explicit values, env vars, or defaults.
 
     Args:
-        ductor_home: User data directory. Falls back to ``$DUCTOR_HOME`` or ``~/.ductor``.
-        framework_root: Repository root. Falls back to ``$DUCTOR_FRAMEWORK_ROOT``.
+        klir_home: User data directory. Falls back to ``$KLIR_HOME`` or ``~/.ductor``.
+        framework_root: Repository root. Falls back to ``$KLIR_FRAMEWORK_ROOT``.
         home_defaults: Template directory. Falls back to ``klir/_home_defaults/``.
     """
-    if ductor_home is not None:
-        home = Path(ductor_home).expanduser().resolve()
+    if klir_home is not None:
+        home = Path(klir_home).expanduser().resolve()
     else:
         home = (
             Path(
-                os.environ.get("DUCTOR_HOME", str(Path.home() / ".ductor")),
+                os.environ.get("KLIR_HOME", str(Path.home() / ".ductor")),
             )
             .expanduser()
             .resolve()
@@ -185,9 +185,9 @@ def resolve_paths(
     if framework_root is not None:
         fw = Path(framework_root).expanduser().resolve()
     else:
-        env_fw = os.environ.get("DUCTOR_FRAMEWORK_ROOT")
+        env_fw = os.environ.get("KLIR_FRAMEWORK_ROOT")
         fw = Path(env_fw).resolve() if env_fw else _default_framework_root()
 
     hd = Path(home_defaults).resolve() if home_defaults is not None else _default_home_defaults()
 
-    return DuctorPaths(ductor_home=home, home_defaults=hd, framework_root=fw)
+    return KlirPaths(klir_home=home, home_defaults=hd, framework_root=fw)

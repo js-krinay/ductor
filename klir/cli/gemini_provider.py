@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT = 300.0
 
-# Must match ``_DUCTOR_MOUNT`` in ``klir.infra.docker``.
+# Must match ``_KLIR_MOUNT`` in ``klir.infra.docker``.
 _CONTAINER_DUCTOR = "/ductor"
 
 
@@ -319,7 +319,7 @@ class GeminiCLI(BaseCLI):
             return None
         directory: str | None = None
         if self._config.docker_container:
-            tmp_dir = resolve_paths().ductor_home / "tmp"
+            tmp_dir = resolve_paths().klir_home / "tmp"
             tmp_dir.mkdir(parents=True, exist_ok=True)
             directory = str(tmp_dir)
         return create_system_prompt_file(
@@ -363,7 +363,7 @@ class GeminiCLI(BaseCLI):
     @staticmethod
     def _host_to_container_path(host_path: str) -> str | None:
         """Translate a host path under ``~/.ductor/`` to its container mount."""
-        prefix = str(resolve_paths().ductor_home)
+        prefix = str(resolve_paths().klir_home)
         if host_path.startswith(prefix):
             return _CONTAINER_DUCTOR + host_path[len(prefix) :].replace("\\", "/")
         return None

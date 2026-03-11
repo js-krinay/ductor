@@ -140,7 +140,7 @@ def _generate_task_xml(command: str, arguments: str = "") -> str:
 
 def _task_xml_path() -> Path:
     """Temp path for the task XML definition."""
-    return resolve_paths().ductor_home / "ductor_task.xml"
+    return resolve_paths().klir_home / "ductor_task.xml"
 
 
 def is_service_available() -> bool:
