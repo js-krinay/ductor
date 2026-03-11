@@ -15,7 +15,7 @@ Runtime infrastructure: process lifecycle, restart/update flow, Docker sandbox, 
 
 ## Startup and recovery state
 
-State files under `~/.ductor/`:
+State files under `~/.klir/`:
 
 - `startup_state.json`
 - `inflight_turns.json`
@@ -46,7 +46,7 @@ Restart code: `42` (`EXIT_RESTART`).
 
 1. stop installed service
 2. kill PID-file instance
-3. kill remaining ductor processes
+3. kill remaining klir processes
 4. short Windows lock-release wait
 5. stop Docker container when enabled
 
@@ -57,7 +57,7 @@ Restart code: `42` (`EXIT_RESTART`).
 - daemon/image/container checks
 - container (re)start
 - mounts:
-  - `~/.ductor -> /ductor`
+  - `~/.klir -> /klir`
   - provider homes (`~/.claude`, `~/.codex`, `~/.gemini`, `~/.claude.json` when present)
   - optional host cache mount
   - user-configured `docker.mounts` to `/mnt/<name>`
@@ -83,10 +83,10 @@ Platform dispatch via `infra/service.py`:
 - macOS: launchd
 - Windows: Task Scheduler
 
-`ductor service logs`:
+`klir service logs`:
 
 - Linux: journal stream
-- macOS/Windows: file tail from `~/.ductor/logs/agent.log` (fallback newest `*.log`)
+- macOS/Windows: file tail from `~/.klir/logs/agent.log` (fallback newest `*.log`)
 
 ## Atomic persistence helpers
 
@@ -97,7 +97,7 @@ These are used across session/task/cron/webhook/config persistence paths.
 
 ## Environment secrets (`env_secrets.py`)
 
-Centralised loading of user-defined API secrets from `~/.ductor/.env`.
+Centralised loading of user-defined API secrets from `~/.klir/.env`.
 
 - standard dotenv syntax (comments, `export` prefix, single/double quotes)
 - loaded once per process and cached

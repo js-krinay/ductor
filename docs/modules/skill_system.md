@@ -1,6 +1,6 @@
 # Skill System
 
-Cross-tool skill sync between ductor workspace and CLI skill homes.
+Cross-tool skill sync between klir workspace and CLI skill homes.
 
 ## Files
 
@@ -20,12 +20,12 @@ Cross-tool skill sync between ductor workspace and CLI skill homes.
 
 `<agent-home>`:
 
-- main: `~/.ductor`
-- sub-agent: `~/.ductor/agents/<name>`
+- main: `~/.klir`
+- sub-agent: `~/.klir/agents/<name>`
 
 ## Bundled skills
 
-Bundled source: `ductor_bot/_home_defaults/workspace/skills/`.
+Bundled source: `klir/_home_defaults/workspace/skills/`.
 
 `sync_bundled_skills(paths)` mirrors bundled skills into each agent's workspace skill dir.
 
@@ -36,7 +36,7 @@ Bundled source: `ductor_bot/_home_defaults/workspace/skills/`.
 
 1. discover skill dirs in all roots
 2. union names
-3. pick canonical source by priority (`ductor > claude > codex > gemini`)
+3. pick canonical source by priority (`klir > claude > codex > gemini`)
 4. mirror to other roots
 5. cleanup broken managed links
 

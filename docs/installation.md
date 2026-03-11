@@ -17,20 +17,20 @@
 ### pipx (recommended)
 
 ```bash
-pipx install ductor
+pipx install klir
 ```
 
 ### pip
 
 ```bash
-pip install ductor
+pip install klir
 ```
 
 ### from source
 
 ```bash
-git clone https://github.com/PleasePrompto/ductor.git
-cd ductor
+git clone https://github.com/js-krinay/klir.git
+cd klir
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
@@ -38,7 +38,7 @@ pip install -e ".[dev]"
 ## First run
 
 ```bash
-ductor
+klir
 ```
 
 On first run, onboarding does:
@@ -48,7 +48,7 @@ On first run, onboarding does:
 - asks timezone,
 - offers Docker sandboxing (with optional AI/ML package selection),
 - offers service install,
-- writes config and seeds `~/.ductor/`.
+- writes config and seeds `~/.klir/`.
 
 If service install succeeds, onboarding returns without starting foreground bot.
 
@@ -60,8 +60,8 @@ If service install succeeds, onboarding returns without starting foreground bot.
 sudo apt update && sudo apt install python3 python3-pip python3-venv nodejs npm
 pip install pipx
 pipx ensurepath
-pipx install ductor
-ductor
+pipx install klir
+klir
 ```
 
 Optional Docker:
@@ -76,8 +76,8 @@ sudo usermod -aG docker $USER
 ```bash
 brew install python@3.11 node pipx
 pipx ensurepath
-pipx install ductor
-ductor
+pipx install klir
+klir
 ```
 
 ### Windows (native)
@@ -87,8 +87,8 @@ winget install Python.Python.3.11
 winget install OpenJS.NodeJS
 pip install pipx
 pipx ensurepath
-pipx install ductor
-ductor
+pipx install klir
+klir
 ```
 
 Native Windows is fully supported, including service management via Task Scheduler.
@@ -101,8 +101,8 @@ WSL works too. Install like Linux inside WSL.
 sudo apt update && sudo apt install python3 python3-pip python3-venv nodejs npm
 pip install pipx
 pipx ensurepath
-pipx install ductor
-ductor
+pipx install klir
+klir
 ```
 
 ## Docker sandboxing
@@ -121,50 +121,50 @@ Notes:
 
 - Docker image is built on first use when missing.
 - Container is reused between calls.
-- On Linux, ductor maps UID/GID to avoid root-owned files.
-- If Docker setup fails at startup, ductor logs warning and falls back to host execution.
+- On Linux, klir maps UID/GID to avoid root-owned files.
+- If Docker setup fails at startup, klir logs warning and falls back to host execution.
 
 Docker CLI shortcuts:
 
 ```bash
-ductor docker enable
-ductor docker disable
-ductor docker rebuild
-ductor docker mount /path/to/project
-ductor docker unmount /path/to/project
-ductor docker mounts
-ductor docker extras
-ductor docker extras-add <id>
-ductor docker extras-remove <id>
+klir docker enable
+klir docker disable
+klir docker rebuild
+klir docker mount /path/to/project
+klir docker unmount /path/to/project
+klir docker mounts
+klir docker extras
+klir docker extras-add <id>
+klir docker extras-remove <id>
 ```
 
 - `enable` / `disable` toggles `docker.enabled` in `config.json` (restart bot afterwards).
 - `rebuild` stops the bot, removes container + image, and forces fresh build on next start.
 - `mount` / `unmount` manage `docker.mounts` entries.
 - mounts are available in-container under `/mnt/<name>` (basename-based mapping with collision suffixes).
-- run `ductor docker mounts` to inspect effective mapping and broken paths.
+- run `klir docker mounts` to inspect effective mapping and broken paths.
 - `extras` lists all optional packages with their selection status.
 - `extras-add` / `extras-remove` manage optional AI/ML packages (Whisper, PyTorch, OpenCV, etc.) in `config.json`. Transitive dependencies are resolved automatically.
-- after changing extras, run `ductor docker rebuild` to apply. Build output is streamed live to the terminal.
+- after changing extras, run `klir docker rebuild` to apply. Build output is streamed live to the terminal.
 
 ## Direct API server (optional)
 
 Preferred enable path:
 
 ```bash
-ductor api enable
+klir api enable
 ```
 
 This writes/updates the `api` block in `config.json` and generates a token if missing.
 
-`ductor api enable` requires PyNaCl (used for E2E encryption). If it is missing:
+`klir api enable` requires PyNaCl (used for E2E encryption). If it is missing:
 
 ```bash
 # pipx install
-pipx inject ductor PyNaCl
+pipx inject klir PyNaCl
 
 # pip install
-pip install "ductor[api]"
+pip install "klir[api]"
 ```
 
 Manual config equivalent:
@@ -183,7 +183,7 @@ Manual config equivalent:
 
 Notes:
 
-- token is generated and persisted by `ductor api enable` (runtime also generates it on API start if still empty).
+- token is generated and persisted by `klir api enable` (runtime also generates it on API start if still empty).
 - WebSocket auth frame must include `type="auth"`, `token`, and `e2e_pk` (client ephemeral public key).
 - endpoints:
   - WebSocket: `ws://<host>:8741/ws`
@@ -198,24 +198,24 @@ Notes:
 Install:
 
 ```bash
-ductor service install
+klir service install
 ```
 
 Manage:
 
 ```bash
-ductor service status
-ductor service start
-ductor service stop
-ductor service logs
-ductor service uninstall
+klir service status
+klir service start
+klir service stop
+klir service logs
+klir service uninstall
 ```
 
 Backends:
 
-- Linux: `systemd --user` service `~/.config/systemd/user/ductor.service`
-- macOS: Launch Agent `~/Library/LaunchAgents/dev.ductor.plist`
-- Windows: Task Scheduler task `ductor`
+- Linux: `systemd --user` service `~/.config/systemd/user/klir.service`
+- macOS: Launch Agent `~/Library/LaunchAgents/dev.klir.plist`
+- Windows: Task Scheduler task `klir`
 
 Linux note:
 
@@ -223,14 +223,14 @@ Linux note:
 
 Windows note:
 
-- service install prefers `pythonw.exe -m ductor_bot` (no visible console window),
+- service install prefers `pythonw.exe -m klir` (no visible console window),
 - installed Task Scheduler service uses logon trigger + restart-on-failure retries,
 - some systems require elevated terminal permissions for Task Scheduler operations.
 
 Log command behavior:
 
-- Linux: live `journalctl --user -u ductor -f`
-- macOS/Windows: recent lines from `~/.ductor/logs/agent.log` (fallback newest `*.log`)
+- Linux: live `journalctl --user -u klir -f`
+- macOS/Windows: recent lines from `~/.klir/logs/agent.log` (fallback newest `*.log`)
 
 ## VPS notes
 
@@ -241,8 +241,8 @@ ssh user@host
 sudo apt update && sudo apt install python3 python3-pip python3-venv nodejs npm docker.io
 pip install pipx
 pipx ensurepath
-pipx install ductor
-ductor
+pipx install klir
+klir
 ```
 
 Security basics:
@@ -250,15 +250,15 @@ Security basics:
 - keep SSH key-only auth
 - enable Docker sandboxing for unattended automation
 - keep `allowed_user_ids` restricted
-- use `/upgrade` or `pipx upgrade ductor`
+- use `/upgrade` or `pipx upgrade klir`
 
 ## Troubleshooting
 
 ### Bot not responding
 
 1. check `telegram_token` + `allowed_user_ids`
-2. run `ductor status`
-3. inspect `~/.ductor/logs/agent.log`
+2. run `klir status`
+3. inspect `~/.klir/logs/agent.log`
 4. run `/diagnose` in Telegram
 
 ### CLI installed but not authenticated
@@ -292,12 +292,12 @@ Then validate `docker.enabled` + image/container names in config.
 Upgrade:
 
 ```bash
-pipx upgrade ductor
+pipx upgrade klir
 ```
 
 Uninstall:
 
 ```bash
-pipx uninstall ductor
-rm -rf ~/.ductor  # optional data removal
+pipx uninstall klir
+rm -rf ~/.klir  # optional data removal
 ```

@@ -1,13 +1,13 @@
 # System Overview
 
-Fastest end-to-end mental model for ductor.
+Fastest end-to-end mental model for klir.
 
 ## 1) Runtime shape
 
 One Python process hosts:
 
 - main agent stack (always)
-- optional sub-agent stacks from `~/.ductor/agents.json`
+- optional sub-agent stacks from `~/.klir/agents.json`
 - shared `AgentSupervisor`
 - shared `InterAgentBus`
 - shared internal HTTP bridge (`InternalAgentAPI`, port `8799`)
@@ -103,7 +103,7 @@ HTTP endpoints:
 
 Ownership checks are enforced for resume/cancel/delete when `from=<agent>` is supplied.
 
-## 7) Key runtime files (`~/.ductor`)
+## 7) Key runtime files (`~/.klir`)
 
 - `config/config.json`
 - `sessions.json`
@@ -119,18 +119,18 @@ Ownership checks are enforced for resume/cancel/delete when `from=<agent>` is su
 - `logs/agent.log`
 - `workspace/` (rules, tools, files, tasks, cron_tasks, skills)
 
-Sub-agent home: `~/.ductor/agents/<name>/` with its own config/workspace/session files.
+Sub-agent home: `~/.klir/agents/<name>/` with its own config/workspace/session files.
 
 ## 8) Where to read code first
 
-1. `ductor_bot/__main__.py` (entrypoint + config/load/run)
-2. `ductor_bot/cli_commands/` (actual CLI subcommand logic)
-3. `ductor_bot/multiagent/supervisor.py` (always-on runtime wrapper)
-4. `ductor_bot/bot/app.py` + `bot/startup.py` (Telegram lifecycle + ingress)
-5. `ductor_bot/orchestrator/core.py` + `orchestrator/lifecycle.py`
-6. `ductor_bot/bus/*` (unified delivery/injection)
-7. `ductor_bot/tasks/hub.py` + `tasks/registry.py`
-8. `ductor_bot/cli/service.py` and provider wrappers
+1. `klir/__main__.py` (entrypoint + config/load/run)
+2. `klir/cli_commands/` (actual CLI subcommand logic)
+3. `klir/multiagent/supervisor.py` (always-on runtime wrapper)
+4. `klir/bot/app.py` + `bot/startup.py` (Telegram lifecycle + ingress)
+5. `klir/orchestrator/core.py` + `orchestrator/lifecycle.py`
+6. `klir/bus/*` (unified delivery/injection)
+7. `klir/tasks/hub.py` + `tasks/registry.py`
+8. `klir/cli/service.py` and provider wrappers
 
 ## 9) Command surface (high level)
 
@@ -145,9 +145,9 @@ Telegram main-agent only:
 
 CLI:
 
-- `ductor`
-- `ductor status|stop|restart|upgrade|uninstall|onboarding|reset`
-- `ductor service ...`
-- `ductor docker ...` (includes `extras`, `extras-add`, `extras-remove` for optional AI/ML packages)
-- `ductor api ...`
-- `ductor agents ...`
+- `klir`
+- `klir status|stop|restart|upgrade|uninstall|onboarding|reset`
+- `klir service ...`
+- `klir docker ...` (includes `extras`, `extras-add`, `extras-remove` for optional AI/ML packages)
+- `klir api ...`
+- `klir agents ...`

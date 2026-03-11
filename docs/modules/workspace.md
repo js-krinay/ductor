@@ -1,37 +1,37 @@
 # workspace/
 
-Workspace/home-directory management for `~/.ductor`.
+Workspace/home-directory management for `~/.klir`.
 
 ## Files
 
-- `paths.py`: immutable `DuctorPaths` + `resolve_paths()`
+- `paths.py`: immutable `KlirPaths` + `resolve_paths()`
 - `init.py`: workspace init pipeline, zone copy rules, rule sync, runtime notice injection
 - `rules_selector.py`: auth-aware RULES template selection/deployment + stale file cleanup
 - `cron_tasks.py`: create/list/delete cron-task folders
 - `skill_sync.py`: cross-tool skill sync and bundled-skill sync
 - `loader.py`: safe file readers
 
-## `DuctorPaths`
+## `KlirPaths`
 
 Important runtime paths:
 
-- `ductor_home`: `~/.ductor` (default)
-- `workspace`: `~/.ductor/workspace`
-- `config_path`: `~/.ductor/config/config.json`
-- `sessions_path`: `~/.ductor/sessions.json`
-- `named_sessions_path`: `~/.ductor/named_sessions.json`
-- `env_file`: `~/.ductor/.env`
-- `tasks_registry_path`: `~/.ductor/tasks.json`
-- `chat_activity_path`: `~/.ductor/chat_activity.json`
-- `startup_state_path`: `~/.ductor/startup_state.json`
-- `inflight_turns_path`: `~/.ductor/inflight_turns.json`
-- `cron_jobs_path`: `~/.ductor/cron_jobs.json`
-- `webhooks_path`: `~/.ductor/webhooks.json`
-- `logs_dir`: `~/.ductor/logs`
-- `cron_tasks_dir`: `~/.ductor/workspace/cron_tasks`
-- `tasks_dir`: `~/.ductor/workspace/tasks`
-- `api_files_dir`: `~/.ductor/workspace/api_files`
-- `skills_dir`: `~/.ductor/workspace/skills`
+- `klir_home`: `~/.klir` (default)
+- `workspace`: `~/.klir/workspace`
+- `config_path`: `~/.klir/config/config.json`
+- `sessions_path`: `~/.klir/sessions.json`
+- `named_sessions_path`: `~/.klir/named_sessions.json`
+- `env_file`: `~/.klir/.env`
+- `tasks_registry_path`: `~/.klir/tasks.json`
+- `chat_activity_path`: `~/.klir/chat_activity.json`
+- `startup_state_path`: `~/.klir/startup_state.json`
+- `inflight_turns_path`: `~/.klir/inflight_turns.json`
+- `cron_jobs_path`: `~/.klir/cron_jobs.json`
+- `webhooks_path`: `~/.klir/webhooks.json`
+- `logs_dir`: `~/.klir/logs`
+- `cron_tasks_dir`: `~/.klir/workspace/cron_tasks`
+- `tasks_dir`: `~/.klir/workspace/tasks`
+- `api_files_dir`: `~/.klir/workspace/api_files`
+- `skills_dir`: `~/.klir/workspace/skills`
 - `bundled_skills_dir`: package `_home_defaults/workspace/skills`
 
 ## `init_workspace()` order
@@ -53,7 +53,7 @@ Directory creation note:
 
 - `workspace/api_files/` is not in `_REQUIRED_DIRS`; it is created lazily on first API upload via `prepare_destination(...)`.
 - `workspace/tasks/` is part of `_REQUIRED_DIRS` and always created (used by shared `TaskHub` task folders).
-- sub-agent homes do not create `logs/` by default; all agents write to the main home log file `~/.ductor/logs/agent.log`.
+- sub-agent homes do not create `logs/` by default; all agents write to the main home log file `~/.klir/logs/agent.log`.
 
 ## Zone copy rules (`_walk_and_copy`)
 
@@ -133,7 +133,7 @@ Watcher detail per cycle:
 `inject_runtime_environment(paths, docker_container=...)` appends two sections to each existing workspace rule file (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`):
 
 - `## Multi-Agent Identity` (main/sub-agent context + communication hints)
-- Docker mode notice (`/ductor` mount)
+- Docker mode notice (`/klir` mount)
 - host mode warning (no sandbox)
 
 Duplicate prevention: injection is skipped when either marker already exists (`## Multi-Agent Identity` or `## Runtime Environment`).
@@ -162,7 +162,7 @@ Path traversal protection is enforced for create/delete operations.
 
 `sync_skills()` syncs between:
 
-- `~/.ductor/workspace/skills`
+- `~/.klir/workspace/skills`
 - `~/.claude/skills`
 - `~/.codex/skills`
 - `~/.gemini/skills`

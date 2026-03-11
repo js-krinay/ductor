@@ -2,7 +2,7 @@ This file gives coding agents a current map of the repository.
 
 ## Project Overview
 
-ductor is a Telegram bot that routes chat input to official provider CLIs (`claude`, `codex`, `gemini`), streams responses back to Telegram, persists per-chat state, and runs cron/webhook/heartbeat automation in-process.
+klir is a Telegram bot that routes chat input to official provider CLIs (`claude`, `codex`, `gemini`), streams responses back to Telegram, persists per-chat state, and runs cron/webhook/heartbeat automation in-process.
 
 Stack:
 
@@ -18,8 +18,8 @@ Stack:
 uv sync --group dev
 
 # Run
-uv run ductor
-uv run ductor -v
+uv run klir
+uv run klir -v
 
 # Tests
 uv run pytest
@@ -29,7 +29,7 @@ uv run pytest -k "pattern"
 # Quality
 uv run ruff format .
 uv run ruff check .
-uv run mypy ductor_bot
+uv run mypy klir
 ```
 
 ## Runtime Flow
@@ -64,15 +64,15 @@ Telegram Update
 
 ## Key Runtime Patterns
 
-- `DuctorPaths` (`workspace/paths.py`) is the single source of truth for paths.
+- `KlirPaths` (`workspace/paths.py`) is the single source of truth for paths.
 - Workspace init is zone-based:
   - Zone 2 overwrite: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, and framework cron/webhook tool scripts.
   - Zone 3 seed-once for user-owned files.
 - Rules are selected from `RULES*.md` variants and deployed per authenticated provider.
 - Rule sync updates existing `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` siblings recursively by mtime.
-- Skill sync spans `~/.ductor/workspace/skills`, `~/.claude/skills`, `~/.codex/skills`, `~/.gemini/skills`.
+- Skill sync spans `~/.klir/workspace/skills`, `~/.claude/skills`, `~/.codex/skills`, `~/.gemini/skills`.
   - normal mode: links
-  - Docker mode: managed copies (`.ductor_managed` marker)
+  - Docker mode: managed copies (`.klir_managed` marker)
 - Streaming fallback is automatic; `/stop` abort checks are enforced during event loop processing.
 - Session state is provider-isolated; `/new` resets only the active provider bucket.
 
@@ -105,29 +105,29 @@ Optional multi-agent system (when `agents.json` is present):
 - macOS: launchd Launch Agent
 - Windows: Task Scheduler
 
-`ductor service logs` behavior:
+`klir service logs` behavior:
 
-- Linux: `journalctl --user -u ductor -f`
-- macOS/Windows: recent lines from `~/.ductor/logs/agent.log` (fallback newest `*.log`)
+- Linux: `journalctl --user -u klir -f`
+- macOS/Windows: recent lines from `~/.klir/logs/agent.log` (fallback newest `*.log`)
 
 ## CLI Commands
 
 | Command | Effect |
 |---|---|
-| `ductor` | Start bot (runs onboarding if needed) |
-| `ductor stop` | Stop bot and Docker container |
-| `ductor restart` | Restart bot |
-| `ductor upgrade` | Stop, upgrade, restart |
-| `ductor docker rebuild` | Stop bot, remove container & image, rebuilt on next start |
-| `ductor docker enable` | Set `docker.enabled = true` |
-| `ductor docker disable` | Stop container, set `docker.enabled = false` |
-| `ductor service install` | Install as background service |
-| `ductor service [sub]` | Service management (status/stop/logs/...) |
-| `ductor agents` | List all sub-agents and their config |
-| `ductor agents add <name>` | Add a new sub-agent (interactive) |
-| `ductor agents remove <name>` | Remove a sub-agent |
+| `klir` | Start bot (runs onboarding if needed) |
+| `klir stop` | Stop bot and Docker container |
+| `klir restart` | Restart bot |
+| `klir upgrade` | Stop, upgrade, restart |
+| `klir docker rebuild` | Stop bot, remove container & image, rebuilt on next start |
+| `klir docker enable` | Set `docker.enabled = true` |
+| `klir docker disable` | Stop container, set `docker.enabled = false` |
+| `klir service install` | Install as background service |
+| `klir service [sub]` | Service management (status/stop/logs/...) |
+| `klir agents` | List all sub-agents and their config |
+| `klir agents add <name>` | Add a new sub-agent (interactive) |
+| `klir agents remove <name>` | Remove a sub-agent |
 
-## Data Files (`~/.ductor`)
+## Data Files (`~/.klir`)
 
 - `config/config.json`
 - `.env` (external API secrets, injected into all CLI subprocesses)

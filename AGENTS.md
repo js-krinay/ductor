@@ -2,7 +2,7 @@ This file gives coding agents a current map of the repository.
 
 ## Project Overview
 
-ductor is a Telegram bot that routes chat input to official provider CLIs (`claude`, `codex`, `gemini`), streams responses back to Telegram, persists per-chat state, and runs cron/webhook/heartbeat automation in-process.
+klir is a Telegram bot that routes chat input to official provider CLIs (`claude`, `codex`, `gemini`), streams responses back to Telegram, persists per-chat state, and runs cron/webhook/heartbeat automation in-process.
 
 Stack:
 
@@ -19,8 +19,8 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
 # Run
-ductor
-ductor -v
+klir
+klir -v
 
 # Tests
 pytest
@@ -30,7 +30,7 @@ pytest -k "pattern"
 # Quality
 ruff format .
 ruff check .
-mypy ductor_bot
+mypy klir
 ```
 
 ## Runtime Flow
@@ -64,13 +64,13 @@ Telegram Update
 
 ## Key Runtime Patterns
 
-- `DuctorPaths` (`workspace/paths.py`) is the single source of truth for paths.
+- `KlirPaths` (`workspace/paths.py`) is the single source of truth for paths.
 - Workspace init is zone-based:
   - Zone 2 overwrite: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, and framework cron/webhook tool scripts.
   - Zone 3 seed-once for user-owned files.
 - Rules are selected from `RULES*.md` variants and deployed per authenticated provider.
 - Rule sync updates existing `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` siblings recursively by mtime.
-- Skill sync spans `~/.ductor/workspace/skills`, `~/.claude/skills`, `~/.codex/skills`, `~/.gemini/skills`.
+- Skill sync spans `~/.klir/workspace/skills`, `~/.claude/skills`, `~/.codex/skills`, `~/.gemini/skills`.
   - normal mode: links
   - Docker mode: managed copies (`.ductor_managed` marker)
 - Streaming fallback is automatic; `/stop` abort checks are enforced during event loop processing.
@@ -97,26 +97,26 @@ All run as in-process asyncio tasks:
 - macOS: launchd Launch Agent
 - Windows: Task Scheduler
 
-`ductor service logs` behavior:
+`klir service logs` behavior:
 
-- Linux: `journalctl --user -u ductor -f`
-- macOS/Windows: recent lines from `~/.ductor/logs/agent.log` (fallback newest `*.log`)
+- Linux: `journalctl --user -u klir -f`
+- macOS/Windows: recent lines from `~/.klir/logs/agent.log` (fallback newest `*.log`)
 
 ## CLI Commands
 
 | Command | Effect |
 |---|---|
-| `ductor` | Start bot (runs onboarding if needed) |
-| `ductor stop` | Stop bot and Docker container |
-| `ductor restart` | Restart bot |
-| `ductor upgrade` | Stop, upgrade, restart |
-| `ductor docker rebuild` | Stop bot, remove container & image, rebuilt on next start |
-| `ductor docker enable` | Set `docker.enabled = true` |
-| `ductor docker disable` | Stop container, set `docker.enabled = false` |
-| `ductor service install` | Install as background service |
-| `ductor service [sub]` | Service management (status/stop/logs/...) |
+| `klir` | Start bot (runs onboarding if needed) |
+| `klir stop` | Stop bot and Docker container |
+| `klir restart` | Restart bot |
+| `klir upgrade` | Stop, upgrade, restart |
+| `klir docker rebuild` | Stop bot, remove container & image, rebuilt on next start |
+| `klir docker enable` | Set `docker.enabled = true` |
+| `klir docker disable` | Stop container, set `docker.enabled = false` |
+| `klir service install` | Install as background service |
+| `klir service [sub]` | Service management (status/stop/logs/...) |
 
-## Data Files (`~/.ductor`)
+## Data Files (`~/.klir`)
 
 - `config/config.json`
 - `sessions.json`

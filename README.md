@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/PleasePrompto/ductor/main/ductor_bot/bot/ductor_images/logo_text.png" alt="ductor" width="100%" />
+  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/klir/bot/ductor_images/logo_text.png" alt="klir" width="100%" />
 </p>
 
 <p align="center">
@@ -8,9 +8,9 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/ductor/"><img src="https://img.shields.io/pypi/v/ductor?color=blue" alt="PyPI" /></a>
-  <a href="https://pypi.org/project/ductor/"><img src="https://img.shields.io/pypi/pyversions/ductor?v=1" alt="Python" /></a>
-  <a href="https://github.com/PleasePrompto/ductor/blob/main/LICENSE"><img src="https://img.shields.io/github/license/PleasePrompto/ductor" alt="License" /></a>
+  <a href="https://pypi.org/project/klir/"><img src="https://img.shields.io/pypi/v/klir?color=blue" alt="PyPI" /></a>
+  <a href="https://pypi.org/project/klir/"><img src="https://img.shields.io/pypi/pyversions/klir?v=1" alt="Python" /></a>
+  <a href="https://github.com/js-krinay/klir/blob/main/LICENSE"><img src="https://img.shields.io/github/license/js-krinay/klir" alt="License" /></a>
 </p>
 
 <p align="center">
@@ -23,20 +23,20 @@
 
 ---
 
-If you want to control Claude Code, Google's Gemini CLI, or OpenAI's Codex CLI via Telegram, build automations, or manage multiple agents easily — ductor is the right tool for you.
+If you want to control Claude Code, Google's Gemini CLI, or OpenAI's Codex CLI via Telegram, build automations, or manage multiple agents easily — klir is the right tool for you.
 
-ductor runs on your machine and sends simple console commands as if you were typing them yourself, so you can use your active subscriptions (Claude Max, etc.) directly. No API proxying, no SDK patching, no spoofed headers. Just the official CLIs, executed as subprocesses, with all state kept in plain JSON and Markdown under `~/.ductor/`.
+klir runs on your machine and sends simple console commands as if you were typing them yourself, so you can use your active subscriptions (Claude Max, etc.) directly. No API proxying, no SDK patching, no spoofed headers. Just the official CLIs, executed as subprocesses, with all state kept in plain JSON and Markdown under `~/.klir/`.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/PleasePrompto/ductor/main/docs/images/ductor-start.jpeg" alt="ductor /start screen" width="49%" />
-  <img src="https://raw.githubusercontent.com/PleasePrompto/ductor/main/docs/images/ductor-quick-actions.jpeg" alt="ductor quick action buttons" width="49%" />
+  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/docs/images/klir-start.jpeg" alt="klir /start screen" width="49%" />
+  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/docs/images/klir-quick-actions.jpeg" alt="klir quick action buttons" width="49%" />
 </p>
 
 ## Quick start
 
 ```bash
-pipx install ductor
-ductor
+pipx install klir
+klir
 ```
 
 The onboarding wizard handles CLI checks, Telegram setup, timezone, optional Docker, and optional background service install.
@@ -47,7 +47,7 @@ Detailed setup: [`docs/installation.md`](docs/installation.md)
 
 ## How chats work
 
-ductor gives you multiple ways to interact with your coding agents. Each level builds on the previous one.
+klir gives you multiple ways to interact with your coding agents. Each level builds on the previous one.
 
 ### 1. Single chat (your main agent)
 
@@ -83,9 +83,9 @@ That's 5 independent conversations from a single group. Your private single chat
 
 Each topic can use a different model. Run `/model` inside a topic to change just that topic's provider.
 
-All chats share the same `~/.ductor/` workspace — same tools, same memory, same files. The only thing isolated is the conversation context.
+All chats share the same `~/.klir/` workspace — same tools, same memory, same files. The only thing isolated is the conversation context.
 
-> **Note:** The Telegram Bot API has no method to list existing forum topics. ductor learns topic names from `forum_topic_created` and `forum_topic_edited` events — so only topics created or renamed while the bot is in the group are known by name. Pre-existing topics show as "Topic #N" until they are edited. This is a Telegram limitation, not a ductor limitation.
+> **Note:** The Telegram Bot API has no method to list existing forum topics. klir learns topic names from `forum_topic_created` and `forum_topic_edited` events — so only topics created or renamed while the bot is in the group are known by name. Pre-existing topics show as "Topic #N" until they are edited. This is a Telegram limitation, not a klir limitation.
 
 ### 3. Named sessions (extra contexts within any chat)
 
@@ -124,10 +124,10 @@ Each task gets its own memory file (`TASKMEMORY.md`) and can be resumed with fol
 
 ### 5. Sub-agents (fully isolated second agent)
 
-Sub-agents are completely separate bots — own Telegram chat, own workspace, own memory, own CLI auth, own config settings (heartbeat, timeouts, model defaults, etc.). Like having ductor installed twice on different machines.
+Sub-agents are completely separate bots — own Telegram chat, own workspace, own memory, own CLI auth, own config settings (heartbeat, timeouts, model defaults, etc.). Like having klir installed twice on different machines.
 
 ```bash
-ductor agents add codex-agent    # creates a new bot (needs its own BotFather token)
+klir agents add codex-agent    # creates a new bot (needs its own BotFather token)
 ```
 
 ```text
@@ -135,7 +135,7 @@ Your main chat (Claude):        "Explain the auth flow"
 codex-agent chat (Codex):       "Refactor the parser module"
 ```
 
-Sub-agents live under `~/.ductor/agents/<name>/` with their own workspace, tools, and memory — fully isolated from the main agent.
+Sub-agents live under `~/.klir/agents/<name>/` with their own workspace, tools, and memory — fully isolated from the main agent.
 
 You can delegate tasks between agents:
 
@@ -152,14 +152,14 @@ Main chat:  "Ask codex-agent to write tests for the API"
 |---|---|---|---|---|---|
 | **What it is** | Your main 1:1 chat | One topic = one chat | Extra context in any chat | "Do this while I keep working" | Separate bot, own everything |
 | **Context** | One per provider | One per topic per provider | Own context per session | Own context, result flows back | Fully isolated |
-| **Workspace** | `~/.ductor/` | Shared with main | Shared with parent chat | Shared with parent agent | Own under `~/.ductor/agents/` |
+| **Workspace** | `~/.klir/` | Shared with main | Shared with parent chat | Shared with parent agent | Own under `~/.klir/agents/` |
 | **Config** | Main config | Shared with main | Shared with parent chat | Shared with parent agent | Own config (heartbeat, timeouts, model, ...) |
-| **Setup** | Automatic | Create group + enable topics | `/session <prompt>` | Automatic or "delegate this" | `ductor agents add` + BotFather |
+| **Setup** | Automatic | Create group + enable topics | `/session <prompt>` | Automatic or "delegate this" | `klir agents add` + BotFather |
 
 ### How it all fits together
 
 ```text
-~/.ductor/                          ← shared workspace (tools, memory, files)
+~/.klir/                          ← shared workspace (tools, memory, files)
   │
   ├── Single chat                   ← main agent, private 1:1
   │     ├── main context
@@ -193,7 +193,7 @@ Main chat:  "Ask codex-agent to write tests for the API"
 
 ## Auth
 
-ductor uses a dual-allowlist model. Every message must pass both checks.
+klir uses a dual-allowlist model. Every message must pass both checks.
 
 | Chat type | Check |
 |---|---|
@@ -224,7 +224,7 @@ All three are **hot-reloadable** — edit `config.json` and changes take effect 
 | `/sessions` | View/manage active sessions |
 | `/tasks` | View/manage background tasks |
 | `/cron` | Interactive cron management |
-| `/showfiles` | Browse `~/.ductor/` |
+| `/showfiles` | Browse `~/.klir/` |
 | `/diagnose` | Runtime diagnostics |
 | `/upgrade` | Check/apply updates |
 | `/agents` | Multi-agent status |
@@ -236,30 +236,30 @@ All three are **hot-reloadable** — edit `config.json` and changes take effect 
 ## CLI commands
 
 ```bash
-ductor                  # Start bot (auto-onboarding if needed)
-ductor stop             # Stop bot
-ductor restart          # Restart bot
-ductor upgrade          # Upgrade and restart
-ductor status           # Runtime status
+klir                  # Start bot (auto-onboarding if needed)
+klir stop             # Stop bot
+klir restart          # Restart bot
+klir upgrade          # Upgrade and restart
+klir status           # Runtime status
 
-ductor service install  # Install as background service
-ductor service logs     # View service logs
+klir service install  # Install as background service
+klir service logs     # View service logs
 
-ductor docker enable    # Enable Docker sandbox
-ductor docker rebuild   # Rebuild sandbox container
-ductor docker mount /p  # Add host mount
+klir docker enable    # Enable Docker sandbox
+klir docker rebuild   # Rebuild sandbox container
+klir docker mount /p  # Add host mount
 
-ductor agents list      # List configured sub-agents
-ductor agents add NAME  # Add a sub-agent
-ductor agents remove NAME
+klir agents list      # List configured sub-agents
+klir agents add NAME  # Add a sub-agent
+klir agents remove NAME
 
-ductor api enable       # Enable WebSocket API (beta)
+klir api enable       # Enable WebSocket API (beta)
 ```
 
 ## Workspace layout
 
 ```text
-~/.ductor/
+~/.klir/
   config/config.json                 # Bot configuration
   sessions.json                      # Chat session state
   named_sessions.json                # Named background sessions
@@ -291,9 +291,9 @@ Full config reference: [`docs/config.md`](docs/config.md)
 | [Automation](docs/automation.md) | Cron, webhooks, heartbeat setup |
 | [Module docs](docs/modules/) | Per-module deep dives |
 
-## Why ductor?
+## Why klir?
 
-Other projects manipulate SDKs or patch CLIs and risk violating provider terms of service. ductor simply runs the official CLI binaries as subprocesses — nothing more.
+Other projects manipulate SDKs or patch CLIs and risk violating provider terms of service. klir simply runs the official CLI binaries as subprocesses — nothing more.
 
 - Official CLIs only (`claude`, `codex`, `gemini`)
 - Rule files are plain Markdown (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`)
@@ -302,7 +302,7 @@ Other projects manipulate SDKs or patch CLIs and risk violating provider terms o
 
 ## Disclaimer
 
-ductor runs official provider CLIs and does not impersonate provider clients. Validate your own compliance requirements before unattended automation.
+klir runs official provider CLIs and does not impersonate provider clients. Validate your own compliance requirements before unattended automation.
 
 - [Anthropic Terms](https://www.anthropic.com/policies/terms)
 - [OpenAI Terms](https://openai.com/policies/terms-of-use)
@@ -311,11 +311,11 @@ ductor runs official provider CLIs and does not impersonate provider clients. Va
 ## Contributing
 
 ```bash
-git clone https://github.com/PleasePrompto/ductor.git
-cd ductor
+git clone https://github.com/js-krinay/klir.git
+cd klir
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest && ruff format . && ruff check . && mypy ductor_bot
+pytest && ruff format . && ruff check . && mypy klir
 ```
 
 Zero warnings, zero errors.

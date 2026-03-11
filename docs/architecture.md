@@ -25,7 +25,7 @@ Direct API path (`api.enabled=true`) uses `ApiServer` and calls orchestrator str
 
 ## Startup Flow
 
-### `ductor` entry (`ductor_bot/__main__.py`)
+### `klir` entry (`klir/__main__.py`)
 
 1. parse CLI args and dispatch command (implementation in `cli_commands/*`)
 2. default run path:
@@ -63,7 +63,7 @@ Direct API path (`api.enabled=true`) uses `ApiServer` and calls orchestrator str
 
 ### Orchestrator factory (`orchestrator/lifecycle.py`)
 
-1. resolve paths and set `DUCTOR_HOME` for main agent
+1. resolve paths and set `KLIR_HOME` for main agent
 2. optional Docker setup + Docker-mode skill resync
 3. inject runtime environment note into workspace rule files
 4. instantiate `Orchestrator`
@@ -154,11 +154,11 @@ Gemini safeguard:
 
 ### Delegated tasks (`TaskHub`)
 
-- shared registry: `~/.ductor/tasks.json`
-- folders: `~/.ductor/workspace/tasks/<task_id>/`
+- shared registry: `~/.klir/tasks.json`
+- folders: `~/.klir/workspace/tasks/<task_id>/`
 - endpoints via internal API (`/tasks/*`)
 - topic-aware routing: task results/questions retain `thread_id` and are injected back into originating topic session
-- task tools receive `DUCTOR_CHAT_ID` and optional `DUCTOR_TOPIC_ID`
+- task tools receive `KLIR_CHAT_ID` and optional `KLIR_TOPIC_ID`
 - single-task permanent delete: `/tasks/delete` + `TaskRegistry.delete()`
 
 ## MessageBus and Delivery
@@ -215,7 +215,7 @@ Shutdown (`orchestrator/lifecycle.shutdown`):
 
 ## Workspace Seeding Model
 
-Source: `ductor_bot/_home_defaults/`.
+Source: `klir/_home_defaults/`.
 
 Zone rules (`workspace/init.py`):
 

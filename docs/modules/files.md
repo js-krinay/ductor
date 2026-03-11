@@ -61,5 +61,5 @@ Builds standardized `[INCOMING FILE]` prompt blocks for agent input.
 
 ## Runtime paths
 
-- Telegram uploads: `~/.ductor/workspace/telegram_files/YYYY-MM-DD/`
-- API uploads: `~/.ductor/workspace/api_files/YYYY-MM-DD/`
+- Telegram uploads: `~/.klir/workspace/telegram_files/YYYY-MM-DD/`
+- API uploads: `~/.klir/workspace/api_files/YYYY-MM-DD/`

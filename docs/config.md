@@ -1,22 +1,22 @@
 # Configuration
 
-Runtime config file: `~/.ductor/config/config.json`.
+Runtime config file: `~/.klir/config/config.json`.
 
-Seed source: `<repo>/config.example.json` (source checkout) or packaged fallback `ductor_bot/_config_example.json` (installed mode).
+Seed source: `<repo>/config.example.json` (source checkout) or packaged fallback `klir/_config_example.json` (installed mode).
 
 ## Config Creation
 
-Primary path: `ductor onboarding` (interactive wizard) writes `config.json` with user-provided values merged into `AgentConfig` defaults.
+Primary path: `klir onboarding` (interactive wizard) writes `config.json` with user-provided values merged into `AgentConfig` defaults.
 
 ## Load & Merge Behavior
 
 Config is merged in two places:
 
-1. `ductor_bot/__main__.py::load_config()`
+1. `klir/__main__.py::load_config()`
    - creates config on first start (copy from `config.example.json` or Pydantic defaults),
    - deep-merges runtime file with `AgentConfig` defaults,
    - writes back only when new keys were added.
-2. `ductor_bot/workspace/init.py::_smart_merge_config()`
+2. `klir/workspace/init.py::_smart_merge_config()`
    - shallow merge `{**defaults, **existing}` with `config.example.json`,
    - preserves existing user top-level keys,
    - fills missing top-level keys from `config.example.json`.
@@ -31,9 +31,9 @@ Runtime edits persisted through config helpers include `/model` changes (model/p
 API config persistence note:
 
 - `load_config()` intentionally does not auto-add the `api` block during default deep-merge (beta gating).
-- `ductor api enable` writes the `api` block (including generated token) into `config.json`.
+- `klir api enable` writes the `api` block (including generated token) into `config.json`.
 
-## External API Secrets (`~/.ductor/.env`)
+## External API Secrets (`~/.klir/.env`)
 
 User-defined environment secrets for external APIs (e.g. `PPLX_API_KEY`, `DEEPSEEK_API_KEY`).
 
@@ -60,14 +60,14 @@ Priority (highest to lowest):
 
 Changes take effect on the next CLI invocation (mtime-based cache invalidation, no restart needed).
 
-## `AgentConfig` (`ductor_bot/config.py`)
+## `AgentConfig` (`klir/config.py`)
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `log_level` | `str` | `"INFO"` | Applied at startup unless CLI `--verbose` is used |
 | `provider` | `str` | `"claude"` | Default provider |
 | `model` | `str` | `"opus"` | Default model ID |
-| `ductor_home` | `str` | `"~/.ductor"` | Runtime home root |
+| `klir_home` | `str` | `"~/.klir"` | Runtime home root |
 | `idle_timeout_minutes` | `int` | `1440` | Session freshness idle timeout (`0` disables idle expiry) |
 | `session_age_warning_hours` | `int` | `12` | Adds `/new` reminder after threshold (every 10 messages) |
 | `daily_reset_hour` | `int` | `4` | Daily reset boundary hour in `user_timezone` |
@@ -155,8 +155,8 @@ Implementation status note:
 
 Stored outside `config.json` in:
 
-- `~/.ductor/cron_jobs.json` (`CronJob`)
-- `~/.ductor/webhooks.json` (`WebhookEntry`, `cron_task` mode)
+- `~/.klir/cron_jobs.json` (`CronJob`)
+- `~/.klir/webhooks.json` (`WebhookEntry`, `cron_task` mode)
 
 Common per-task fields:
 
@@ -191,14 +191,14 @@ Behavior notes:
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `enabled` | `bool` | `false` | Master toggle |
-| `image_name` | `str` | `"ductor-sandbox"` | Docker image name |
-| `container_name` | `str` | `"ductor-sandbox"` | Docker container name |
+| `image_name` | `str` | `"klir-sandbox"` | Docker image name |
+| `container_name` | `str` | `"klir-sandbox"` | Docker container name |
 | `auto_build` | `bool` | `true` | Build image automatically when missing |
 | `mount_host_cache` | `bool` | `false` | Mount host `~/.cache` into container (see below) |
 | `mounts` | `list[str]` | `[]` | Extra host directories mounted into sandbox (`/mnt/...`) |
 | `extras` | `list[str]` | `[]` | Optional AI/ML package IDs to install in the Docker image (see below) |
 
-`Orchestrator.create()` calls `DockerManager.setup()` when enabled. If setup fails, ductor logs warning and falls back to host execution.
+`Orchestrator.create()` calls `DockerManager.setup()` when enabled. If setup fails, klir logs warning and falls back to host execution.
 
 ### `mount_host_cache`
 
@@ -225,12 +225,12 @@ User-defined directory mounts for project/data access inside Docker sandbox.
 
 Runtime note:
 
-- updates are typically managed via `ductor docker mount|unmount`
-- changing mounts requires bot restart (or `ductor docker rebuild`) to affect container run flags
+- updates are typically managed via `klir docker mount|unmount`
+- changing mounts requires bot restart (or `klir docker rebuild`) to affect container run flags
 
 ### `extras`
 
-Optional AI/ML packages installed into the Docker sandbox image at build time. Each entry is an ID from the extras registry (`ductor_bot/infra/docker_extras.py`).
+Optional AI/ML packages installed into the Docker sandbox image at build time. Each entry is an ID from the extras registry (`klir/infra/docker_extras.py`).
 
 Available extras:
 
@@ -256,7 +256,7 @@ Dependency resolution:
 - `easyocr` and `transformers` depend on `pytorch-cpu`
 - dependencies are auto-resolved at build time
 
-Managed via `ductor docker extras-add|extras-remove` or during onboarding wizard. Changes require `ductor docker rebuild` to take effect.
+Managed via `klir docker extras-add|extras-remove` or during onboarding wizard. Changes require `klir docker rebuild` to take effect.
 
 When extras are configured, the supervisor startup timeout is dynamically extended to accommodate longer Docker build times.
 
@@ -306,7 +306,7 @@ Cleanup implementation detail:
 | `enabled` | `bool` | `false` | Master toggle |
 | `host` | `str` | `"0.0.0.0"` | Bind address |
 | `port` | `int` | `8741` | API HTTP/WebSocket port |
-| `token` | `str` | `""` | Bearer/WebSocket auth token (generated by `ductor api enable`, with runtime generation fallback on API start) |
+| `token` | `str` | `""` | Bearer/WebSocket auth token (generated by `klir api enable`, with runtime generation fallback on API start) |
 | `chat_id` | `int` | `0` | Default API session chat (`0` means fallback to first `allowed_user_ids` entry, else `1`) |
 | `allow_public` | `bool` | `false` | Suppresses Tailscale-not-detected warning |
 
@@ -343,13 +343,13 @@ Restart-required top-level fields:
 
 - `telegram_token`
 - `docker`, `api`, `webhooks`
-- `ductor_home`, `log_level`, `gemini_api_key`, `timeouts`, `tasks`
+- `klir_home`, `log_level`, `gemini_api_key`, `timeouts`, `tasks`
 
 Restart classification is computed from `AgentConfig` top-level schema fields.
 
 ## Model Resolution
 
-`ModelRegistry` (`ductor_bot/config.py`):
+`ModelRegistry` (`klir/config.py`):
 
 - Claude models are hardcoded: `haiku`, `sonnet`, `opus`.
 - Gemini aliases are hardcoded: `auto`, `pro`, `flash`, `flash-lite`.
@@ -361,7 +361,7 @@ Restart classification is computed from `AgentConfig` top-level schema fields.
 
 ## Timezone Resolution
 
-`resolve_user_timezone(configured)` in `ductor_bot/config.py`:
+`resolve_user_timezone(configured)` in `klir/config.py`:
 
 1. valid configured IANA timezone,
 2. `$TZ` env var,
@@ -386,7 +386,7 @@ Automation flow:
 
 ## Codex Model Cache
 
-Path: `~/.ductor/config/codex_models.json`.
+Path: `~/.klir/config/codex_models.json`.
 
 Behavior:
 
@@ -398,7 +398,7 @@ Behavior:
 
 ## Gemini Model Cache
 
-Path: `~/.ductor/config/gemini_models.json`.
+Path: `~/.klir/config/gemini_models.json`.
 
 Behavior:
 
@@ -409,14 +409,14 @@ Behavior:
 
 ## `agents.json` (Multi-Agent Registry)
 
-Path: `~/.ductor/agents.json`.
+Path: `~/.klir/agents.json`.
 
 Top-level JSON array of `SubAgentConfig` objects. Each entry defines a sub-agent that runs alongside the main agent.
 
 Managed via:
 
-- `ductor agents add <name>` (interactive CLI)
-- `ductor agents remove <name>` (CLI)
+- `klir agents add <name>` (interactive CLI)
+- `klir agents remove <name>` (CLI)
 - `create_agent.py` / `remove_agent.py` tool scripts (from within a CLI session)
 - manual file editing (auto-detected by `FileWatcher`)
 
@@ -490,7 +490,7 @@ Example:
 
 Then it always forces:
 
-- `ductor_home = ~/.ductor/agents/<name>/`
+- `klir_home = ~/.klir/agents/<name>/`
 - `telegram_token`, `allowed_user_ids`, and `allowed_group_ids` from the sub-agent entry
 - `api.enabled = false` when no explicit `api` block is provided
 

@@ -17,26 +17,26 @@ Optional for full runtime validation:
 ## 2) Run the bot
 
 ```bash
-ductor
+klir
 ```
 
-First run starts onboarding and writes config to `~/.ductor/config/config.json`.
+First run starts onboarding and writes config to `~/.klir/config/config.json`.
 
 Primary runtime files/directories:
 
-- `~/.ductor/sessions.json`
-- `~/.ductor/named_sessions.json`
-- `~/.ductor/tasks.json`
-- `~/.ductor/chat_activity.json`
-- `~/.ductor/cron_jobs.json`
-- `~/.ductor/webhooks.json`
-- `~/.ductor/startup_state.json`
-- `~/.ductor/inflight_turns.json`
-- `~/.ductor/SHAREDMEMORY.md`
-- `~/.ductor/agents.json`
-- `~/.ductor/agents/`
-- `~/.ductor/workspace/`
-- `~/.ductor/logs/agent.log`
+- `~/.klir/sessions.json`
+- `~/.klir/named_sessions.json`
+- `~/.klir/tasks.json`
+- `~/.klir/chat_activity.json`
+- `~/.klir/cron_jobs.json`
+- `~/.klir/webhooks.json`
+- `~/.klir/startup_state.json`
+- `~/.klir/inflight_turns.json`
+- `~/.klir/SHAREDMEMORY.md`
+- `~/.klir/agents.json`
+- `~/.klir/agents/`
+- `~/.klir/workspace/`
+- `~/.klir/logs/agent.log`
 
 ## 3) Quality gates
 
@@ -44,7 +44,7 @@ Primary runtime files/directories:
 uv run pytest
 uv run ruff format .
 uv run ruff check .
-uv run mypy ductor_bot
+uv run mypy klir
 ```
 
 Expected: zero warnings, zero errors.
@@ -69,65 +69,65 @@ background/async results
 
 Entry + command layer:
 
-- `ductor_bot/__main__.py`
-- `ductor_bot/cli_commands/`
+- `klir/__main__.py`
+- `klir/cli_commands/`
 
 Runtime hot path:
 
-- `ductor_bot/multiagent/supervisor.py`
-- `ductor_bot/bot/app.py`
-- `ductor_bot/bot/startup.py`
-- `ductor_bot/orchestrator/core.py`
-- `ductor_bot/orchestrator/lifecycle.py`
-- `ductor_bot/orchestrator/flows.py`
+- `klir/multiagent/supervisor.py`
+- `klir/bot/app.py`
+- `klir/bot/startup.py`
+- `klir/orchestrator/core.py`
+- `klir/orchestrator/lifecycle.py`
+- `klir/orchestrator/flows.py`
 
 Delivery/task/session core:
 
-- `ductor_bot/bus/`
-- `ductor_bot/session/manager.py`
-- `ductor_bot/tasks/hub.py`
-- `ductor_bot/tasks/registry.py`
+- `klir/bus/`
+- `klir/session/manager.py`
+- `klir/tasks/hub.py`
+- `klir/tasks/registry.py`
 
 Provider/API/workspace core:
 
-- `ductor_bot/cli/service.py` + provider wrappers
-- `ductor_bot/api/server.py`
-- `ductor_bot/workspace/init.py`
-- `ductor_bot/workspace/rules_selector.py`
-- `ductor_bot/workspace/skill_sync.py`
+- `klir/cli/service.py` + provider wrappers
+- `klir/api/server.py`
+- `klir/workspace/init.py`
+- `klir/workspace/rules_selector.py`
+- `klir/workspace/skill_sync.py`
 
 ## 6) Common debug paths
 
 If command behavior is wrong:
 
-1. `ductor_bot/__main__.py`
-2. `ductor_bot/cli_commands/*`
+1. `klir/__main__.py`
+2. `klir/cli_commands/*`
 
 If Telegram routing is wrong:
 
-1. `ductor_bot/bot/middleware.py`
-2. `ductor_bot/bot/app.py`
-3. `ductor_bot/orchestrator/commands.py`
-4. `ductor_bot/orchestrator/flows.py`
+1. `klir/bot/middleware.py`
+2. `klir/bot/app.py`
+3. `klir/orchestrator/commands.py`
+4. `klir/orchestrator/flows.py`
 
 If background results look wrong:
 
-1. `ductor_bot/bus/adapters.py`
-2. `ductor_bot/bus/bus.py`
-3. `ductor_bot/bus/telegram_transport.py`
+1. `klir/bus/adapters.py`
+2. `klir/bus/bus.py`
+3. `klir/bus/telegram_transport.py`
 
 If tasks are wrong:
 
-1. `ductor_bot/tasks/hub.py`
-2. `ductor_bot/tasks/registry.py`
-3. `ductor_bot/multiagent/internal_api.py`
-4. `ductor_bot/_home_defaults/workspace/tools/task_tools/*.py`
+1. `klir/tasks/hub.py`
+2. `klir/tasks/registry.py`
+3. `klir/multiagent/internal_api.py`
+4. `klir/_home_defaults/workspace/tools/task_tools/*.py`
 
 If API is wrong:
 
-1. `ductor_bot/api/server.py`
-2. `ductor_bot/orchestrator/lifecycle.py` (API startup wiring)
-3. `ductor_bot/files/*` (allowed roots, MIME, prompt building)
+1. `klir/api/server.py`
+2. `klir/orchestrator/lifecycle.py` (API startup wiring)
+3. `klir/files/*` (allowed roots, MIME, prompt building)
 
 ## 7) Behavior details to remember
 
@@ -136,7 +136,7 @@ If API is wrong:
 - session identity is topic-aware: `SessionKey(chat_id, topic_id)`.
 - `/model` inside a topic updates only that topic session (not global config).
 - task tools now support permanent single-task removal via `delete_task.py` (`/tasks/delete`).
-- task routing is topic-aware via `thread_id` and `DUCTOR_TOPIC_ID`.
+- task routing is topic-aware via `thread_id` and `KLIR_TOPIC_ID`.
 - API auth accepts optional `channel_id` for per-channel session isolation.
 - startup recovery uses `inflight_turns.json` + recovered named sessions.
 - auth allowlists (`allowed_user_ids`, `allowed_group_ids`) are hot-reloadable.

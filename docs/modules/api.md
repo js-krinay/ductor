@@ -92,7 +92,7 @@ Abort:
 
 Upload target:
 
-- `~/.ductor/workspace/api_files/YYYY-MM-DD/...`
+- `~/.klir/workspace/api_files/YYYY-MM-DD/...`
 
 ## File safety model
 
@@ -100,9 +100,9 @@ Upload target:
 
 - `all` -> unrestricted
 - `home` -> home-root limited
-- `workspace` -> `~/.ductor/workspace` limited
+- `workspace` -> `~/.klir/workspace` limited
 
-MIME and file-tag parsing share helpers from `ductor_bot/files/`.
+MIME and file-tag parsing share helpers from `klir/files/`.
 
 ## Error model
 

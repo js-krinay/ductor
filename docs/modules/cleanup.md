@@ -11,9 +11,9 @@ Daily retention cleanup for workspace file-drop directories.
 
 Targets retention cleanup in:
 
-- `~/.ductor/workspace/telegram_files/`
-- `~/.ductor/workspace/output_to_user/`
-- `~/.ductor/workspace/api_files/`
+- `~/.klir/workspace/telegram_files/`
+- `~/.klir/workspace/output_to_user/`
+- `~/.klir/workspace/api_files/`
 
 ## Config (`AgentConfig.cleanup`)
 
