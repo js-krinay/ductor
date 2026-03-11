@@ -87,7 +87,9 @@ class AgentSupervisor:
         if self._notify_sender is not None:
             self._bus.set_notification_sender(self._notify_sender)
         self._internal_api = InternalAgentAPI(
-            self._bus, docker_mode=self._main_config.docker.enabled
+            self._bus,
+            port=self._main_config.interagent_port,
+            docker_mode=self._main_config.docker.enabled,
         )
         self._internal_api.set_health_ref(self._health)
         started = await self._internal_api.start()

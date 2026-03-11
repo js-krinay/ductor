@@ -348,6 +348,7 @@ class AgentConfig(BaseModel):
     tasks: TasksConfig = Field(default_factory=TasksConfig)
     user_timezone: str = ""
     update_check: bool = True
+    interagent_port: int = 8799
     peer_isolation: bool = False
     group_mention_only: bool = False
     telegram_token: str = ""
