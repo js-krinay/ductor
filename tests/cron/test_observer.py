@@ -227,7 +227,8 @@ class TestCronObserverExecution:
 
         job = mgr.get_job("missing-folder")
         assert job is not None
-        assert job.last_run_status == "error:folder_missing"
+        assert job.consecutive_errors == 1
+        assert job.last_error == "error:folder_missing"
 
     async def test_handles_missing_cli(self, tmp_path: Path) -> None:
         paths = _make_paths(tmp_path)
@@ -246,8 +247,9 @@ class TestCronObserverExecution:
 
         job = mgr.get_job("no-cli")
         assert job is not None
-        assert job.last_run_status is not None
-        assert job.last_run_status.startswith("error:cli_not_found")
+        assert job.consecutive_errors == 1
+        assert job.last_error is not None
+        assert job.last_error.startswith("error:cli_not_found")
 
     async def test_executes_claude_job_success(self, tmp_path: Path) -> None:
         paths = _make_paths(tmp_path)
@@ -277,7 +279,7 @@ class TestCronObserverExecution:
 
         job = mgr.get_job("daily")
         assert job is not None
-        assert job.last_run_status == "success"
+        assert job.consecutive_errors == 0
 
     async def test_executes_codex_job_success(self, tmp_path: Path) -> None:
         """Codex model uses codex CLI with exec subcommand."""
@@ -331,7 +333,7 @@ class TestCronObserverExecution:
 
         job = mgr.get_job("daily")
         assert job is not None
-        assert job.last_run_status == "success"
+        assert job.consecutive_errors == 0
 
     async def test_updates_run_status_on_failure(self, tmp_path: Path) -> None:
         paths = _make_paths(tmp_path)
@@ -354,7 +356,8 @@ class TestCronObserverExecution:
 
         job = mgr.get_job("failing")
         assert job is not None
-        assert job.last_run_status == "error:exit_1"
+        assert job.consecutive_errors == 1
+        assert job.last_error == "error:exit_1"
 
     async def test_uses_config_model(self, tmp_path: Path) -> None:
         """CLI command includes --model from AgentConfig."""
@@ -520,7 +523,8 @@ class TestCronObserverExecution:
         assert mock_proc.communicate.await_count >= 2
         job = mgr.get_job("slow")
         assert job is not None
-        assert job.last_run_status == "error:timeout"
+        assert job.consecutive_errors == 1
+        assert job.last_error == "error:timeout"
 
     async def test_execute_job_uses_stdin_devnull(self, tmp_path: Path) -> None:
         """Subprocess is spawned with stdin=DEVNULL to prevent interactive hangs."""
@@ -567,6 +571,85 @@ class TestCronObserverExecution:
 
         # No exception = success
 
+    async def test_auto_disables_after_max_retries(self, tmp_path: Path) -> None:
+        """Job reaching max_retries is disabled and sends auto_disabled notification."""
+        paths = _make_paths(tmp_path)
+        mgr = _make_manager(paths)
+        # max_retries=1 so one failure triggers auto-disable;
+        # alert_after=99 so alert doesn't fire before auto-disable.
+        mgr.add_job(_make_job("flaky", max_retries=1, alert_after=99))
+        (paths.cron_tasks_dir / "flaky").mkdir()
+
+        delivered: list[tuple[str, str]] = []
+
+        async def _capture(_title: str, text: str, status: str) -> None:
+            delivered.append((text, status))
+
+        observer = _make_observer(paths, mgr)
+        observer.set_result_handler(_capture)
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 1
+        mock_proc.communicate = AsyncMock(return_value=(b"", b"error output"))
+
+        with (
+            time_machine.travel(datetime(2026, 1, 15, 14, 0, tzinfo=UTC)),
+            patch("klir.cron.execution.which", return_value="/usr/bin/claude"),
+            patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+        ):
+            await observer._execute_job("flaky", "Do stuff", "flaky")
+
+        job = mgr.get_job("flaky")
+        assert job is not None
+        assert job.enabled is False  # auto-disabled
+        assert job.consecutive_errors == 1
+
+        # Verify auto_disabled notification was delivered
+        auto_disable_msgs = [text for text, status in delivered if status == "auto_disabled"]
+        assert len(auto_disable_msgs) == 1
+        assert "⛔" in auto_disable_msgs[0]
+
+    async def test_sends_failure_alert_after_threshold(self, tmp_path: Path) -> None:
+        """Job reaching alert_after consecutive errors gets a failure alert."""
+        paths = _make_paths(tmp_path)
+        mgr = _make_manager(paths)
+        # alert_after=2, max_retries=99 so alert fires but auto-disable doesn't.
+        job = _make_job("alertable", alert_after=2, max_retries=99)
+        # Pre-set consecutive_errors=1 so next failure hits the threshold.
+        job.consecutive_errors = 1
+        mgr.add_job(job)
+        (paths.cron_tasks_dir / "alertable").mkdir()
+
+        delivered: list[tuple[str, str]] = []
+
+        async def _capture(_title: str, text: str, status: str) -> None:
+            delivered.append((text, status))
+
+        observer = _make_observer(paths, mgr)
+        observer.set_result_handler(_capture)
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 1
+        mock_proc.communicate = AsyncMock(return_value=(b"", b"error"))
+
+        with (
+            time_machine.travel(datetime(2026, 1, 15, 14, 0, tzinfo=UTC)),
+            patch("klir.cron.execution.which", return_value="/usr/bin/claude"),
+            patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+        ):
+            await observer._execute_job("alertable", "Do stuff", "alertable")
+
+        job_after = mgr.get_job("alertable")
+        assert job_after is not None
+        assert job_after.consecutive_errors == 2
+        assert job_after.enabled is True  # NOT disabled
+        assert job_after.last_alert_at is not None  # alert was recorded
+
+        # Verify alert notification was delivered with "alert" status
+        alert_msgs = [text for text, status in delivered if status == "alert"]
+        assert len(alert_msgs) == 1
+        assert "2" in alert_msgs[0]  # consecutive errors count
+
 
 class TestCronResultDelivery:
     """Result delivery must be robust: no silent drops, no race conditions."""
@@ -605,7 +688,7 @@ class TestCronResultDelivery:
         assert status == "success"
 
     async def test_result_delivered_before_file_write(self, tmp_path: Path) -> None:
-        """Result handler is called before update_run_status writes to disk."""
+        """Result handler is called before record_success writes to disk."""
         paths = _make_paths(tmp_path)
         mgr = _make_manager(paths)
         mgr.add_job(_make_job("daily", title="My Task"))
@@ -618,11 +701,11 @@ class TestCronResultDelivery:
         async def track_result(*_args: object) -> None:
             call_order.append("result_delivered")
 
-        original_update = mgr.update_run_status
+        original_record = mgr.record_success
 
-        def track_update(*args: object, **kwargs: object) -> None:
+        def track_record(*args: object, **kwargs: object) -> None:
             call_order.append("file_written")
-            original_update(*args, **kwargs)
+            original_record(*args, **kwargs)
 
         observer.set_result_handler(track_result)
 
@@ -634,7 +717,7 @@ class TestCronResultDelivery:
             time_machine.travel(datetime(2026, 1, 15, 14, 0, tzinfo=UTC)),
             patch("klir.cron.execution.which", return_value="/usr/bin/claude"),
             patch("asyncio.create_subprocess_exec", return_value=mock_proc),
-            patch.object(mgr, "update_run_status", side_effect=track_update),
+            patch.object(mgr, "record_success", side_effect=track_record),
         ):
             await observer._execute_job("daily", "Do work", "daily")
 

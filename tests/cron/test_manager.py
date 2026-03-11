@@ -68,11 +68,36 @@ class TestCronJob:
         }
         job = CronJob.from_dict(data)
         assert job.enabled is True
-        assert job.last_run_at is None
+        assert job.consecutive_errors == 0
 
     def test_auto_created_at(self) -> None:
         job = _make_job()
         assert job.created_at != ""
+
+    def test_to_dict_includes_error_tracking(self) -> None:
+        job = _make_job()
+        d = job.to_dict()
+        assert "consecutive_errors" in d
+        assert d["consecutive_errors"] == 0
+        assert "last_error" in d
+        assert d["last_error"] is None
+        assert "max_retries" in d
+        assert d["max_retries"] == 3
+
+    def test_from_dict_error_tracking_defaults(self) -> None:
+        data = {
+            "id": "test",
+            "title": "Test",
+            "description": "desc",
+            "schedule": "*/5 * * * *",
+            "task_folder": "test-task",
+            "agent_instruction": "do stuff",
+        }
+        job = CronJob.from_dict(data)
+        assert job.consecutive_errors == 0
+        assert job.last_error is None
+        assert job.max_retries == 3
+        assert job.alert_after == 3
 
 
 # -- CronManager CRUD --
@@ -127,15 +152,59 @@ class TestCronManagerCRUD:
         mgr = _make_manager(tmp_path)
         assert mgr.get_job("nope") is None
 
-    def test_update_run_status(self, tmp_path: Path) -> None:
+    def test_record_success(self, tmp_path: Path) -> None:
         mgr = _make_manager(tmp_path)
         mgr.add_job(_make_job())
 
-        mgr.update_run_status("daily", status="success")
-        updated = mgr.get_job("daily")
-        assert updated is not None
-        assert updated.last_run_status == "success"
-        assert updated.last_run_at is not None
+        mgr.record_success("daily", duration_ms=1500, delivery_status="delivered")
+        job = mgr.get_job("daily")
+        assert job is not None
+        assert job.consecutive_errors == 0
+        assert job.last_error is None
+        assert job.last_duration_ms == 1500
+        assert job.delivery_status == "delivered"
+
+    def test_record_error(self, tmp_path: Path) -> None:
+        mgr = _make_manager(tmp_path)
+        mgr.add_job(_make_job())
+
+        mgr.record_error("daily", error="timeout", duration_ms=5000, delivery_status="skipped")
+        job = mgr.get_job("daily")
+        assert job is not None
+        assert job.consecutive_errors == 1
+        assert job.last_error == "timeout"
+        assert job.last_duration_ms == 5000
+
+    def test_record_error_increments(self, tmp_path: Path) -> None:
+        mgr = _make_manager(tmp_path)
+        mgr.add_job(_make_job())
+
+        mgr.record_error("daily", error="err1", duration_ms=100, delivery_status="skipped")
+        mgr.record_error("daily", error="err2", duration_ms=100, delivery_status="skipped")
+        job = mgr.get_job("daily")
+        assert job is not None
+        assert job.consecutive_errors == 2
+        assert job.last_error == "err2"
+
+    def test_record_success_resets_errors(self, tmp_path: Path) -> None:
+        mgr = _make_manager(tmp_path)
+        mgr.add_job(_make_job())
+
+        mgr.record_error("daily", error="err", duration_ms=100, delivery_status="skipped")
+        mgr.record_success("daily", duration_ms=200, delivery_status="delivered")
+        job = mgr.get_job("daily")
+        assert job is not None
+        assert job.consecutive_errors == 0
+        assert job.last_error is None
+
+    def test_record_alert(self, tmp_path: Path) -> None:
+        mgr = _make_manager(tmp_path)
+        mgr.add_job(_make_job())
+
+        mgr.record_alert("daily")
+        job = mgr.get_job("daily")
+        assert job is not None
+        assert job.last_alert_at is not None
 
     def test_set_enabled_updates_single_job(self, tmp_path: Path) -> None:
         mgr = _make_manager(tmp_path)

@@ -30,14 +30,25 @@ class CronJob:
     enabled: bool = True
     timezone: str = ""
     created_at: str = ""
-    last_run_at: str | None = None
-    last_run_status: str | None = None
 
     # Per-task execution overrides
     provider: str | None = None
     model: str | None = None
     reasoning_effort: str | None = None
     cli_parameters: list[str] = field(default_factory=list)
+
+    # Error tracking
+    consecutive_errors: int = 0
+    last_error: str | None = None
+    last_duration_ms: int | None = None
+    delivery_status: str | None = None
+    delivery_error: str | None = None
+
+    # Retry/alert config
+    max_retries: int = 3
+    alert_after: int = 3
+    alert_cooldown_seconds: int = 3600
+    last_alert_at: str | None = None
 
     # Quiet hours (None = use global config defaults)
     quiet_start: int | None = None
@@ -60,12 +71,19 @@ class CronJob:
             "agent_instruction": self.agent_instruction,
             "enabled": self.enabled,
             "created_at": self.created_at,
-            "last_run_at": self.last_run_at,
-            "last_run_status": self.last_run_status,
             "provider": self.provider,
             "model": self.model,
             "reasoning_effort": self.reasoning_effort,
             "cli_parameters": self.cli_parameters,
+            "consecutive_errors": self.consecutive_errors,
+            "last_error": self.last_error,
+            "last_duration_ms": self.last_duration_ms,
+            "delivery_status": self.delivery_status,
+            "delivery_error": self.delivery_error,
+            "max_retries": self.max_retries,
+            "alert_after": self.alert_after,
+            "alert_cooldown_seconds": self.alert_cooldown_seconds,
+            "last_alert_at": self.last_alert_at,
             "quiet_start": self.quiet_start,
             "quiet_end": self.quiet_end,
             "dependency": self.dependency,
@@ -86,12 +104,19 @@ class CronJob:
             enabled=data.get("enabled", True),
             timezone=data.get("timezone", ""),
             created_at=data.get("created_at", ""),
-            last_run_at=data.get("last_run_at"),
-            last_run_status=data.get("last_run_status"),
             provider=data.get("provider"),
             model=data.get("model"),
             reasoning_effort=data.get("reasoning_effort"),
             cli_parameters=data.get("cli_parameters", []),
+            consecutive_errors=data.get("consecutive_errors", 0),
+            last_error=data.get("last_error"),
+            last_duration_ms=data.get("last_duration_ms"),
+            delivery_status=data.get("delivery_status"),
+            delivery_error=data.get("delivery_error"),
+            max_retries=data.get("max_retries", 3),
+            alert_after=data.get("alert_after", 3),
+            alert_cooldown_seconds=data.get("alert_cooldown_seconds", 3600),
+            last_alert_at=data.get("last_alert_at"),
             quiet_start=data.get("quiet_start"),
             quiet_end=data.get("quiet_end"),
             dependency=data.get("dependency"),
@@ -162,13 +187,44 @@ class CronManager:
             logger.info("Cron jobs bulk update: enabled=%s changed=%d", enabled, changed)
         return changed
 
-    def update_run_status(self, job_id: str, *, status: str) -> None:
-        """Update last_run_at and last_run_status for a job."""
+    def record_success(self, job_id: str, *, duration_ms: int, delivery_status: str) -> None:
+        """Reset consecutive errors and record successful run."""
         job = self.get_job(job_id)
         if job is None:
             return
-        job.last_run_at = datetime.now(UTC).isoformat()
-        job.last_run_status = status
+        job.consecutive_errors = 0
+        job.last_error = None
+        job.last_duration_ms = duration_ms
+        job.delivery_status = delivery_status
+        job.delivery_error = None
+        self._save()
+
+    def record_error(
+        self,
+        job_id: str,
+        *,
+        error: str,
+        duration_ms: int,
+        delivery_status: str,
+        delivery_error: str | None = None,
+    ) -> None:
+        """Increment consecutive errors and record failure."""
+        job = self.get_job(job_id)
+        if job is None:
+            return
+        job.consecutive_errors += 1
+        job.last_error = error
+        job.last_duration_ms = duration_ms
+        job.delivery_status = delivery_status
+        job.delivery_error = delivery_error
+        self._save()
+
+    def record_alert(self, job_id: str) -> None:
+        """Record that a failure alert was sent for this job."""
+        job = self.get_job(job_id)
+        if job is None:
+            return
+        job.last_alert_at = datetime.now(UTC).isoformat()
         self._save()
 
     def reload(self) -> None:

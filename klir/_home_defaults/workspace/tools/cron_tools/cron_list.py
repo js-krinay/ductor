@@ -24,8 +24,9 @@ def main() -> None:
             "schedule": j["schedule"],
             "task_folder": task_folder,
             "enabled": j.get("enabled", True),
-            "last_run_at": j.get("last_run_at"),
-            "last_run_status": j.get("last_run_status"),
+            "consecutive_errors": j.get("consecutive_errors", 0),
+            "last_error": j.get("last_error"),
+            "last_duration_ms": j.get("last_duration_ms"),
             "task_folder_exists": (CRON_TASKS_DIR / task_folder).is_dir()
             if task_folder
             else False,

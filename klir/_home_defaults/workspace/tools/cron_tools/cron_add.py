@@ -286,8 +286,6 @@ def main() -> None:
         "agent_instruction": _DEFAULT_INSTRUCTION,
         "enabled": True,
         "created_at": datetime.now(UTC).isoformat(),
-        "last_run_at": None,
-        "last_run_status": None,
     }
     if args.timezone:
         job["timezone"] = args.timezone.strip()

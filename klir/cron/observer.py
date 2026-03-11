@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import secrets
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -14,7 +15,10 @@ from cronsim import CronSim, CronSimError
 
 from klir.cli.param_resolver import TaskOverrides
 from klir.config import resolve_user_timezone
+from klir.cron.alerts import format_failure_alert, should_alert
+from klir.cron.backoff import compute_backoff_seconds, should_auto_disable
 from klir.cron.manager import CronManager
+from klir.cron.run_log import CronRunLogEntry, append_run_log, resolve_run_log_path, save_run_output
 from klir.infra.base_task_observer import BaseTaskObserver
 from klir.infra.file_watcher import FileWatcher
 from klir.infra.task_runner import execute_in_task_folder
@@ -64,6 +68,7 @@ class CronObserver(BaseTaskObserver):
         self._manager = manager
         self._on_result: CronResultCallback | None = None
         self._scheduled: dict[str, asyncio.Task[None]] = {}
+        self._backoff_until: dict[str, float] = {}
         self._reschedule_lock = asyncio.Lock()
         self._requested_reschedule_task: asyncio.Task[None] | None = None
         self._running = False
@@ -161,6 +166,9 @@ class CronObserver(BaseTaskObserver):
         for task in tasks:
             task.cancel()
         self._scheduled.clear()
+        # Prune backoff entries for jobs that no longer exist.
+        active_ids = {j.id for j in self._manager.list_jobs()}
+        self._backoff_until = {k: v for k, v in self._backoff_until.items() if k in active_ids}
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
         await self._schedule_all()
@@ -205,6 +213,10 @@ class CronObserver(BaseTaskObserver):
                 next_aware = next_naive.replace(tzinfo=tz)
                 delay = (next_aware - datetime.now(tz)).total_seconds()
             delay = max(delay, 0)
+            # Apply exponential backoff anchored to the time of the last failure.
+            backoff_remaining = self._backoff_until.get(job_id, 0.0) - time.time()
+            if backoff_remaining > 0:
+                delay = max(delay, backoff_remaining)
             scheduled_job = _ScheduledJob(
                 id=job_id,
                 schedule=schedule,
@@ -253,19 +265,51 @@ class CronObserver(BaseTaskObserver):
 
     # -- Execution --
 
+    def _build_log_entry(  # noqa: PLR0913
+        self,
+        *,
+        job_id: str,
+        run_id: str,
+        status: str,
+        elapsed_ms: int,
+        delivery_status: str,
+        delivery_error: str | None = None,
+        output_path: object = None,
+    ) -> CronRunLogEntry:
+        """Build a run log entry, pulling provider/model from the job."""
+        job = self._manager.get_job(job_id)
+        return CronRunLogEntry(
+            ts=time.time(),
+            job_id=job_id,
+            status=status,
+            duration_ms=elapsed_ms,
+            delivery_status=delivery_status,
+            delivery_error=delivery_error,
+            run_id=run_id,
+            output_path=str(output_path) if output_path else None,
+            provider=job.provider if job else None,
+            model=job.model if job else None,
+        )
+
     async def _deliver_result(
         self, job_id: str, job_title: str, result_text: str, status: str
-    ) -> None:
+    ) -> tuple[str, str | None]:
         """Send result to the external handler (e.g. Telegram).
 
         Uses *job_title* (computed at execution start) so delivery works even
         if the job was removed from the manager mid-execution.
+
+        Returns (delivery_status, delivery_error).
         """
         if self._on_result:
             try:
                 await self._on_result(job_title, result_text, status)
-            except Exception:
+            except Exception as exc:
                 logger.exception("Error in cron result handler for job %s", job_id)
+                return "error", str(exc)
+            else:
+                return "delivered", None
+        return "skipped", None
 
     async def _execute_job(
         self,
@@ -281,7 +325,11 @@ class CronObserver(BaseTaskObserver):
         if self._is_quiet_hours(job, job_title):
             return
 
-        logger.info("Cron job starting job=%s", job_title)
+        run_id = f"{int(time.time())}_{secrets.token_hex(4)}"
+        state_dir = self._paths.cron_job_state_dir(job_id)
+        log_path = resolve_run_log_path(self._paths.cron_state_dir, job_id)
+
+        logger.info("Cron job starting job=%s run_id=%s", job_title, run_id)
         t0 = time.monotonic()
 
         overrides = TaskOverrides(
@@ -301,22 +349,58 @@ class CronObserver(BaseTaskObserver):
             task_id=job_id,
             task_label="Cron job",
             timeout_seconds=self._config.cli_timeout,
+            extra_env={"KLIR_CRON_STATE_DIR": str(self._paths.cron_state_dir)},
         )
+
+        elapsed_ms = int((time.monotonic() - t0) * 1000)
 
         if result.status == "error:folder_missing":
             logger.error("Cron task folder missing: %s", task_folder)
-            self._manager.update_run_status(job_id, status="error:folder_missing")
+            self._manager.record_error(
+                job_id,
+                error=result.status,
+                duration_ms=elapsed_ms,
+                delivery_status="skipped",
+            )
+            await append_run_log(
+                log_path,
+                self._build_log_entry(
+                    job_id=job_id,
+                    run_id=run_id,
+                    status=result.status,
+                    elapsed_ms=elapsed_ms,
+                    delivery_status="skipped",
+                ),
+            )
             return
 
         if result.execution is None:
             logger.error("CLI not found for cron job %s", job_id)
-            await self._deliver_result(job_id, job_title, result.result_text, result.status)
-            self._manager.update_run_status(job_id, status=result.status)
+            delivery_status, delivery_error = await self._deliver_result(
+                job_id, job_title, result.result_text, result.status
+            )
+            self._manager.record_error(
+                job_id,
+                error=result.status,
+                duration_ms=elapsed_ms,
+                delivery_status=delivery_status,
+                delivery_error=delivery_error,
+            )
+            await append_run_log(
+                log_path,
+                self._build_log_entry(
+                    job_id=job_id,
+                    run_id=run_id,
+                    status=result.status,
+                    elapsed_ms=elapsed_ms,
+                    delivery_status=delivery_status,
+                    delivery_error=delivery_error,
+                ),
+            )
             return
 
-        elapsed_ms = (time.monotonic() - t0) * 1000
         logger.info(
-            "Cron job completed job=%s status=%s duration_ms=%.0f stdout=%d result=%d",
+            "Cron job completed job=%s status=%s duration_ms=%d stdout=%d result=%d",
             job_title,
             result.status,
             elapsed_ms,
@@ -324,14 +408,91 @@ class CronObserver(BaseTaskObserver):
             len(result.result_text),
         )
 
+        # Save raw output before delivery so the path can go in the log entry.
+        output_path = await save_run_output(
+            state_dir,
+            run_id=run_id,
+            stdout=result.execution.stdout,
+            stderr=result.execution.stderr,
+        )
+
         # Deliver result BEFORE writing run-status to disk.  The file
         # write can trigger the file-watcher which reschedules (and
         # cancels) running tasks.  Delivering first guarantees the
         # Telegram message is sent even if the task is cancelled during
         # the subsequent file I/O.
-        await self._deliver_result(job_id, job_title, result.result_text, result.status)
+        delivery_status, delivery_error = await self._deliver_result(
+            job_id, job_title, result.result_text, result.status
+        )
 
-        self._manager.update_run_status(job_id, status=result.status)
+        if result.status == "success":
+            self._manager.record_success(
+                job_id, duration_ms=elapsed_ms, delivery_status=delivery_status
+            )
+            self._backoff_until.pop(job_id, None)
+        else:
+            self._manager.record_error(
+                job_id,
+                error=result.status,
+                duration_ms=elapsed_ms,
+                delivery_status=delivery_status,
+                delivery_error=delivery_error,
+            )
+            job_after = self._manager.get_job(job_id)
+            if job_after:
+                backoff = compute_backoff_seconds(job_after.consecutive_errors)
+                if backoff > 0:
+                    self._backoff_until[job_id] = time.time() + backoff
+            # Auto-disable if the job has exceeded its max_retries threshold.
+            if job_after and should_auto_disable(
+                job_after.consecutive_errors, max_retries=job_after.max_retries
+            ):
+                disable_msg = (
+                    f"⛔ Cron job auto-disabled after {job_after.consecutive_errors} "
+                    f"consecutive errors\nJob: {job_title}\n"
+                    f"Last error: {job_after.last_error or result.status}"
+                )
+                await self._deliver_result(job_id, job_title, disable_msg, "auto_disabled")
+                self._manager.set_enabled(job_id, enabled=False)
+                self._backoff_until.pop(job_id, None)
+                logger.warning(
+                    "Cron job auto-disabled after %d consecutive errors: %s",
+                    job_after.consecutive_errors,
+                    job_id,
+                )
+            # Send failure alert if threshold reached and cooldown elapsed.
+            elif job_after and should_alert(
+                consecutive_errors=job_after.consecutive_errors,
+                last_alert_at=job_after.last_alert_at,
+                alert_after=job_after.alert_after,
+                cooldown_seconds=job_after.alert_cooldown_seconds,
+            ):
+                alert_text = format_failure_alert(
+                    job_title,
+                    job_after.consecutive_errors,
+                    job_after.last_error or result.status,
+                )
+                await self._deliver_result(job_id, job_title, alert_text, "alert")
+                self._manager.record_alert(job_id)
+                logger.warning(
+                    "Failure alert sent for job %s (%d consecutive errors)",
+                    job_id,
+                    job_after.consecutive_errors,
+                )
+
+        await append_run_log(
+            log_path,
+            self._build_log_entry(
+                job_id=job_id,
+                run_id=run_id,
+                status=result.status,
+                elapsed_ms=elapsed_ms,
+                delivery_status=delivery_status,
+                delivery_error=delivery_error,
+                output_path=output_path,
+            ),
+        )
+
         # Refresh our mtime baseline so the file-watcher doesn't treat the
         # run-status write as a user-initiated change and trigger a full
         # reschedule of all other jobs.

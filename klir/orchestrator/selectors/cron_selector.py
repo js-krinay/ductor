@@ -124,8 +124,10 @@ async def _build_page(
         number = start + idx + 1
         status_tag = "active" if job.enabled else "paused"
         last_run = ""
-        if job.last_run_status:
-            last_run = f" | last: {job.last_run_status}"
+        if job.consecutive_errors > 0:
+            last_run = f" | errors: {job.consecutive_errors}"
+        elif job.last_duration_ms is not None:
+            last_run = " | last: ok"
         lines.append(f"{number}. **{job.title}** ({status_tag}){last_run}\n   `{job.schedule}`")
         button_text = f"{number}. {'Disable' if job.enabled else 'Enable'}"
         rows.append(

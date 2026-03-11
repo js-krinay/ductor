@@ -44,6 +44,8 @@ def observer(tmp_path: Path, mock_codex_cache: CodexModelCache) -> CronObserver:
     paths.cron_jobs_path = tmp_path / "cron_jobs.json"
     paths.cron_tasks_dir = tmp_path / "cron_tasks"
     paths.cron_tasks_dir.mkdir(exist_ok=True)
+    paths.cron_state_dir = tmp_path / "cron-state"
+    paths.cron_job_state_dir.side_effect = lambda job_id: tmp_path / "cron-state" / job_id
 
     # Create manager
     manager = CronManager(jobs_path=paths.cron_jobs_path)

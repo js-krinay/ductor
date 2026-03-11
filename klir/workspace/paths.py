@@ -72,6 +72,13 @@ class KlirPaths:
         return self.workspace / "cron_tasks"
 
     @property
+    def cron_state_dir(self) -> Path:
+        return self.klir_home / "cron-state"
+
+    def cron_job_state_dir(self, job_id: str) -> Path:
+        return self.cron_state_dir / job_id
+
+    @property
     def tools_dir(self) -> Path:
         return self.workspace / "tools"
 

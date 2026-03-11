@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from klir.config import resolve_user_timezone
+from klir.cron.run_log import prune_run_outputs
 from klir.infra.base_observer import BaseObserver
 
 if TYPE_CHECKING:
@@ -127,14 +128,18 @@ class CleanupObserver(BaseObserver):
             (self._paths.output_to_user_dir, self._cfg.output_to_user_days),
             (self._paths.api_files_dir, self._cfg.api_files_days),
         ]
-        results = await asyncio.to_thread(_run_cleanup, targets)
+        results, cron_deleted = await asyncio.gather(
+            asyncio.to_thread(_run_cleanup, targets),
+            asyncio.to_thread(prune_run_outputs, self._paths.cron_state_dir),
+        )
 
-        if any(results):
+        if any(results) or cron_deleted:
             logger.info(
-                "Cleanup complete: telegram=%d, output=%d, api=%d",
+                "Cleanup complete: telegram=%d, output=%d, api=%d, cron_runs=%d",
                 results[0],
                 results[1],
                 results[2],
+                cron_deleted,
             )
         else:
             logger.debug("Cleanup: nothing to delete")

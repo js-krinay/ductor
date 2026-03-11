@@ -99,8 +99,8 @@ async def test_cron_ignores_heartbeat_quiet_hours(tmp_path: Path) -> None:
     # Job proceeded past quiet hours check (heartbeat config is ignored for cron)
     job = mgr.get_job("test-job")
     assert job is not None
-    assert job.last_run_status is not None
-    assert "cli_not_found" in job.last_run_status
+    assert job.last_error is not None
+    assert "cli_not_found" in job.last_error
 
 
 @time_machine.travel("2025-06-15T14:00:00+00:00")
@@ -126,8 +126,8 @@ async def test_cron_runs_during_active_hours(tmp_path: Path) -> None:
     # but was NOT skipped by quiet hours
     job = mgr.get_job("test-job")
     assert job is not None
-    assert job.last_run_status is not None
-    assert "cli_not_found" in job.last_run_status
+    assert job.last_error is not None
+    assert "cli_not_found" in job.last_error
 
 
 @time_machine.travel("2025-06-15T14:00:00+00:00")
@@ -187,8 +187,8 @@ async def test_cron_job_quiet_hours_boundary_end(tmp_path: Path) -> None:
     # NOT skipped because hour 8 is the exclusive end boundary
     job = mgr.get_job("test-job")
     assert job is not None
-    assert job.last_run_status is not None
-    assert "cli_not_found" in job.last_run_status
+    assert job.last_error is not None
+    assert "cli_not_found" in job.last_error
 
 
 @time_machine.travel("2025-06-15T14:00:00+00:00")
@@ -213,5 +213,5 @@ async def test_cron_quiet_hours_disabled(tmp_path: Path) -> None:
     # Job proceeded past quiet hours check (build_cmd returned None -> error)
     job = mgr.get_job("test-job")
     assert job is not None
-    assert job.last_run_status is not None
-    assert "cli_not_found" in job.last_run_status
+    assert job.last_error is not None
+    assert "cli_not_found" in job.last_error

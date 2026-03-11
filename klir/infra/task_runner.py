@@ -25,13 +25,14 @@ class TaskResult:
     execution: OneShotExecutionResult | None
 
 
-async def run_oneshot_task(
+async def run_oneshot_task(  # noqa: PLR0913
     exec_config: TaskExecutionConfig,
     prompt: str,
     *,
     cwd: Path,
     timeout_seconds: float,
     timeout_label: str,
+    extra_env: dict[str, str] | None = None,
 ) -> TaskResult:
     """Build the CLI command and execute it, returning a normalized result.
 
@@ -55,6 +56,7 @@ async def run_oneshot_task(
         provider=exec_config.provider,
         timeout_seconds=timeout_seconds,
         timeout_label=timeout_label,
+        extra_env=extra_env,
     )
 
     return TaskResult(
@@ -80,6 +82,7 @@ async def execute_in_task_folder(  # noqa: PLR0913
     task_id: str,
     task_label: str,
     timeout_seconds: float,
+    extra_env: dict[str, str] | None = None,
 ) -> TaskResult:
     """Execute a one-shot CLI task inside a ``cron_tasks`` subfolder.
 
@@ -122,6 +125,7 @@ async def execute_in_task_folder(  # noqa: PLR0913
             cwd=folder,
             timeout_seconds=timeout_seconds,
             timeout_label=task_label,
+            extra_env=extra_env,
         )
 
         if result.execution is not None:
