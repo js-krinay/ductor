@@ -26,21 +26,21 @@ class TestBuildUpgradeCommand:
 
     def test_uv_plain_upgrade(self) -> None:
         cmd = _build_upgrade_command(mode="uv", target_version=None, force_reinstall=False)
-        assert cmd == ["uv", "tool", "upgrade", "klir"]
+        assert cmd == ["uv", "tool", "upgrade", "klir-bot"]
 
     def test_uv_force_reinstall(self) -> None:
         cmd = _build_upgrade_command(mode="uv", target_version=None, force_reinstall=True)
-        assert cmd == ["uv", "tool", "upgrade", "klir", "--reinstall"]
+        assert cmd == ["uv", "tool", "upgrade", "klir-bot", "--reinstall"]
 
     def test_uv_ignores_target_version(self) -> None:
         cmd = _build_upgrade_command(mode="uv", target_version="2.0.0", force_reinstall=False)
-        assert cmd == ["uv", "tool", "upgrade", "klir"]
+        assert cmd == ["uv", "tool", "upgrade", "klir-bot"]
 
     def test_pipx_plain_upgrade(self) -> None:
         with patch("klir.infra.updater.sys") as mock_sys:
             mock_sys.platform = "linux"
             cmd = _build_upgrade_command(mode="pipx", target_version=None, force_reinstall=False)
-        assert cmd == ["pipx", "upgrade", "--force", "klir"]
+        assert cmd == ["pipx", "upgrade", "--force", "klir-bot"]
 
     def test_pip_plain_upgrade(self) -> None:
         cmd = _build_upgrade_command(mode="pip", target_version=None, force_reinstall=False)

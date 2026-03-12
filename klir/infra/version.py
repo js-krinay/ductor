@@ -11,9 +11,9 @@ import aiohttp
 
 logger = logging.getLogger(__name__)
 
-_PYPI_URL = "https://pypi.org/pypi/klir/json"
+_PYPI_URL = "https://pypi.org/pypi/klir-bot/json"
 _GITHUB_RELEASES_URL = "https://api.github.com/repos/PleasePrompto/klir/releases"
-_PACKAGE_NAME = "klir"
+_PACKAGE_NAME = "klir-bot"
 _TIMEOUT = aiohttp.ClientTimeout(total=10)
 
 

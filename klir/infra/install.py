@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 InstallMode = Literal["uv", "pipx", "pip", "dev"]
 
-_PACKAGE_NAME = "klir"
+_PACKAGE_NAME = "klir-bot"
 
 
 def detect_install_mode() -> InstallMode:
