@@ -148,6 +148,5 @@ CLI:
 - `klir`
 - `klir status|stop|restart|upgrade|uninstall|onboarding|reset`
 - `klir service ...`
-- `klir docker ...` (includes `extras`, `extras-add`, `extras-remove` for optional AI/ML packages)
 - `klir api ...`
 - `klir agents ...`

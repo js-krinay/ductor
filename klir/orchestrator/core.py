@@ -25,7 +25,6 @@ from klir.errors import (
     WebhookError,
     WorkspaceError,
 )
-from klir.infra.docker import DockerManager
 from klir.infra.inflight import InflightTracker
 from klir.orchestrator.commands import (
     cmd_compact,
@@ -122,13 +121,11 @@ class Orchestrator:
         config: AgentConfig,
         paths: KlirPaths,
         *,
-        docker_container: str = "",
         agent_name: str = "main",
         interagent_port: int = 8799,
     ) -> None:
         self._config = config
         self._paths: KlirPaths = paths
-        self._docker: DockerManager | None = None
         self._resolver = ChatConfigResolver(config)
         self._providers = ProviderManager(config)
         self._sessions = SessionManager(paths.sessions_path, config)
@@ -144,7 +141,6 @@ class Orchestrator:
                 permission_mode=config.permission_mode,
                 reasoning_effort=config.reasoning_effort,
                 gemini_api_key=config.gemini_api_key,
-                docker_container=docker_container,
                 claude_cli_parameters=tuple(config.cli_parameters.claude),
                 codex_cli_parameters=tuple(config.cli_parameters.codex),
                 gemini_cli_parameters=tuple(config.cli_parameters.gemini),
@@ -326,8 +322,6 @@ class Orchestrator:
         )
         if result is not None:
             return result
-
-        await self._ensure_docker()
 
         directives = parse_directives(dispatch.text, self._providers._known_model_ids)
 
@@ -595,12 +589,6 @@ class Orchestrator:
         """Check if a chat has active CLI processes."""
         return self._process_registry.has_active(chat_id)
 
-    async def _ensure_docker(self) -> None:
-        """Health-check Docker before CLI calls; auto-recover or fall back."""
-        from klir.orchestrator.lifecycle import ensure_docker
-
-        await ensure_docker(self)
-
     def set_config_hot_reload_handler(
         self,
         handler: Callable[[AgentConfig, dict[str, object]], None],
@@ -632,7 +620,6 @@ class Orchestrator:
                     permission_mode=config.permission_mode,
                     reasoning_effort=config.reasoning_effort,
                     gemini_api_key=config.gemini_api_key,
-                    docker_container=self._cli_service._config.docker_container,
                     claude_cli_parameters=tuple(config.cli_parameters.claude),
                     codex_cli_parameters=tuple(config.cli_parameters.codex),
                     gemini_cli_parameters=tuple(config.cli_parameters.gemini),

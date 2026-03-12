@@ -332,23 +332,10 @@ def test_cleans_orphan_symlinks(tmp_path: Path) -> None:
 # -- runtime environment injection --
 
 
-@patch("klir.cli.auth.check_all_auth", return_value=_mock_all_authenticated())
-def test_inject_docker_notice(_mock_auth: object, tmp_path: Path) -> None:
-    paths = _make_paths(tmp_path)
-    init_workspace(paths)
-    inject_runtime_environment(paths, docker_container="klir-sandbox")
-    content = (paths.workspace / "CLAUDE.md").read_text()
-    assert "DOCKER CONTAINER" in content
-    assert "klir-sandbox" in content
-    # AGENTS.md mirror should also have it
-    agents = (paths.workspace / "AGENTS.md").read_text()
-    assert "DOCKER CONTAINER" in agents
-
-
 def test_inject_host_notice(tmp_path: Path) -> None:
     paths = _make_paths(tmp_path)
     init_workspace(paths)
-    inject_runtime_environment(paths, docker_container="")
+    inject_runtime_environment(paths)
     content = (paths.workspace / "CLAUDE.md").read_text()
     assert "HOST SYSTEM" in content
     assert "NO SANDBOX" in content
@@ -358,8 +345,8 @@ def test_inject_no_duplicate(tmp_path: Path) -> None:
     """Calling inject twice does not duplicate the section."""
     paths = _make_paths(tmp_path)
     init_workspace(paths)
-    inject_runtime_environment(paths, docker_container="ctr-1")
-    inject_runtime_environment(paths, docker_container="ctr-1")
+    inject_runtime_environment(paths)
+    inject_runtime_environment(paths)
     content = (paths.workspace / "CLAUDE.md").read_text()
     assert content.count("## Runtime Environment") == 1
 
@@ -368,12 +355,12 @@ def test_inject_refreshed_on_reinit(tmp_path: Path) -> None:
     """Workspace re-init overwrites Zone 2, then inject writes fresh notice."""
     paths = _make_paths(tmp_path)
     init_workspace(paths)
-    inject_runtime_environment(paths, docker_container="ctr-old")
+    inject_runtime_environment(paths)
     # Re-init overwrites CLAUDE.md (Zone 2), removing the old notice
     init_workspace(paths)
     content = (paths.workspace / "CLAUDE.md").read_text()
     assert "## Runtime Environment" not in content
     # Fresh inject
-    inject_runtime_environment(paths, docker_container="ctr-new")
+    inject_runtime_environment(paths)
     content = (paths.workspace / "CLAUDE.md").read_text()
-    assert "ctr-new" in content
+    assert "HOST SYSTEM" in content

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
@@ -84,10 +85,23 @@ def api_install_hint() -> str:
     return "pip install klir[api]"
 
 
+def _read_config() -> tuple[Path, dict[str, object]] | None:
+    """Read the config file and return (path, data) or None on failure."""
+    paths = resolve_paths()
+    config_path = paths.config_path
+    if not config_path.exists():
+        _console.print("[red]Config file not found. Run klir first.[/red]")
+        return None
+    try:
+        data: dict[str, object] = json.loads(config_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        _console.print("[red]Failed to read config file.[/red]")
+        return None
+    return config_path, data
+
+
 def api_enable() -> None:
     """Enable the API server: check deps, write config, generate token."""
-    from klir.cli_commands.docker import docker_read_config
-
     if not nacl_available():
         hint = api_install_hint()
         _console.print(
@@ -102,7 +116,7 @@ def api_enable() -> None:
         )
         return
 
-    result = docker_read_config()
+    result = _read_config()
     if result is None:
         return
     config_path, data = result
@@ -141,9 +155,7 @@ def api_enable() -> None:
 
 def api_disable() -> None:
     """Disable the API server in config."""
-    from klir.cli_commands.docker import docker_read_config
-
-    result = docker_read_config()
+    result = _read_config()
     if result is None:
         return
     config_path, data = result

@@ -147,9 +147,7 @@ class TestReadRunLogPage:
     async def test_pagination_offset(self, tmp_path: pytest.TempPathFactory) -> None:
         path = tmp_path / "runs.jsonl"
         for i in range(5):
-            await append_run_log(
-                path, CronRunLogEntry(ts=float(i), job_id="job", status="success")
-            )
+            await append_run_log(path, CronRunLogEntry(ts=float(i), job_id="job", status="success"))
         page = await read_run_log_page(path, limit=2, offset=2)
         assert len(page.entries) == 2
         assert page.total == 5

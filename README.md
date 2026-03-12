@@ -39,7 +39,7 @@ pipx install klir
 klir
 ```
 
-The onboarding wizard handles CLI checks, Telegram setup, timezone, optional Docker, and optional background service install.
+The onboarding wizard handles CLI checks, Telegram setup, timezone, and optional background service install.
 
 **Requirements:** Python 3.11+, at least one CLI installed (`claude`, `codex`, or `gemini`), a Telegram Bot Token from [@BotFather](https://t.me/BotFather).
 
@@ -187,7 +187,6 @@ Main chat:  "Ask codex-agent to write tests for the API"
 - **Webhooks** — `wake` (inject into active chat) and `cron_task` (isolated task run) modes
 - **Heartbeat** — proactive checks in active sessions with cooldown
 - **Config hot-reload** — most settings update without restart
-- **Docker sandbox** — optional sidecar container with configurable host mounts
 - **Service manager** — Linux (systemd), macOS (launchd), Windows (Task Scheduler)
 - **Cross-tool skill sync** — shared skills across `~/.claude/`, `~/.codex/`, `~/.gemini/`
 
@@ -244,10 +243,6 @@ klir status           # Runtime status
 
 klir service install  # Install as background service
 klir service logs     # View service logs
-
-klir docker enable    # Enable Docker sandbox
-klir docker rebuild   # Rebuild sandbox container
-klir docker mount /p  # Add host mount
 
 klir agents list      # List configured sub-agents
 klir agents add NAME  # Add a sub-agent

@@ -32,9 +32,7 @@ _BIND_ALL_HOST = ".".join(["0"] * 4)
 class InternalAgentAPI:
     """HTTP server for CLI → Bus / TaskHub communication.
 
-    Binds to ``127.0.0.1`` by default.  When *docker_mode* is ``True`` it
-    binds to ``0.0.0.0`` so that CLI processes running inside a Docker
-    container can reach the API via ``host.docker.internal``.
+    Binds to ``127.0.0.1``.
 
     The *bus* parameter is optional: when ``None`` only task endpoints are
     registered (task-only mode for single-agent setups).
@@ -44,12 +42,10 @@ class InternalAgentAPI:
         self,
         bus: InterAgentBus | None = None,
         port: int = _DEFAULT_PORT,
-        *,
-        docker_mode: bool = False,
     ) -> None:
         self._bus = bus
         self._port = port
-        self._bind_host = _BIND_ALL_HOST if docker_mode else "127.0.0.1"
+        self._bind_host = "127.0.0.1"
         self._health_ref: dict[str, AgentHealth] | None = None
         self._task_hub: TaskHub | None = None
         self._app = web.Application()

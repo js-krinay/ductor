@@ -32,8 +32,7 @@ Result: smaller `core.py` with clearer responsibilities.
 High-level steps:
 
 1. resolve paths + set main-agent `KLIR_HOME`
-2. optional Docker setup + Docker skill resync
-3. runtime environment injection into workspace rule files
+2. runtime environment injection into workspace rule files
 4. instantiate `Orchestrator`
 5. provider auth detection + available-provider update
 6. initialize Gemini/Codex cache observers
@@ -177,4 +176,3 @@ Restart-required fields are surfaced via reloader callback logging.
 2. stop API server (if running)
 3. cleanup managed skill links
 4. stop observers/reloader/cache/watchers
-5. Docker teardown (if enabled)

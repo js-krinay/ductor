@@ -1,12 +1,11 @@
 # infra/
 
-Runtime infrastructure: process lifecycle, restart/update flow, Docker sandbox, service backends, shared low-level helpers.
+Runtime infrastructure: process lifecycle, restart/update flow, service backends, shared low-level helpers.
 
 ## Files
 
 - process/runtime: `pidlock.py`, `restart.py`, `inflight.py`, `recovery.py`, `startup_state.py`, `boot_id.py`
 - secrets: `env_secrets.py`
-- Docker: `docker.py`, `docker_extras.py`
 - service: `service.py`, `service_base.py`, `service_logs.py`, `service_linux.py`, `service_macos.py`, `service_windows.py`
 - update/version: `install.py`, `version.py`, `updater.py`
 - filesystem/atomic I/O: `fs.py`, `atomic_io.py`, `json_store.py`
@@ -48,32 +47,6 @@ Restart code: `42` (`EXIT_RESTART`).
 2. kill PID-file instance
 3. kill remaining klir processes
 4. short Windows lock-release wait
-5. stop Docker container when enabled
-
-## Docker manager
-
-`DockerManager.setup()` handles:
-
-- daemon/image/container checks
-- container (re)start
-- mounts:
-  - `~/.klir -> /klir`
-  - provider homes (`~/.claude`, `~/.codex`, `~/.gemini`, `~/.claude.json` when present)
-  - optional host cache mount
-  - user-configured `docker.mounts` to `/mnt/<name>`
-
-Docker extras (`docker_extras.py`):
-
-- `DockerExtra` frozen dataclass registry of optional AI/ML packages (Whisper, PyTorch, OpenCV, Tesseract, etc.)
-- `resolve_extras()` resolves transitive dependencies in topological order
-- `generate_dockerfile_extras()` appends `RUN` blocks (apt + pip) to the base Dockerfile
-- packages with custom `--index-url` (e.g. PyTorch CPU) are installed before standard PyPI packages to prevent CUDA variant downloads
-- `calculate_build_timeout()` adds per-extra timeout to the base build timeout
-- build output is streamed live via `_exec_stream()` to the Rich console
-
-Fallback behavior:
-
-- if Docker setup/recovery fails, runtime falls back to host execution.
 
 ## Service backends
 
@@ -101,10 +74,7 @@ Centralised loading of user-defined API secrets from `~/.klir/.env`.
 
 - standard dotenv syntax (comments, `export` prefix, single/double quotes)
 - loaded once per process and cached
-- injected at three points:
-  - `_build_subprocess_env()` in `executor.py` (host CLI execution)
-  - `docker_wrap()` in `base.py` (`docker exec -e` flags)
-  - `_start_container()` in `docker.py` (`docker run -e` flags)
+- injected into subprocess env via `_build_subprocess_env()` in `executor.py`
 - existing environment variables are never overridden
 - provider-specific `extra_env` (e.g. `GEMINI_API_KEY` from config) takes precedence
 - mtime-based cache invalidation: edits take effect on the next CLI invocation without restart

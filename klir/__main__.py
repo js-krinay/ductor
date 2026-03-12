@@ -16,7 +16,6 @@ from rich.console import Console
 # tests that patch klir.__main__.<name>.
 from klir.cli_commands.agents import cmd_agents as _cmd_agents
 from klir.cli_commands.api_cmd import cmd_api as _cmd_api
-from klir.cli_commands.docker import cmd_docker as _cmd_docker
 from klir.cli_commands.lifecycle import (
     cmd_restart as _cmd_restart,
 )
@@ -254,7 +253,6 @@ _COMMANDS: dict[str, str] = {
     "onboarding": "setup",
     "reset": "setup",
     "service": "service",
-    "docker": "docker",
     "api": "api",
     "agents": "agents",
 }
@@ -283,7 +281,6 @@ def main() -> None:
         "uninstall": _uninstall,
         "setup": lambda: _cmd_setup(verbose),
         "service": lambda: _cmd_service(args),
-        "docker": lambda: _cmd_docker(args),
         "api": lambda: _cmd_api(args),
         "agents": lambda: _cmd_agents(args),
     }

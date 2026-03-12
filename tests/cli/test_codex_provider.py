@@ -103,11 +103,6 @@ class TestInit:
         cli = CodexCLI(CLIConfig(provider="codex"))
         assert cli._cli == "/opt/bin/codex"
 
-    def test_docker_container_skips_find_cli(self) -> None:
-        """When docker_container is set, _find_cli is never called."""
-        cli = CodexCLI(CLIConfig(provider="codex", docker_container="my-sandbox"))
-        assert cli._cli == "codex"
-
     def test_working_dir_resolved(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         monkeypatch.setattr("klir.cli.codex_provider.which", lambda _: "/usr/bin/codex")
         cli = CodexCLI(CLIConfig(provider="codex", working_dir=str(tmp_path)))
@@ -893,76 +888,6 @@ class TestLogCmd:
         with caplog.at_level(logging.INFO, logger="klir.cli.codex_provider"):
             _log_cmd(["codex", "exec"], streaming=False)
         assert "Codex cmd" in caplog.text
-
-
-# ---------------------------------------------------------------------------
-# Docker wrapping integration
-# ---------------------------------------------------------------------------
-
-
-class TestDockerIntegration:
-    async def test_send_with_docker_container(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """When docker_container is set, command is wrapped in docker exec."""
-        cli = CodexCLI(
-            CLIConfig(
-                provider="codex",
-                model="gpt-5.2-codex",
-                docker_container="sandbox-container",
-            )
-        )
-        jsonl = json.dumps(
-            {
-                "type": "item.completed",
-                "item": {"type": "agent_message", "text": "docker OK"},
-            }
-        )
-        proc = _make_process_mock(stdout=jsonl.encode(), returncode=0)
-
-        with patch("klir.cli.executor.asyncio") as mock_asyncio:
-            mock_asyncio.timeout = asyncio.timeout
-            mock_asyncio.subprocess = asyncio.subprocess
-            mock_asyncio.create_subprocess_exec = AsyncMock(return_value=proc)
-
-            resp = await cli.send("hello")
-
-        # Verify docker exec was called
-        call_args = mock_asyncio.create_subprocess_exec.call_args
-        exec_cmd = call_args.args
-        assert exec_cmd[0] == "docker"
-        assert "sandbox-container" in exec_cmd
-        # cwd should be None for docker
-        assert call_args.kwargs.get("cwd") is None
-        assert resp.result == "docker OK"
-
-    async def test_send_with_docker_container_keeps_stdin_open_on_windows(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Windows Codex-in-Docker must use ``docker exec -i`` so stdin prompts arrive."""
-        monkeypatch.setattr("klir.cli.codex_provider._IS_WINDOWS", True)
-        cli = CodexCLI(
-            CLIConfig(
-                provider="codex",
-                model="gpt-5.2-codex",
-                docker_container="sandbox-container",
-            )
-        )
-        jsonl = json.dumps(
-            {
-                "type": "item.completed",
-                "item": {"type": "agent_message", "text": "docker OK"},
-            }
-        )
-        proc = _make_process_mock(stdout=jsonl.encode(), returncode=0)
-
-        with patch("klir.cli.executor.asyncio") as mock_asyncio:
-            mock_asyncio.timeout = asyncio.timeout
-            mock_asyncio.subprocess = asyncio.subprocess
-            mock_asyncio.create_subprocess_exec = AsyncMock(return_value=proc)
-
-            await cli.send("hello")
-
-        exec_cmd = mock_asyncio.create_subprocess_exec.call_args.args
-        assert exec_cmd[:3] == ("docker", "exec", "-i")
 
 
 # ---------------------------------------------------------------------------

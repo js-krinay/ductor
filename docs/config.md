@@ -47,9 +47,7 @@ export MY_VAR="quoted value"
 
 Propagation:
 
-- host CLI execution: merged into subprocess env via `_build_subprocess_env()`
-- Docker exec: injected as `-e` flags via `docker_wrap()`
-- Docker container creation: injected as `-e` flags via `_start_container()`
+- CLI execution: merged into subprocess env via `_build_subprocess_env()`
 - sub-agents and background tasks: inherited through the same execution paths
 
 Priority (highest to lowest):
@@ -86,7 +84,6 @@ Changes take effect on the next CLI invocation (mtime-based cache invalidation, 
 | `allowed_group_ids` | `list[int]` | `[]` | Telegram group allowlist (which groups the bot can operate in; default `[]` = no groups, fail-closed). In groups, both the group and the user must be allowlisted |
 | `group_mention_only` | `bool` | `false` | In allowlisted group chats, only process messages that explicitly mention or reply to the bot (mention-gating filter; not an auth bypass) |
 | `streaming` | `StreamingConfig` | see below | Streaming tuning |
-| `docker` | `DockerConfig` | see below | Docker sidecar config |
 | `heartbeat` | `HeartbeatConfig` | see below | Background heartbeat config |
 | `cleanup` | `CleanupConfig` | see below | Daily file-retention cleanup |
 | `webhooks` | `WebhookConfig` | see below | Webhook HTTP server config |
@@ -186,80 +183,6 @@ Behavior notes:
 | `append_mode` | `bool` | `false` |
 | `sentence_break` | `bool` | `true` |
 
-## `DockerConfig`
-
-| Field | Type | Default | Notes |
-|---|---|---|---|
-| `enabled` | `bool` | `false` | Master toggle |
-| `image_name` | `str` | `"klir-sandbox"` | Docker image name |
-| `container_name` | `str` | `"klir-sandbox"` | Docker container name |
-| `auto_build` | `bool` | `true` | Build image automatically when missing |
-| `mount_host_cache` | `bool` | `false` | Mount host `~/.cache` into container (see below) |
-| `mounts` | `list[str]` | `[]` | Extra host directories mounted into sandbox (`/mnt/...`) |
-| `extras` | `list[str]` | `[]` | Optional AI/ML package IDs to install in the Docker image (see below) |
-
-`Orchestrator.create()` calls `DockerManager.setup()` when enabled. If setup fails, klir logs warning and falls back to host execution.
-
-### `mount_host_cache`
-
-Mounts the host's platform-specific cache directory into the container at `/home/node/.cache`:
-
-| Platform | Host path |
-|---|---|
-| Linux | `~/.cache` (or `$XDG_CACHE_HOME`) |
-| macOS | `~/Library/Caches` |
-| Windows | `%LOCALAPPDATA%` |
-
-Use case: browser-based skills (e.g. google-ai-mode) that use patchright/playwright need access to persistent browser profiles and browser binaries stored in the host cache. Without this, each container start requires a fresh CAPTCHA solve and Chrome download.
-
-Disabled by default because it exposes the host cache directory to the sandbox.
-
-### `mounts`
-
-User-defined directory mounts for project/data access inside Docker sandbox.
-
-- each entry is expanded (`~`, env vars), resolved, and validated as an existing directory
-- invalid or missing entries are skipped with warnings
-- container target path is derived from host basename: `/mnt/<sanitized-name>`
-- duplicate target names are disambiguated as `/mnt/name_2`, `/mnt/name_3`, ...
-
-Runtime note:
-
-- updates are typically managed via `klir docker mount|unmount`
-- changing mounts requires bot restart (or `klir docker rebuild`) to affect container run flags
-
-### `extras`
-
-Optional AI/ML packages installed into the Docker sandbox image at build time. Each entry is an ID from the extras registry (`klir/infra/docker_extras.py`).
-
-Available extras:
-
-| ID | Name | Category | Size |
-|---|---|---|---|
-| `ffmpeg` | FFmpeg | Audio / Speech | ~100 MB |
-| `whisper` | Faster Whisper | Audio / Speech | ~500 MB |
-| `opencv` | OpenCV | Vision / OCR | ~100 MB |
-| `tesseract` | Tesseract OCR | Vision / OCR | ~40 MB |
-| `easyocr` | EasyOCR | Vision / OCR | ~2.5 GB |
-| `pymupdf` | PyMuPDF | Document Processing | ~50 MB |
-| `pandoc` | Pandoc | Document Processing | ~80 MB |
-| `scipy` | SciPy | Scientific / Data | ~130 MB |
-| `pandas` | pandas | Scientific / Data | ~60 MB |
-| `matplotlib` | Matplotlib | Scientific / Data | ~60 MB |
-| `pytorch-cpu` | PyTorch (CPU) | ML Frameworks | ~800 MB |
-| `transformers` | HF Transformers | ML Frameworks | ~2 GB |
-| `playwright` | Playwright | Web / Browser | ~450 MB |
-
-Dependency resolution:
-
-- `whisper` depends on `ffmpeg`
-- `easyocr` and `transformers` depend on `pytorch-cpu`
-- dependencies are auto-resolved at build time
-
-Managed via `klir docker extras-add|extras-remove` or during onboarding wizard. Changes require `klir docker rebuild` to take effect.
-
-When extras are configured, the supervisor startup timeout is dynamically extended to accommodate longer Docker build times.
-
 ## `HeartbeatConfig`
 
 | Field | Type | Default | Notes |
@@ -342,7 +265,7 @@ Observer lifecycle caveat:
 Restart-required top-level fields:
 
 - `telegram_token`
-- `docker`, `api`, `webhooks`
+- `api`, `webhooks`
 - `klir_home`, `log_level`, `gemini_api_key`, `timeouts`, `tasks`
 
 Restart classification is computed from `AgentConfig` top-level schema fields.
@@ -443,7 +366,6 @@ Managed via:
 | `reasoning_effort` | `str` | no | inherited | |
 | `file_access` | `str` | no | inherited | |
 | `streaming` | `StreamingConfig` | no | inherited | |
-| `docker` | `DockerConfig` | no | inherited | |
 | `heartbeat` | `HeartbeatConfig` | no | inherited | |
 | `cleanup` | `CleanupConfig` | no | inherited | |
 | `webhooks` | `WebhookConfig` | no | inherited | |

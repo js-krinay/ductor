@@ -115,7 +115,7 @@ Provider-switch safeguard:
 
 ### Local HTTP bridge for tool scripts
 
-`InternalAgentAPI` runs on `127.0.0.1:8799` (host) or `0.0.0.0:8799` (Docker mode).
+`InternalAgentAPI` runs on `127.0.0.1:8799`.
 
 Inter-agent endpoints:
 

@@ -89,7 +89,6 @@ class AgentSupervisor:
         self._internal_api = InternalAgentAPI(
             self._bus,
             port=self._main_config.interagent_port,
-            docker_mode=self._main_config.docker.enabled,
         )
         self._internal_api.set_health_ref(self._health)
         started = await self._internal_api.start()
@@ -134,19 +133,9 @@ class AgentSupervisor:
             name="agent:main",
         )
 
-        # 2. Wait for main agent startup (Docker, workspace, auth) before
-        #    starting sub-agents.  This ensures Docker is set up exactly once
-        #    by the main agent; sub-agents reuse the existing container.
-        #    Timeout is extended when Docker extras are configured because the
-        #    first image build can take several minutes.
+        # 2. Wait for main agent startup (workspace, auth) before starting
+        #    sub-agents.
         startup_timeout = 120
-        if self._main_config.docker.enabled and self._main_config.docker.extras:
-            from klir.infra.docker_extras import calculate_build_timeout, resolve_extras
-
-            startup_timeout = max(
-                startup_timeout,
-                calculate_build_timeout(resolve_extras(self._main_config.docker.extras)),
-            )
         try:
             await asyncio.wait_for(self._main_ready.wait(), timeout=startup_timeout)
         except TimeoutError:
@@ -327,7 +316,7 @@ class AgentSupervisor:
         supervisor reference + registers multi-agent commands on the main agent.
 
         For the main agent this also signals ``_main_ready`` so the supervisor
-        knows Docker and workspace init are complete before starting sub-agents.
+        knows workspace init is complete before starting sub-agents.
         """
         supervisor = self
 

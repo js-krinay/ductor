@@ -10,7 +10,6 @@
    - Gemini CLI: `npm install -g @google/gemini-cli` and authenticate in `gemini`
 4. Telegram bot token from [@BotFather](https://t.me/BotFather)
 5. Telegram user ID from [@userinfobot](https://t.me/userinfobot)
-6. Docker optional (recommended for sandboxing)
 
 ## Install
 
@@ -46,7 +45,6 @@ On first run, onboarding does:
 - checks Claude/Codex/Gemini auth status,
 - asks for Telegram token + user ID,
 - asks timezone,
-- offers Docker sandboxing (with optional AI/ML package selection),
 - offers service install,
 - writes config and seeds `~/.klir/`.
 
@@ -62,13 +60,6 @@ pip install pipx
 pipx ensurepath
 pipx install klir
 klir
-```
-
-Optional Docker:
-
-```bash
-sudo apt install docker.io
-sudo usermod -aG docker $USER
 ```
 
 ### macOS
@@ -105,47 +96,17 @@ pipx install klir
 klir
 ```
 
-## Docker sandboxing
+## Optional host tools
 
-Enable in config:
+klir works out of the box with just the provider CLIs. These optional tools unlock extra capabilities that the AI models can't handle natively:
 
-```json
-{
-  "docker": {
-    "enabled": true
-  }
-}
-```
+| Tool | Install | What it enables |
+|---|---|---|
+| FFmpeg | `sudo apt install ffmpeg` | Voice message conversion, video processing |
+| Whisper | `pip install openai-whisper` or [whisper.cpp](https://github.com/ggerganov/whisper.cpp) | Local voice message transcription |
+| Playwright | `pip install playwright && playwright install` | Browser automation, web scraping, screenshots |
 
-Notes:
-
-- Docker image is built on first use when missing.
-- Container is reused between calls.
-- On Linux, klir maps UID/GID to avoid root-owned files.
-- If Docker setup fails at startup, klir logs warning and falls back to host execution.
-
-Docker CLI shortcuts:
-
-```bash
-klir docker enable
-klir docker disable
-klir docker rebuild
-klir docker mount /path/to/project
-klir docker unmount /path/to/project
-klir docker mounts
-klir docker extras
-klir docker extras-add <id>
-klir docker extras-remove <id>
-```
-
-- `enable` / `disable` toggles `docker.enabled` in `config.json` (restart bot afterwards).
-- `rebuild` stops the bot, removes container + image, and forces fresh build on next start.
-- `mount` / `unmount` manage `docker.mounts` entries.
-- mounts are available in-container under `/mnt/<name>` (basename-based mapping with collision suffixes).
-- run `klir docker mounts` to inspect effective mapping and broken paths.
-- `extras` lists all optional packages with their selection status.
-- `extras-add` / `extras-remove` manage optional AI/ML packages (Whisper, PyTorch, OpenCV, etc.) in `config.json`. Transitive dependencies are resolved automatically.
-- after changing extras, run `klir docker rebuild` to apply. Build output is streamed live to the terminal.
+None of these are required. If a tool is missing when needed, klir will show an actionable error with install instructions.
 
 ## Direct API server (optional)
 
@@ -238,7 +199,7 @@ Small Linux VPS is enough. Typical path:
 
 ```bash
 ssh user@host
-sudo apt update && sudo apt install python3 python3-pip python3-venv nodejs npm docker.io
+sudo apt update && sudo apt install python3 python3-pip python3-venv nodejs npm
 pip install pipx
 pipx ensurepath
 pipx install klir
@@ -248,7 +209,6 @@ klir
 Security basics:
 
 - keep SSH key-only auth
-- enable Docker sandboxing for unattended automation
 - keep `allowed_user_ids` restricted
 - use `/upgrade` or `pipx upgrade klir`
 
@@ -272,14 +232,6 @@ codex auth
 # or
 # authenticate in gemini CLI
 ```
-
-### Docker enabled but not running
-
-```bash
-docker info
-```
-
-Then validate `docker.enabled` + image/container names in config.
 
 ### Webhooks not arriving
 

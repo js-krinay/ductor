@@ -88,7 +88,6 @@ class CLIServiceConfig:
     permission_mode: str
     reasoning_effort: str = "medium"
     gemini_api_key: str | None = None
-    docker_container: str = ""
     claude_cli_parameters: tuple[str, ...] = ()
     codex_cli_parameters: tuple[str, ...] = ()
     gemini_cli_parameters: tuple[str, ...] = ()
@@ -134,10 +133,6 @@ class CLIService:
     def update_config(self, config: CLIServiceConfig) -> None:
         """Replace the full service config (used by config hot-reload)."""
         self._config = config
-
-    def update_docker_container(self, container: str) -> None:
-        """Switch Docker container (empty string = host execution)."""
-        self._config = replace(self._config, docker_container=container)
 
     def _resolve_model(self, request: AgentRequest) -> str:
         """Resolve the effective model for logging and metadata."""
@@ -320,7 +315,6 @@ class CLIService:
                 reasoning_effort=self._config.reasoning_effort,
                 thinking_level=request.thinking_level,
                 gemini_api_key=self._config.gemini_api_key,
-                docker_container=self._config.docker_container,
                 process_registry=self._process_registry,
                 chat_id=request.chat_id,
                 topic_id=request.topic_id,

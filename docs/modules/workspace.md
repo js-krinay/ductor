@@ -130,11 +130,9 @@ Watcher detail per cycle:
 
 ## Runtime environment injection
 
-`inject_runtime_environment(paths, docker_container=...)` appends two sections to each existing workspace rule file (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`):
+`inject_runtime_environment(paths)` appends a section to each existing workspace rule file (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`):
 
 - `## Multi-Agent Identity` (main/sub-agent context + communication hints)
-- Docker mode notice (`/klir` mount)
-- host mode warning (no sandbox)
 
 Duplicate prevention: injection is skipped when either marker already exists (`## Multi-Agent Identity` or `## Runtime Environment`).
 
@@ -167,7 +165,7 @@ Path traversal protection is enforced for create/delete operations.
 - `~/.codex/skills`
 - `~/.gemini/skills`
 
-Default mode uses symlinks/junctions. Docker mode uses managed directory copies (`.klir_managed`) so paths resolve inside container namespace.
+Uses symlinks/junctions for cross-tool sync.
 
 See `docs/modules/skill_system.md`.
 

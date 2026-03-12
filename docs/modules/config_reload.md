@@ -39,7 +39,7 @@ Important runtime nuance:
 ## Restart-required fields
 
 - `telegram_token`
-- `docker`, `api`, `webhooks`
+- `api`, `webhooks`
 - `klir_home`, `log_level`, `gemini_api_key`, `timeouts`, `tasks`
 - restart classification is schema-based over `AgentConfig` top-level fields
 

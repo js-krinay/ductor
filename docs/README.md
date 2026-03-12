@@ -25,7 +25,7 @@ klir routes chat input to official provider CLIs (`claude`, `codex`, `gemini`), 
 ## System in 60 Seconds
 
 - `klir/__main__.py`: thin CLI entrypoint (dispatch) + config loading.
-- `klir/cli_commands/`: concrete CLI subcommand implementations (`agents`, `docker`, `service`, `api`, lifecycle/status helpers).
+- `klir/cli_commands/`: concrete CLI subcommand implementations (`agents`, `service`, `api`, lifecycle/status helpers).
 - `klir/bot/`: aiogram handlers, auth/sequencing middleware, streaming dispatch, callback routing, group audit/chat tracking.
 - `klir/orchestrator/`: command registry, directives/hooks, normal + streaming + heartbeat flows, provider/session/task wiring.
 - `klir/bus/`: central `MessageBus` + `Envelope` + `LockPool` + Telegram transport formatting.
@@ -36,7 +36,7 @@ klir routes chat input to official provider CLIs (`claude`, `codex`, `gemini`), 
 - `klir/cron/`, `webhook/`, `heartbeat/`, `cleanup/`: in-process automation observers.
 - `klir/workspace/`: path source-of-truth, home defaults sync, rules deployment/sync, skill sync.
 - `klir/multiagent/`: supervisor, inter-agent bus, internal localhost API bridge, shared-knowledge sync.
-- `klir/infra/`: PID lock, restart/update state, Docker manager, service backends, observer/task utilities.
+- `klir/infra/`: PID lock, restart/update state, service backends, observer/task utilities.
 
 Runtime behavior notes:
 

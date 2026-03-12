@@ -67,7 +67,6 @@ _HOT_RELOADABLE: frozenset[str] = frozenset(
 _RESTART_REQUIRED: frozenset[str] = frozenset(
     {
         "telegram_token",
-        "docker",
         "api",
         "webhooks",
         "klir_home",

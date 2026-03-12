@@ -5,7 +5,7 @@ Provider-agnostic CLI execution layer for Claude Code, Codex, and Gemini.
 ## Files
 
 - `types.py`: `AgentRequest`, `AgentResponse`, `CLIResponse`
-- `base.py`: `BaseCLI`, `CLIConfig`, `docker_wrap()`, Windows helpers
+- `base.py`: `BaseCLI`, `CLIConfig`, Windows helpers
 - `factory.py`: provider factory (`claude` / `codex` / `gemini`)
 - `service.py`: `CLIService` gateway for orchestrator
 - `executor.py`: shared subprocess lifecycle helpers for provider wrappers
@@ -165,15 +165,3 @@ Statuses: `AUTHENTICATED`, `INSTALLED`, `NOT_FOUND`.
 
 Windows uses process-tree termination (`taskkill /F /T`) to avoid orphaned child processes.
 
-## Docker wrapping
-
-`docker_wrap(cmd, config, extra_env=None, interactive=False)`:
-
-- host mode (`config.docker_container == ""`): return original command + resolved local cwd
-- container mode:
-  - wraps command as `docker exec ... <container> ...`,
-  - injects `KLIR_CHAT_ID`, optional `KLIR_TOPIC_ID`, `KLIR_AGENT_NAME`, `KLIR_INTERAGENT_PORT`, `KLIR_HOME`, `KLIR_SHARED_MEMORY_PATH`, and `KLIR_INTERAGENT_HOST`,
-  - merges user secrets from `~/.klir/.env` (never overrides existing vars),
-  - forwards optional env vars via `-e` flags (`extra_env`, overrides `.env`),
-  - uses `-i` when `interactive=True` (required for stdin-fed providers like Gemini),
-  - returns `cwd=None` (execution happens inside container context).

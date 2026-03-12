@@ -7,7 +7,6 @@ from pydantic import ValidationError
 
 from klir.config import (
     AgentConfig,
-    DockerConfig,
     ModelRegistry,
     StreamingConfig,
     deep_merge_config,
@@ -46,12 +45,6 @@ def test_agent_config_streaming_defaults() -> None:
     assert cfg.streaming.enabled is True
     assert cfg.streaming.min_chars == 200
     assert cfg.streaming.max_chars == 4000
-
-
-def test_agent_config_docker_defaults() -> None:
-    cfg = AgentConfig()
-    assert cfg.docker.enabled is False
-    assert cfg.docker.image_name == "klir-sandbox"
 
 
 def test_agent_config_rejects_invalid_types() -> None:
@@ -125,9 +118,3 @@ def test_streaming_config_fields() -> None:
     s = StreamingConfig(enabled=False, min_chars=100)
     assert s.enabled is False
     assert s.min_chars == 100
-
-
-def test_docker_config_fields() -> None:
-    d = DockerConfig(enabled=True, image_name="custom")
-    assert d.enabled is True
-    assert d.image_name == "custom"

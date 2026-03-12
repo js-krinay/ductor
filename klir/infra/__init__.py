@@ -1,6 +1,5 @@
-"""Infrastructure: PID lock, restart sentinels, Docker management."""
+"""Infrastructure: PID lock, restart sentinels."""
 
-from klir.infra.docker import DockerManager
 from klir.infra.pidlock import acquire_lock, release_lock
 from klir.infra.restart import (
     EXIT_RESTART,
@@ -12,7 +11,6 @@ from klir.infra.restart import (
 
 __all__ = [
     "EXIT_RESTART",
-    "DockerManager",
     "acquire_lock",
     "consume_restart_marker",
     "consume_restart_sentinel",

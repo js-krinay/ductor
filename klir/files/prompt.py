@@ -26,7 +26,7 @@ def build_media_prompt(
 ) -> str:
     """Build the prompt injected into the orchestrator for a received file.
 
-    Paths are relative to *workspace* so they work in both host and Docker.
+    Paths are relative to *workspace* for portability.
     """
     rel_path: Path | str = info.path
     with contextlib.suppress(ValueError):

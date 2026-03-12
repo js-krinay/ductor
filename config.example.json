@@ -64,12 +64,6 @@
         "done_emoji": "✅",
         "error_emoji": "❌"
     },
-    "docker": {
-        "enabled": false,
-        "image_name": "klir-sandbox",
-        "container_name": "klir-sandbox",
-        "auto_build": true
-    },
     "cleanup": {
         "enabled": true,
         "telegram_files_days": 30,

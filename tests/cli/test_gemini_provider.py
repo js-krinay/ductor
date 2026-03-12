@@ -199,21 +199,6 @@ class TestPrepareEnv:
 
         assert env["PATH"].split(os.pathsep)[0] == "/opt/node/v22.0.0/bin"
 
-    def test_host_to_container_path_normalizes_windows_separators(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        fake_paths = type("P", (), {"klir_home": Path(r"C:\Users\ZOZN109\.klir")})()
-        monkeypatch.setattr(
-            "klir.cli.gemini_provider.resolve_paths",
-            lambda: fake_paths,
-        )
-
-        result = GeminiCLI._host_to_container_path(
-            r"C:\Users\ZOZN109\.klir\tmp\gemini_system_abc.md"
-        )
-
-        assert result == "/klir/tmp/gemini_system_abc.md"
-
     def test_injects_config_api_key_for_gemini_api_key_mode(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

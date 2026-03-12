@@ -19,7 +19,7 @@ In-process multi-agent supervisor (`AgentSupervisor`) for main agent + optional 
 `AgentSupervisor.start()`:
 
 1. start `InterAgentBus`
-2. start `InternalAgentAPI` (`127.0.0.1:8799` in host mode, `0.0.0.0:8799` in Docker mode)
+2. start `InternalAgentAPI` (`127.0.0.1:8799`)
 3. if `tasks.enabled=true`: create shared `TaskHub` (`~/.klir/tasks.json` + `~/.klir/workspace/tasks/`) and attach it to `InternalAgentAPI`
 4. create/start main `AgentStack`
 5. wait up to 120s for main startup readiness (`_main_ready`) before sub-agent startup

@@ -60,7 +60,7 @@ Telegram Update
 | `heartbeat/` | periodic proactive checks in active sessions |
 | `cleanup/` | daily retention cleanup |
 | `workspace/` | home seeding, rules deployment/sync, skill sync |
-| `infra/` | PID lock, service backends, Docker manager, update/restart helpers |
+| `infra/` | PID lock, service backends, update/restart helpers |
 
 ## Key Runtime Patterns
 
@@ -71,8 +71,6 @@ Telegram Update
 - Rules are selected from `RULES*.md` variants and deployed per authenticated provider.
 - Rule sync updates existing `CLAUDE.md`, `AGENTS.md`, `GEMINI.md` siblings recursively by mtime.
 - Skill sync spans `~/.klir/workspace/skills`, `~/.claude/skills`, `~/.codex/skills`, `~/.gemini/skills`.
-  - normal mode: links
-  - Docker mode: managed copies (`.klir_managed` marker)
 - Streaming fallback is automatic; `/stop` abort checks are enforced during event loop processing.
 - Session state is provider-isolated; `/new` resets only the active provider bucket.
 
@@ -107,12 +105,9 @@ All run as in-process asyncio tasks:
 | Command | Effect |
 |---|---|
 | `klir` | Start bot (runs onboarding if needed) |
-| `klir stop` | Stop bot and Docker container |
+| `klir stop` | Stop bot |
 | `klir restart` | Restart bot |
 | `klir upgrade` | Stop, upgrade, restart |
-| `klir docker rebuild` | Stop bot, remove container & image, rebuilt on next start |
-| `klir docker enable` | Set `docker.enabled = true` |
-| `klir docker disable` | Stop container, set `docker.enabled = false` |
 | `klir service install` | Install as background service |
 | `klir service [sub]` | Service management (status/stop/logs/...) |
 

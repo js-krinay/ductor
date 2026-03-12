@@ -7,7 +7,6 @@ CLI command implementation package extracted from `__main__.py`.
 - `cli_commands/lifecycle.py`: `start_bot`, `stop_bot`, `cmd_restart`, `upgrade`, `uninstall`, `_re_exec_bot`
 - `cli_commands/status.py`: `print_status`, `print_usage`
 - `cli_commands/service.py`: `klir service ...`
-- `cli_commands/docker.py`: `klir docker ...`
 - `cli_commands/api_cmd.py`: `klir api ...`
 - `cli_commands/agents.py`: `klir agents ...`
 
@@ -26,13 +25,12 @@ This keeps lifecycle logic testable and prevents command monolith growth.
 - lifecycle: `klir`, `stop`, `restart`, `upgrade`, `uninstall`, onboarding/reset flow
 - status/help: `klir status`, `klir help`
 - service: install/start/stop/logs/uninstall wrapper for platform backends
-- docker: enable/disable/rebuild/mount/unmount/mounts/extras/extras-add/extras-remove
 - api: enable/disable direct WebSocket API block in config
 - agents: list/add/remove sub-agent entries in `agents.json`
 
 ## Notable behavior details
 
-- `stop_bot()` stops service first, then PID instance, then remaining klir processes, then Docker container (if enabled).
+- `stop_bot()` stops service first, then PID instance, then remaining klir processes.
 - `start_bot()` calls `load_config()` and starts `AgentSupervisor` via `run_telegram()`.
 - restart semantics:
   - service/supervisor context -> exit with code `42`

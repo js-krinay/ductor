@@ -63,11 +63,11 @@ class TestClassifyChanges:
         assert restart == []
 
     def test_restart_required(self) -> None:
-        changes = {"telegram_token": ("old", "new"), "docker": ({}, {"enabled": True})}
+        changes = {"telegram_token": ("old", "new"), "api": ({}, {"enabled": True})}
         hot, restart = classify_changes(changes)
         assert hot == {}
         assert "telegram_token" in restart
-        assert "docker" in restart
+        assert "api" in restart
 
     def test_mixed(self) -> None:
         changes = {

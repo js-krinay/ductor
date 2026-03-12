@@ -64,8 +64,7 @@ Direct API path (`api.enabled=true`) uses `ApiServer` and calls orchestrator str
 ### Orchestrator factory (`orchestrator/lifecycle.py`)
 
 1. resolve paths and set `KLIR_HOME` for main agent
-2. optional Docker setup + Docker-mode skill resync
-3. inject runtime environment note into workspace rule files
+2. inject runtime environment note into workspace rule files
 4. instantiate `Orchestrator`
 5. check provider auth and apply provider availability
 6. initialize model cache observers (Gemini + Codex)
@@ -211,7 +210,6 @@ Shutdown (`orchestrator/lifecycle.shutdown`):
 2. stop API server
 3. cleanup managed skill links
 4. stop observers + config reloader + cache observers + watchers
-5. optional Docker teardown
 
 ## Workspace Seeding Model
 

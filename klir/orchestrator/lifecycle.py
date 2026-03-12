@@ -9,22 +9,15 @@ import secrets
 from typing import TYPE_CHECKING
 
 from klir.files.allowed_roots import resolve_allowed_roots
-from klir.infra.docker import DockerManager
 from klir.workspace.init import inject_runtime_environment
 from klir.workspace.paths import KlirPaths, resolve_paths
-from klir.workspace.skill_sync import cleanup_klir_links, sync_bundled_skills, sync_skills
+from klir.workspace.skill_sync import cleanup_klir_links
 
 if TYPE_CHECKING:
     from klir.config import AgentConfig
     from klir.orchestrator.core import Orchestrator
 
 logger = logging.getLogger(__name__)
-
-
-def _docker_skill_resync(paths: KlirPaths) -> None:
-    """Re-run skill sync with copies so skills resolve inside Docker."""
-    sync_bundled_skills(paths, docker_active=True)
-    sync_skills(paths, docker_active=True)
 
 
 async def create_orchestrator(
@@ -45,34 +38,18 @@ async def create_orchestrator(
     if agent_name == "main":
         os.environ["KLIR_HOME"] = str(paths.klir_home)
 
-    docker_container = ""
-    docker_mgr: DockerManager | None = None
-    if config.docker.enabled:
-        docker_mgr = DockerManager(config.docker, paths)
-        container = await docker_mgr.setup()
-        if container:
-            docker_container = container
-        else:
-            logger.warning("Docker enabled but setup failed; running on host")
-
-    if docker_container:
-        await asyncio.to_thread(_docker_skill_resync, paths)
-
     await asyncio.to_thread(
         inject_runtime_environment,
         paths,
-        docker_container=docker_container,
         agent_name=agent_name,
     )
 
     orch = Orchestrator(
         config,
         paths,
-        docker_container=docker_container,
         agent_name=agent_name,
         interagent_port=config.interagent_port,
     )
-    orch._docker = docker_mgr
 
     from klir.cli.auth import AuthStatus, check_all_auth
 
@@ -103,7 +80,7 @@ async def create_orchestrator(
         codex_cache=codex_cache,
     )
     orch._providers._codex_cache_fn = lambda: orch._observers.codex_cache
-    await orch._observers.start_all(docker_container=docker_container)
+    await orch._observers.start_all()
 
     # Direct API server (WebSocket, designed for Tailscale)
     if config.api.enabled:
@@ -173,18 +150,6 @@ async def start_api_server(
     orch._api_stop = server.stop
 
 
-async def ensure_docker(orch: Orchestrator) -> None:
-    """Health-check Docker before CLI calls; auto-recover or fall back."""
-    if not orch._docker:
-        return
-    container = await orch._docker.ensure_running()
-    if container:
-        orch._cli_service.update_docker_container(container)
-    elif orch._cli_service._config.docker_container:
-        logger.warning("Docker recovery failed, falling back to host execution")
-        orch._cli_service.update_docker_container("")
-
-
 async def shutdown(orch: Orchestrator) -> None:
     """Cleanup on bot shutdown."""
     killed = await orch._process_registry.kill_all_active()
@@ -194,6 +159,4 @@ async def shutdown(orch: Orchestrator) -> None:
         await orch._api_stop()
     await asyncio.to_thread(cleanup_klir_links, orch._paths)
     await orch._observers.stop_all()
-    if orch._docker:
-        await orch._docker.teardown()
     logger.info("Orchestrator shutdown")

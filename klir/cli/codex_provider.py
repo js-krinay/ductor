@@ -12,7 +12,6 @@ from klir.cli.base import (
     _IS_WINDOWS,
     BaseCLI,
     CLIConfig,
-    docker_wrap,
 )
 from klir.cli.codex_events import (
     CodexThinkingFilter,
@@ -62,7 +61,7 @@ class CodexCLI(BaseCLI):
     def __init__(self, config: CLIConfig) -> None:
         self._config = config
         self._working_dir = Path(config.working_dir).resolve()
-        self._cli = "codex" if config.docker_container else self._find_cli()
+        self._cli = self._find_cli()
         logger.info("Codex CLI wrapper: cwd=%s, model=%s", self._working_dir, config.model)
 
     @staticmethod
@@ -149,14 +148,6 @@ class CodexCLI(BaseCLI):
             cmd.append(final_prompt)
         return cmd
 
-    def _docker_wrap(self, cmd: list[str]) -> tuple[list[str], str | None]:
-        """Keep stdin open for Dockerized Codex on Windows so prompts reach the CLI."""
-        return docker_wrap(
-            cmd,
-            self._config,
-            interactive=_IS_WINDOWS,
-        )
-
     async def send(
         self,
         prompt: str,
@@ -169,11 +160,11 @@ class CodexCLI(BaseCLI):
         if continue_session:
             logger.debug("continue_session is not supported by Codex CLI, ignoring")
         cmd = self._build_command(prompt, resume_session, json_output=True)
-        exec_cmd, use_cwd = self._docker_wrap(cmd)
-        _log_cmd(exec_cmd)
+        use_cwd = str(self._working_dir)
+        _log_cmd(cmd)
         return await run_oneshot_subprocess(
             config=self._config,
-            spec=SubprocessSpec(exec_cmd, use_cwd, prompt, timeout_seconds, timeout_controller),
+            spec=SubprocessSpec(cmd, use_cwd, prompt, timeout_seconds, timeout_controller),
             parse_output=self._parse_output,
             provider_label="Codex",
         )
@@ -188,8 +179,8 @@ class CodexCLI(BaseCLI):
     ) -> AsyncGenerator[StreamEvent, None]:
         """Send a prompt and yield stream events as they arrive."""
         cmd = self._build_command(prompt, resume_session, json_output=True)
-        exec_cmd, use_cwd = self._docker_wrap(cmd)
-        _log_cmd(exec_cmd, streaming=True)
+        use_cwd = str(self._working_dir)
+        _log_cmd(cmd, streaming=True)
 
         state = _StreamState()
         thinking_filter = CodexThinkingFilter()
@@ -210,7 +201,7 @@ class CodexCLI(BaseCLI):
 
         async for event in run_streaming_subprocess(
             config=self._config,
-            spec=SubprocessSpec(exec_cmd, use_cwd, prompt, timeout_seconds, timeout_controller),
+            spec=SubprocessSpec(cmd, use_cwd, prompt, timeout_seconds, timeout_controller),
             line_handler=line_handler,
             provider_label="Codex",
             post_handler=post_handler,

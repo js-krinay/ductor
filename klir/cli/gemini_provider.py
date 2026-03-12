@@ -17,7 +17,6 @@ from klir.cli.base import (
     BaseCLI,
     CLIConfig,
     _feed_stdin_and_close,
-    docker_wrap,
 )
 from klir.cli.gemini_events import extract_result_text, extract_text, parse_gemini_stream_line
 from klir.cli.gemini_utils import (
@@ -30,7 +29,7 @@ from klir.cli.types import CLIResponse
 from klir.config import NULLISH_TEXT_VALUES
 from klir.infra.platform import CREATION_FLAGS as _CREATION_FLAGS
 from klir.infra.process_tree import force_kill_process_tree
-from klir.workspace.paths import resolve_paths
+
 
 if TYPE_CHECKING:
     from klir.cli.process_registry import ProcessRegistry, TrackedProcess
@@ -48,9 +47,6 @@ _THINKING_BUDGET: dict[str, int] = {
     "medium": 8192,
     "high": 24576,
 }
-
-# Must match ``_KLIR_MOUNT`` in ``klir.infra.docker``.
-_CONTAINER_KLIR = "/klir"
 
 
 @dataclass(slots=True)
@@ -78,12 +74,8 @@ class GeminiCLI(BaseCLI):
         self._config = config
         self._working_dir = Path(config.working_dir).resolve()
 
-        if config.docker_container:
-            self._cli: str = "gemini"
-            self._cli_js: str | None = None
-        else:
-            self._cli = find_gemini_cli()
-            self._cli_js = find_gemini_cli_js()
+        self._cli: str = find_gemini_cli()
+        self._cli_js: str | None = find_gemini_cli_js()
 
         logger.info("GeminiCLI: cwd=%s model=%s", self._working_dir, config.model)
 
@@ -322,64 +314,13 @@ class GeminiCLI(BaseCLI):
             yield event
 
     def _create_system_prompt_path(self) -> str | None:
-        """Create a temporary system prompt file when prompt content is present.
-
-        In Docker mode the file is written to ``~/.klir/tmp/`` which is
-        bind-mounted into the container so it can be read via a translated
-        container-side path.
-        """
+        """Create a temporary system prompt file when prompt content is present."""
         if not (self._config.system_prompt or self._config.append_system_prompt):
             return None
-        directory: str | None = None
-        if self._config.docker_container:
-            tmp_dir = resolve_paths().klir_home / "tmp"
-            tmp_dir.mkdir(parents=True, exist_ok=True)
-            directory = str(tmp_dir)
         return create_system_prompt_file(
             self._config.system_prompt or "",
             self._config.append_system_prompt or "",
-            directory=directory,
         )
-
-    def _docker_extra_env(self, system_prompt_path: str | None = None) -> dict[str, str]:
-        """Build Docker ``-e`` flags for Gemini-specific env vars.
-
-        These are injected into the container via ``docker exec -e``.
-        """
-        extra: dict[str, str] = {"GEMINI_IDE_ENABLED": "false"}
-
-        # Forward host GEMINI_API_KEY if set, otherwise inject from config.
-        host_key = os.environ.get("GEMINI_API_KEY", "").strip()
-        if host_key and host_key.lower() not in NULLISH_TEXT_VALUES:
-            extra["GEMINI_API_KEY"] = host_key
-        else:
-            key = (self._config.gemini_api_key or "").strip()
-            if key and key.lower() not in NULLISH_TEXT_VALUES:
-                settings = _gemini_settings_path(dict(os.environ))
-                if gemini_api_key_mode_selected(settings):
-                    extra["GEMINI_API_KEY"] = key
-
-        # Forward Google Cloud auth vars when present on host.
-        for var in ("GOOGLE_GENAI_USE_GCA", "GOOGLE_GENAI_USE_VERTEXAI"):
-            val = os.environ.get(var, "").strip()
-            if val:
-                extra[var] = val
-
-        # Translate system prompt path to container-side path.
-        if system_prompt_path:
-            container_path = self._host_to_container_path(system_prompt_path)
-            if container_path:
-                extra["GEMINI_SYSTEM_MD"] = container_path
-
-        return extra
-
-    @staticmethod
-    def _host_to_container_path(host_path: str) -> str | None:
-        """Translate a host path under ``~/.klir/`` to its container mount."""
-        prefix = str(resolve_paths().klir_home)
-        if host_path.startswith(prefix):
-            return _CONTAINER_KLIR + host_path[len(prefix) :].replace("\\", "/")
-        return None
 
     def _resolve_exec(
         self,
@@ -388,20 +329,11 @@ class GeminiCLI(BaseCLI):
     ) -> tuple[list[str], str | None, dict[str, str] | None]:
         """Resolve command, cwd, and env for subprocess execution.
 
-        Returns ``(exec_cmd, use_cwd, subprocess_env)``.  In Docker mode
-        ``subprocess_env`` is ``None`` (inherit host env for the ``docker``
-        binary) and Gemini-specific vars are forwarded via ``-e`` flags.
+        Returns ``(exec_cmd, use_cwd, subprocess_env)``.
         """
-        if self._config.docker_container:
-            extra_env = self._docker_extra_env(system_prompt_path)
-            exec_cmd, use_cwd = docker_wrap(
-                cmd, self._config, extra_env=extra_env, interactive=True
-            )
-            return exec_cmd, use_cwd, None
-
         env = self._prepare_env(system_prompt_path)
-        exec_cmd, use_cwd = docker_wrap(cmd, self._config)
-        return exec_cmd, use_cwd, env
+        use_cwd = str(self._working_dir)
+        return cmd, use_cwd, env
 
     def _track_process(
         self,

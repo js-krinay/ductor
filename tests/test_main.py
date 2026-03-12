@@ -267,28 +267,6 @@ class TestStopBot:
         with patch(f"{_LIFECYCLE}.resolve_paths", return_value=paths):
             stop_bot()
 
-    def test_stop_with_docker(self, tmp_path: Path) -> None:
-        from klir.cli_commands.lifecycle import stop_bot
-
-        paths = _make_paths(tmp_path)
-        paths.klir_home.mkdir(parents=True)
-        _write_config(
-            paths,
-            {
-                "docker": {"enabled": True, "container_name": "test-container"},
-                "telegram_token": "x",
-                "allowed_user_ids": [1],
-            },
-        )
-        with (
-            patch(f"{_LIFECYCLE}.resolve_paths", return_value=paths),
-            patch(f"{_LIFECYCLE}.shutil.which", return_value="/usr/bin/docker"),
-            patch(f"{_LIFECYCLE}.subprocess.run") as mock_run,
-        ):
-            stop_bot()
-        docker_calls = [c for c in mock_run.call_args_list if "docker" in str(c)]
-        assert len(docker_calls) >= 2
-
 
 class TestUpgradeCli:
     def test_upgrade_with_pipx(self, tmp_path: Path) -> None:

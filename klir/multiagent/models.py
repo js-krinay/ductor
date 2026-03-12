@@ -11,7 +11,6 @@ from klir.config import (
     ApiConfig,
     CleanupConfig,
     CLIParametersConfig,
-    DockerConfig,
     HeartbeatConfig,
     StreamingConfig,
     WebhookConfig,
@@ -46,7 +45,6 @@ class SubAgentConfig(BaseModel):
     reasoning_effort: str | None = None
     file_access: str | None = None
     streaming: StreamingConfig | None = None
-    docker: DockerConfig | None = None
     heartbeat: HeartbeatConfig | None = None
     cleanup: CleanupConfig | None = None
     webhooks: WebhookConfig | None = None

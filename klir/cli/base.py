@@ -82,7 +82,6 @@ class CLIConfig:
     allowed_tools: list[str] = field(default_factory=list)
     disallowed_tools: list[str] = field(default_factory=list)
     permission_mode: str = "bypassPermissions"
-    docker_container: str = ""
     # Codex-specific fields (ignored by Claude provider):
     sandbox_mode: str = "read-only"
     images: list[str] = field(default_factory=list)
@@ -101,100 +100,6 @@ class CLIConfig:
     # Multi-agent identification:
     agent_name: str = "main"
     interagent_port: int = 8799
-
-
-_CONTAINER_KLIR_MOUNT = "/klir"
-
-
-def _to_container_path(host_path: Path, main_home: Path) -> str:
-    """Map a host path under *main_home* to its container equivalent.
-
-    The Docker container mounts the root klir home at ``/klir``.
-    """
-    rel = host_path.relative_to(main_home)
-    if str(rel) == ".":
-        return _CONTAINER_KLIR_MOUNT
-    return f"{_CONTAINER_KLIR_MOUNT}/{rel.as_posix()}"
-
-
-def docker_wrap(
-    cmd: list[str],
-    config: CLIConfig,
-    *,
-    extra_env: dict[str, str] | None = None,
-    interactive: bool = False,
-) -> tuple[list[str], str | None]:
-    """Wrap a CLI command for Docker execution if a container is set.
-
-    *interactive* adds ``-i`` to keep stdin open (required for providers
-    that pipe the prompt via stdin, e.g. Gemini).
-
-    *extra_env* vars are injected as ``-e`` flags into ``docker exec``
-    (set **inside** the container, unlike ``env=`` on the host process).
-    """
-    if config.docker_container:
-        logger.debug("docker_wrap container=%s", config.docker_container)
-        stdin_flag: list[str] = ["-i"] if interactive else []
-        working_dir = Path(config.working_dir)
-        klir_home = working_dir.parent if working_dir.name == "workspace" else working_dir
-
-        # Resolve root klir home for host → container path mapping.
-        # Sub-agents live at <root>/agents/<name>/; the Docker mount is the root.
-        main_home = klir_home
-        if main_home.parent.name == "agents":
-            main_home = main_home.parent.parent
-
-        container_cwd = _to_container_path(working_dir, main_home)
-        container_home = _to_container_path(klir_home, main_home)
-        container_shared = _to_container_path(main_home / "SHAREDMEMORY.md", main_home)
-
-        # Merge user secrets from .env (low priority — never override).
-        import os
-
-        from klir.infra.env_secrets import load_env_secrets
-
-        merged_extra = dict(load_env_secrets(main_home / ".env"))
-        # Remove keys already in host env (subprocess inherits docker binary env).
-        for key in list(merged_extra):
-            if key in os.environ:
-                del merged_extra[key]
-        if extra_env:
-            merged_extra.update(extra_env)  # Provider-specific overrides win.
-        extra_env = merged_extra or None
-
-        env_flags: list[str] = [
-            "-e",
-            f"KLIR_CHAT_ID={config.chat_id}",
-            "-e",
-            f"KLIR_AGENT_NAME={config.agent_name}",
-            "-e",
-            f"KLIR_INTERAGENT_PORT={config.interagent_port}",
-            "-e",
-            f"KLIR_HOME={container_home}",
-            "-e",
-            f"KLIR_SHARED_MEMORY_PATH={container_shared}",
-            "-e",
-            "KLIR_INTERAGENT_HOST=host.docker.internal",
-        ]
-        if config.topic_id:
-            env_flags += ["-e", f"KLIR_TOPIC_ID={config.topic_id}"]
-        if extra_env:
-            for key, value in extra_env.items():
-                env_flags += ["-e", f"{key}={value}"]
-        return (
-            [
-                "docker",
-                "exec",
-                *stdin_flag,
-                "-w",
-                container_cwd,
-                *env_flags,
-                config.docker_container,
-                *cmd,
-            ],
-            None,
-        )
-    return cmd, str(Path(config.working_dir).resolve())
 
 
 class BaseCLI(ABC):

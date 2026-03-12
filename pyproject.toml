@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "klir-bot"
-version = "0.2.0"
-description = "Control AI coding CLIs from Telegram. Live streaming, sessions, cron jobs, webhooks, Docker sandboxing. Originally forked from ductor by PleasePrompto."
+version = "0.3.0"
+description = "Control AI coding CLIs from Telegram. Live streaming, sessions, cron jobs, webhooks. Originally forked from ductor by PleasePrompto."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -79,13 +79,11 @@ packages = ["klir"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "config.example.json" = "klir/_config_example.json"
-"Dockerfile.sandbox" = "klir/_Dockerfile.sandbox"
 
 [tool.hatch.build.targets.sdist]
 include = [
     "klir/",
     "config.example.json",
-    "Dockerfile.sandbox",
     "LICENSE",
     "README.md",
     "pyproject.toml",

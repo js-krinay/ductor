@@ -33,7 +33,6 @@ def test_write_config_ignores_corrupt_existing_json(tmp_path: Path) -> None:
             telegram_token="123456789:abcdefghijklmnopqrstuvwxyzABCDE",
             allowed_user_ids=[1234],
             user_timezone="UTC",
-            docker_enabled=False,
         )
 
     assert out == paths.config_path
@@ -57,7 +56,6 @@ def test_write_config_normalizes_existing_null_gemini_api_key(tmp_path: Path) ->
             telegram_token="123456789:abcdefghijklmnopqrstuvwxyzABCDE",
             allowed_user_ids=[1234],
             user_timezone="UTC",
-            docker_enabled=False,
         )
 
     data = json.loads(paths.config_path.read_text(encoding="utf-8"))
@@ -73,7 +71,6 @@ def test_run_onboarding_returns_false_when_service_install_fails(tmp_path: Path)
         patch("klir.cli.init_wizard._show_disclaimer"),
         patch("klir.cli.init_wizard._ask_telegram_token", return_value="token"),
         patch("klir.cli.init_wizard._ask_user_id", return_value=[1]),
-        patch("klir.cli.init_wizard._ask_docker", return_value=False),
         patch("klir.cli.init_wizard._ask_timezone", return_value="UTC"),
         patch("klir.cli.init_wizard._write_config", return_value=paths.config_path),
         patch("klir.cli.init_wizard.resolve_paths", return_value=paths),
@@ -92,7 +89,6 @@ def test_run_onboarding_returns_true_when_service_install_succeeds(tmp_path: Pat
         patch("klir.cli.init_wizard._show_disclaimer"),
         patch("klir.cli.init_wizard._ask_telegram_token", return_value="token"),
         patch("klir.cli.init_wizard._ask_user_id", return_value=[1]),
-        patch("klir.cli.init_wizard._ask_docker", return_value=False),
         patch("klir.cli.init_wizard._ask_timezone", return_value="UTC"),
         patch("klir.cli.init_wizard._write_config", return_value=paths.config_path),
         patch("klir.cli.init_wizard.resolve_paths", return_value=paths),

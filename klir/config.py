@@ -78,18 +78,6 @@ class ReactionConfig(BaseModel):
         return v
 
 
-class DockerConfig(BaseModel):
-    """Settings for Docker-based CLI sandboxing."""
-
-    enabled: bool = False
-    image_name: str = "klir-sandbox"
-    container_name: str = "klir-sandbox"
-    auto_build: bool = True
-    mount_host_cache: bool = False
-    mounts: list[str] = Field(default_factory=list)
-    extras: list[str] = Field(default_factory=list)
-
-
 _DEFAULT_HEARTBEAT_PROMPT = (
     "You are running as a background heartbeat check. Review the current workspace context:\n"
     "- Read memory_system/MAINMEMORY.md for user interests and personality\n"
@@ -338,7 +326,6 @@ class AgentConfig(BaseModel):
     gemini_api_key: str | None = None
     streaming: StreamingConfig = Field(default_factory=StreamingConfig)
     reactions: ReactionConfig = Field(default_factory=ReactionConfig)
-    docker: DockerConfig = Field(default_factory=DockerConfig)
     heartbeat: HeartbeatConfig = Field(default_factory=HeartbeatConfig)
     cleanup: CleanupConfig = Field(default_factory=CleanupConfig)
     webhooks: WebhookConfig = Field(default_factory=WebhookConfig)

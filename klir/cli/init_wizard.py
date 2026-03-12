@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import NoReturn
@@ -144,9 +142,7 @@ def _show_disclaimer(console: Console) -> None:
         "The agent can read, write, and delete files, execute commands, "
         "and interact with your system without asking for confirmation.\n\n"
         "While safeguards are in place, [bold red]unintended actions can occur[/bold red] "
-        "-- including data loss, unexpected file changes, or unintended command execution.\n\n"
-        "[bold green]We strongly recommend running klir inside a Docker container[/bold green] "
-        "to isolate it from your host system."
+        "-- including data loss, unexpected file changes, or unintended command execution."
     )
     console.print(
         Panel(
@@ -225,138 +221,6 @@ def _ask_user_id(console: Console) -> list[int]:
             console.print("[red]User ID must be a positive number.[/red]")
             continue
         return [uid]
-
-
-def _ask_docker(console: Console) -> bool:
-    """Detect Docker and ask whether to enable sandboxing."""
-    docker_found = shutil.which("docker") is not None
-
-    if docker_found:
-        console.print(
-            Panel(
-                "[bold green]Docker detected on your system.[/bold green]\n\n"
-                "Running klir inside Docker isolates it from your host.\n"
-                "This is the recommended setup for safety.",
-                title="[bold]Docker Sandboxing[/bold]",
-                border_style="green",
-                padding=(1, 2),
-            ),
-        )
-        enabled: bool | None = questionary.confirm(
-            "Enable Docker sandboxing? (Recommended)",
-            default=True,
-        ).ask()
-        if enabled is None:
-            _abort()
-        return bool(enabled)
-
-    console.print(
-        Panel(
-            "[bold yellow]Docker was not found on your system.[/bold yellow]\n\n"
-            "We recommend installing Docker to run the bot in an isolated container.\n"
-            "You can enable Docker sandboxing later in the config.\n\n"
-            "[dim]https://docs.docker.com/get-docker/[/dim]",
-            title="[bold]Docker Sandboxing[/bold]",
-            border_style="yellow",
-            padding=(1, 2),
-        ),
-    )
-    return False
-
-
-def _build_extras_table(console: Console) -> None:
-    """Print a Rich overview table of all available Docker extras."""
-    from rich.table import Table
-
-    from klir.infra.docker_extras import DOCKER_EXTRAS_BY_ID, extras_for_display
-
-    table = Table(
-        show_header=True,
-        header_style="bold",
-        box=None,
-        padding=(0, 2),
-        title="[bold]Available Docker Extras[/bold]",
-        title_style="bold blue",
-    )
-    table.add_column("Package", style="bold green", min_width=18)
-    table.add_column("What it does", min_width=40)
-    table.add_column("Size", style="cyan", justify="right")
-
-    for category, extras in extras_for_display():
-        table.add_row(f"[bold yellow]{category}[/bold yellow]", "", "")
-        for extra in extras:
-            dep_hint = ""
-            if extra.depends_on:
-                dep_names = ", ".join(
-                    DOCKER_EXTRAS_BY_ID[d].name
-                    for d in extra.depends_on
-                    if d in DOCKER_EXTRAS_BY_ID
-                )
-                if dep_names:
-                    dep_hint = f" [dim](+ {dep_names})[/dim]"
-            table.add_row(
-                f"  {extra.name}",
-                f"{extra.description}{dep_hint}",
-                extra.size_estimate,
-            )
-
-    console.print()
-    console.print(table)
-    console.print()
-    console.print(
-        "[dim]These packages are optional and increase image build time.\n"
-        "You can change this later with"
-        " [cyan]klir docker extras-add / extras-remove[/cyan].[/dim]"
-    )
-    console.print()
-
-
-def _ask_docker_extras(console: Console) -> list[str]:
-    """Prompt for optional Docker sandbox packages."""
-    from klir.infra.docker_extras import (
-        DOCKER_EXTRAS_BY_ID,
-        extras_for_display,
-        resolve_extras,
-    )
-
-    _build_extras_table(console)
-
-    # -- checkbox selection ---------------------------------------------------
-    choices: list[questionary.Choice | questionary.Separator] = []
-    for category, extras in extras_for_display():
-        choices.append(questionary.Separator(f"── {category} ──"))
-        choices.extend(
-            questionary.Choice(
-                title=f"{extra.name}  ({extra.size_estimate})",
-                value=extra.id,
-            )
-            for extra in extras
-        )
-
-    selected: list[str] | None = questionary.checkbox(
-        "Select extras (Space to toggle, Enter to confirm):",
-        choices=choices,
-    ).ask()
-
-    if selected is None:
-        _abort()
-
-    if not selected:
-        return []
-
-    # -- resolve dependencies -------------------------------------------------
-    resolved = resolve_extras(selected)
-    resolved_ids = [e.id for e in resolved]
-
-    added_deps = set(resolved_ids) - set(selected)
-    if added_deps:
-        dep_names = ", ".join(
-            DOCKER_EXTRAS_BY_ID[d].name for d in added_deps if d in DOCKER_EXTRAS_BY_ID
-        )
-        if dep_names:
-            console.print(f"[dim]Auto-added dependencies: {dep_names}[/dim]")
-
-    return resolved_ids
 
 
 def _ask_timezone(console: Console) -> str:
@@ -440,8 +304,6 @@ def _write_config(
     telegram_token: str,
     allowed_user_ids: list[int],
     user_timezone: str,
-    docker_enabled: bool,
-    docker_extras: list[str] | None = None,
 ) -> Path:
     """Write the config file with wizard values merged into defaults."""
     paths = resolve_paths()
@@ -466,15 +328,6 @@ def _write_config(
     merged["telegram_token"] = telegram_token
     merged["allowed_user_ids"] = allowed_user_ids
     merged["user_timezone"] = user_timezone
-    raw_docker = merged.get("docker")
-    if isinstance(raw_docker, dict):
-        docker_section = raw_docker
-    else:
-        docker_section = {"enabled": docker_enabled}
-        merged["docker"] = docker_section
-    docker_section["enabled"] = docker_enabled
-    if docker_extras is not None:
-        docker_section["extras"] = docker_extras
 
     from klir.infra.json_store import atomic_json_save
 
@@ -502,14 +355,6 @@ def run_onboarding() -> bool:
     user_ids = _ask_user_id(console)
     console.print()
 
-    docker_enabled = _ask_docker(console)
-    console.print()
-
-    docker_extras: list[str] = []
-    if docker_enabled:
-        docker_extras = _ask_docker_extras(console)
-        console.print()
-
     timezone = _ask_timezone(console)
     console.print()
 
@@ -517,8 +362,6 @@ def run_onboarding() -> bool:
         telegram_token=token,
         allowed_user_ids=user_ids,
         user_timezone=timezone,
-        docker_enabled=docker_enabled,
-        docker_extras=docker_extras,
     )
 
     paths = resolve_paths()
@@ -552,24 +395,9 @@ def run_onboarding() -> bool:
 
 
 def run_smart_reset(klir_home: Path) -> None:
-    """Read existing config, handle Docker cleanup, and delete workspace."""
+    """Delete workspace after confirmation."""
     console = Console()
     console.print()
-
-    config_path = klir_home / "config" / "config.json"
-
-    # Read Docker config from existing setup
-    docker_container: str | None = None
-    docker_image: str | None = None
-    if config_path.exists():
-        try:
-            data = json.loads(config_path.read_text(encoding="utf-8"))
-            docker = data.get("docker", {})
-            if isinstance(docker, dict) and docker.get("enabled"):
-                docker_container = str(docker.get("container_name", "klir-sandbox"))
-                docker_image = str(docker.get("image_name", "klir-sandbox"))
-        except (json.JSONDecodeError, OSError):
-            pass
 
     # Warning panel
     console.print(
@@ -583,45 +411,6 @@ def run_smart_reset(klir_home: Path) -> None:
             padding=(1, 2),
         ),
     )
-
-    # Docker cleanup offer
-    if docker_container and shutil.which("docker"):
-        console.print()
-        console.print(
-            Panel(
-                "[bold]Docker sandboxing is enabled in your current config.[/bold]\n\n"
-                f"  Container: [cyan]{docker_container}[/cyan]\n"
-                f"  Image:     [cyan]{docker_image}[/cyan]",
-                title="[bold]Docker Cleanup[/bold]",
-                border_style="blue",
-                padding=(1, 2),
-            ),
-        )
-        remove_docker: bool | None = questionary.confirm(
-            "Remove the Docker container and image?",
-            default=True,
-        ).ask()
-        if remove_docker is None:
-            _abort()
-        if remove_docker:
-            console.print("[dim]Removing Docker resources...[/dim]")
-            subprocess.run(
-                ["docker", "stop", "-t", "5", docker_container],
-                capture_output=True,
-                check=False,
-            )
-            subprocess.run(
-                ["docker", "rm", "-f", docker_container],
-                capture_output=True,
-                check=False,
-            )
-            if docker_image:
-                subprocess.run(
-                    ["docker", "rmi", docker_image],
-                    capture_output=True,
-                    check=False,
-                )
-            console.print("[green]Docker cleanup done.[/green]")
 
     # Final confirmation
     console.print()

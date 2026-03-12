@@ -311,19 +311,6 @@ def init_workspace(paths: KlirPaths) -> None:
 # Runtime environment injection
 # ---------------------------------------------------------------------------
 
-_DOCKER_NOTICE = """
-
----
-
-## Runtime Environment
-
-**IMPORTANT: YOU ARE RUNNING INSIDE A DOCKER CONTAINER (`{container}`).**
-
-- Your filesystem is isolated. `/klir` is the mounted host directory `~/.klir`.
-- You cannot see or access the host system outside this mount.
-- Feel free to experiment -- the host is protected.
-"""
-
 _HOST_NOTICE = """
 
 ---
@@ -435,16 +422,13 @@ def _build_identity_notice(agent_name: str) -> str:
 def inject_runtime_environment(
     paths: KlirPaths,
     *,
-    docker_container: str,
     agent_name: str = "main",
 ) -> None:
     """Append agent identity and runtime environment sections to workspace rule files.
 
-    Called once after workspace init when the Docker state is known.
+    Called once after workspace init.
     """
-    env_notice = (
-        _DOCKER_NOTICE.format(container=docker_container) if docker_container else _HOST_NOTICE
-    )
+    env_notice = _HOST_NOTICE
     identity_notice = _build_identity_notice(agent_name)
 
     for name in _RULE_FILE_NAMES:
@@ -456,11 +440,7 @@ def inject_runtime_environment(
         if "## Multi-Agent Identity" in content or "## Runtime Environment" in content:
             continue
         atomic_text_save(target, content + identity_notice + env_notice)
-    logger.info(
-        "Runtime environment injected: %s agent=%s",
-        "docker" if docker_container else "host",
-        agent_name,
-    )
+    logger.info("Runtime environment injected: host agent=%s", agent_name)
 
 
 _RULE_SYNC_INTERVAL = 10.0  # seconds

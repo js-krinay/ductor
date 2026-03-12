@@ -13,7 +13,6 @@ from klir.cli.base import (
     _IS_WINDOWS,
     BaseCLI,
     CLIConfig,
-    docker_wrap,
 )
 from klir.cli.executor import SubprocessSpec, run_oneshot_subprocess, run_streaming_subprocess
 from klir.cli.stream_events import (
@@ -34,7 +33,7 @@ class ClaudeCodeCLI(BaseCLI):
     def __init__(self, config: CLIConfig) -> None:
         self._config = config
         self._working_dir = Path(config.working_dir).resolve()
-        self._cli = "claude" if config.docker_container else self._find_cli()
+        self._cli = self._find_cli()
         logger.info("CLI wrapper: cwd=%s, model=%s", self._working_dir, config.model)
 
     @staticmethod
@@ -102,11 +101,11 @@ class ClaudeCodeCLI(BaseCLI):
     ) -> CLIResponse:
         """Send a prompt and return the final result."""
         cmd = self._build_command(prompt, resume_session, continue_session)
-        exec_cmd, use_cwd = docker_wrap(cmd, self._config)
-        _log_cmd(exec_cmd)
+        use_cwd = str(self._working_dir)
+        _log_cmd(cmd)
         return await run_oneshot_subprocess(
             config=self._config,
-            spec=SubprocessSpec(exec_cmd, use_cwd, prompt, timeout_seconds, timeout_controller),
+            spec=SubprocessSpec(cmd, use_cwd, prompt, timeout_seconds, timeout_controller),
             parse_output=_parse_response,
             provider_label="CLI",
         )
@@ -138,12 +137,12 @@ class ClaudeCodeCLI(BaseCLI):
     ) -> AsyncGenerator[StreamEvent, None]:
         """Send a prompt and yield stream events as they arrive."""
         cmd = self._build_command_streaming(prompt, resume_session, continue_session)
-        exec_cmd, use_cwd = docker_wrap(cmd, self._config)
-        _log_cmd(exec_cmd, streaming=True)
+        use_cwd = str(self._working_dir)
+        _log_cmd(cmd, streaming=True)
 
         async for event in run_streaming_subprocess(
             config=self._config,
-            spec=SubprocessSpec(exec_cmd, use_cwd, prompt, timeout_seconds, timeout_controller),
+            spec=SubprocessSpec(cmd, use_cwd, prompt, timeout_seconds, timeout_controller),
             line_handler=_claude_line_handler,
             provider_label="CLI",
         ):
