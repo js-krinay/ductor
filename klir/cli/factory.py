@@ -22,6 +22,11 @@ def create_cli(config: CLIConfig) -> BaseCLI:
 
         return CodexCLI(config)
 
+    if config.provider == "opencode":
+        from klir.cli.opencode_provider import OpenCodeCLI
+
+        return OpenCodeCLI(config)
+
     from klir.cli.claude_provider import ClaudeCodeCLI
 
     return ClaudeCodeCLI(config)

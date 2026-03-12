@@ -122,6 +122,7 @@ class CLIParametersConfig(BaseModel):
     claude: list[str] = Field(default_factory=list)
     codex: list[str] = Field(default_factory=list)
     gemini: list[str] = Field(default_factory=list)
+    opencode: list[str] = Field(default_factory=list)
 
 
 class TasksConfig(BaseModel):
@@ -483,6 +484,9 @@ class ModelRegistry:
             or model_id.startswith(("gemini-", "auto-gemini-"))
         ):
             return "gemini"
+        # OpenCode uses provider/model format (e.g. "anthropic/claude-sonnet-4").
+        if "/" in model_id:
+            return "opencode"
         return "codex"
 
 

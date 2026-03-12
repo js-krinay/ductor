@@ -69,11 +69,13 @@ class ProviderManager:
     def active_provider_name(self) -> str:
         """Human-readable name for the active CLI provider."""
         _model, provider = self.resolve_runtime_target(self._config.model)
-        if provider == "claude":
-            return "Claude Code"
-        if provider == "gemini":
-            return "Gemini"
-        return "Codex"
+        display_names: dict[str, str] = {
+            "claude": "Claude Code",
+            "gemini": "Gemini",
+            "codex": "Codex",
+            "opencode": "OpenCode",
+        }
+        return display_names.get(provider, provider.title())
 
     # -- Auth / init ----------------------------------------------------------
 
@@ -148,6 +150,8 @@ class ProviderManager:
             return ""
         if provider == "gemini":
             return ""
+        if provider == "opencode":
+            return ""
         return ""
 
     def resolve_session_directive(self, key: str) -> tuple[str, str] | None:
@@ -158,7 +162,7 @@ class ProviderManager:
         - known model   (``@opus``)  -> (inferred_provider, model)
         - unknown                    -> None
         """
-        if key in ("claude", "codex", "gemini"):
+        if key in ("claude", "codex", "gemini", "opencode"):
             return key, self.default_model_for_provider(key)
         if self.is_known_model(key):
             provider = self._models.provider_for(key)
@@ -179,6 +183,7 @@ class ProviderManager:
             "claude": ("Claude Code", "#F97316"),
             "gemini": ("Gemini", "#8B5CF6"),
             "codex": ("Codex", "#10B981"),
+            "opencode": ("OpenCode", "#3B82F6"),
         }
         providers: list[dict[str, object]] = []
         for pid in sorted(self._available_providers):

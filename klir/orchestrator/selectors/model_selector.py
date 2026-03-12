@@ -171,6 +171,8 @@ async def model_selector_start(
         buttons.append(Button(text="CODEX", callback_data="ms:p:codex"))
     if "gemini" in authed:
         buttons.append(Button(text="GEMINI", callback_data="ms:p:gemini"))
+    if "opencode" in authed:
+        buttons.append(Button(text="OPENCODE", callback_data="ms:p:opencode"))
 
     keyboard = ButtonGrid(rows=[buttons])
     return SelectorResponse(text=f"{header}\n\nPick a provider:", buttons=keyboard)
@@ -359,6 +361,18 @@ async def _build_model_step(
         gemini_rows.append([Button(text="<< Back", callback_data="ms:b:root")])
         keyboard = ButtonGrid(rows=gemini_rows)
         return SelectorResponse(text=f"{header}\n\nSelect Gemini model:", buttons=keyboard)
+
+    if provider == "opencode":
+        keyboard = ButtonGrid(
+            rows=[
+                [Button(text="<< Back", callback_data="ms:b:root")],
+            ]
+        )
+        return SelectorResponse(
+            text=f"{header}\n\nOpenCode models use provider/model format "
+            f"(e.g. `anthropic/claude-sonnet-4`). Set via `@provider/model` in chat.",
+            buttons=keyboard,
+        )
 
     # Use cache instead of live discovery
     codex_models = codex_cache.models if codex_cache else []

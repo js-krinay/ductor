@@ -100,6 +100,8 @@ def resolve_cli_config(
             raise KlirError(msg)
     elif provider == "gemini":
         _validate_gemini_model(model)
+    elif provider == "opencode":
+        pass  # OpenCode uses provider/model format; validated by the CLI itself
     else:  # codex
         if codex_cache is None:
             msg = "Codex cache is required for Codex model validation"

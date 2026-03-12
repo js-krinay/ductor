@@ -118,6 +118,7 @@ class CLIServiceConfig:
     claude_cli_parameters: tuple[str, ...] = ()
     codex_cli_parameters: tuple[str, ...] = ()
     gemini_cli_parameters: tuple[str, ...] = ()
+    opencode_cli_parameters: tuple[str, ...] = ()
     allowed_tools: tuple[str, ...] = ()
     disallowed_tools: tuple[str, ...] = ()
     agent_name: str = "main"
@@ -130,6 +131,8 @@ class CLIServiceConfig:
             return list(self.codex_cli_parameters)
         if provider == "gemini":
             return list(self.gemini_cli_parameters)
+        if provider == "opencode":
+            return list(self.opencode_cli_parameters)
         return list(self.claude_cli_parameters)
 
 

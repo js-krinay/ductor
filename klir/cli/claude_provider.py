@@ -42,7 +42,7 @@ class ClaudeCodeCLI(BaseCLI):
         if not path:
             msg = (
                 "claude CLI not found on PATH. "
-                "Install via: npm install -g @anthropic-ai/claude-code"
+                "Install via: curl -fsSL https://claude.ai/install.sh | bash"
             )
             raise FileNotFoundError(msg)
         return path

@@ -395,10 +395,42 @@ def _normalize_key_like_value(raw: str) -> str:
     return value
 
 
+def check_opencode_auth() -> AuthResult:
+    """Check OpenCode CLI auth via config file, binary presence, or env vars."""
+    from shutil import which
+
+    config_dir = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "opencode"
+    config_file = config_dir / "opencode.json"
+
+    # Fast path: config file with credentials.
+    if config_file.is_file():
+        mtime = datetime.fromtimestamp(config_file.stat().st_mtime, tz=UTC)
+        result = AuthResult("opencode", AuthStatus.AUTHENTICATED, config_file, mtime)
+        logger.debug("Auth check provider=%s status=%s", result.provider, result.status)
+        return result
+
+    # API keys for any supported backend.
+    env_keys = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY")
+    if any(_has_nonempty_env(k) for k in env_keys) and which("opencode"):
+        result = AuthResult("opencode", AuthStatus.AUTHENTICATED)
+        logger.debug("Auth check provider=%s status=%s (env key)", result.provider, result.status)
+        return result
+
+    if which("opencode"):
+        result = AuthResult("opencode", AuthStatus.INSTALLED)
+        logger.debug("Auth check provider=%s status=%s", result.provider, result.status)
+        return result
+
+    result = AuthResult("opencode", AuthStatus.NOT_FOUND)
+    logger.debug("Auth check provider=%s status=%s", result.provider, result.status)
+    return result
+
+
 _CHECKERS: dict[str, Callable[[], AuthResult]] = {
     "claude": check_claude_auth,
     "codex": check_codex_auth,
     "gemini": check_gemini_auth,
+    "opencode": check_opencode_auth,
 }
 
 

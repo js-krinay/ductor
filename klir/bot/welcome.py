@@ -91,10 +91,12 @@ def _build_auth_block(auth_results: dict[str, AuthResult], config: AgentConfig) 
     claude = auth_results.get("claude")
     codex = auth_results.get("codex")
     gemini = auth_results.get("gemini")
+    opencode = auth_results.get("opencode")
 
     claude_ok = claude is not None and claude.is_authenticated
     codex_ok = codex is not None and codex.is_authenticated
     gemini_ok = gemini is not None and gemini.is_authenticated
+    opencode_ok = opencode is not None and opencode.is_authenticated
 
     providers: list[str] = []
     if claude_ok:
@@ -103,6 +105,8 @@ def _build_auth_block(auth_results: dict[str, AuthResult], config: AgentConfig) 
         providers.append("Codex")
     if gemini_ok:
         providers.append("Gemini")
+    if opencode_ok:
+        providers.append("OpenCode")
 
     if not providers:
         return (
