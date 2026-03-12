@@ -3,13 +3,14 @@
 </p>
 
 <p align="center">
-  <strong>Claude Code, Codex CLI, and Gemini CLI as your Telegram assistant.</strong><br>
+  <strong>Claude Code, Codex CLI, Gemini CLI, and OpenCode as your Telegram assistant.</strong><br>
   Uses only official CLIs. Nothing spoofed, nothing proxied.
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/klir/"><img src="https://img.shields.io/pypi/v/klir?color=blue" alt="PyPI" /></a>
-  <a href="https://pypi.org/project/klir/"><img src="https://img.shields.io/pypi/pyversions/klir?v=1" alt="Python" /></a>
+  <a href="https://github.com/js-krinay/klir/actions/workflows/ci.yml"><img src="https://github.com/js-krinay/klir/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://pypi.org/project/klir-bot/"><img src="https://img.shields.io/pypi/v/klir-bot?color=blue" alt="PyPI" /></a>
+  <a href="https://pypi.org/project/klir-bot/"><img src="https://img.shields.io/pypi/pyversions/klir-bot?v=1" alt="Python" /></a>
   <a href="https://github.com/js-krinay/klir/blob/main/LICENSE"><img src="https://img.shields.io/github/license/js-krinay/klir" alt="License" /></a>
 </p>
 
@@ -28,8 +29,9 @@ If you want to control Claude Code, Google's Gemini CLI, or OpenAI's Codex CLI v
 klir runs on your machine and sends simple console commands as if you were typing them yourself, so you can use your active subscriptions (Claude Max, etc.) directly. No API proxying, no SDK patching, no spoofed headers. Just the official CLIs, executed as subprocesses, with all state kept in plain JSON and Markdown under `~/.klir/`.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/docs/images/klir-start.jpeg" alt="klir /start screen" width="49%" />
-  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/docs/images/klir-quick-actions.jpeg" alt="klir quick action buttons" width="49%" />
+  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/docs/images/klir-onboarding.png" alt="klir onboarding" width="32%" />
+  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/docs/images/klir-start.png" alt="klir /start screen" width="32%" />
+  <img src="https://raw.githubusercontent.com/js-krinay/klir/main/docs/images/klir-commands.png" alt="klir commands" width="32%" />
 </p>
 
 ## Quick start
@@ -41,7 +43,7 @@ klir
 
 The onboarding wizard handles CLI checks, Telegram setup, timezone, and optional background service install.
 
-**Requirements:** Python 3.11+, at least one CLI installed (`claude`, `codex`, or `gemini`), a Telegram Bot Token from [@BotFather](https://t.me/BotFather).
+**Requirements:** Python 3.11+, at least one CLI installed (`claude`, `codex`, `gemini`, or `opencode`), a Telegram Bot Token from [@BotFather](https://t.me/BotFather).
 
 Detailed setup: [`docs/installation.md`](docs/installation.md)
 
@@ -263,7 +265,7 @@ klir api enable       # Enable WebSocket API (beta)
   webhooks.json                      # Webhook definitions
   agents.json                        # Sub-agent registry (optional)
   SHAREDMEMORY.md                    # Shared knowledge across all agents
-  CLAUDE.md / AGENTS.md / GEMINI.md  # Rule files
+  CLAUDE.md / AGENTS.md / GEMINI.md / OPENCODE.md  # Rule files
   logs/agent.log
   workspace/
     memory_system/MAINMEMORY.md      # Persistent memory
@@ -290,7 +292,7 @@ Full config reference: [`docs/config.md`](docs/config.md)
 
 Other projects manipulate SDKs or patch CLIs and risk violating provider terms of service. klir simply runs the official CLI binaries as subprocesses — nothing more.
 
-- Official CLIs only (`claude`, `codex`, `gemini`)
+- Official CLIs only (`claude`, `codex`, `gemini`, `opencode`)
 - Rule files are plain Markdown (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`)
 - Memory is one Markdown file per agent
 - All state is JSON — no database, no external services
@@ -308,12 +310,12 @@ klir runs official provider CLIs and does not impersonate provider clients. Vali
 ```bash
 git clone https://github.com/js-krinay/klir.git
 cd klir
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-pytest && ruff format . && ruff check . && mypy klir
+uv sync --group dev
+uv run lefthook install
+uv run pytest
 ```
 
-Zero warnings, zero errors.
+Pre-commit hooks run ruff and mypy automatically. CI enforces the same checks on every PR.
 
 ## License
 
