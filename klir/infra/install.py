@@ -10,7 +10,7 @@ from typing import Literal
 
 logger = logging.getLogger(__name__)
 
-InstallMode = Literal["pipx", "pip", "dev"]
+InstallMode = Literal["uv", "pipx", "pip", "dev"]
 
 _PACKAGE_NAME = "klir"
 
@@ -23,6 +23,11 @@ def detect_install_mode() -> InstallMode:
         ``"pip"``  -- installed via ``pip install klir`` (from PyPI)
         ``"dev"``  -- editable install (``pip install -e .``) or running from source
     """
+    # uv tool install creates venvs under .../uv/tools/<pkg>/
+    prefix_lower = sys.prefix.lower().replace("\\", "/")
+    if "uv/tools" in prefix_lower:
+        return "uv"
+
     if "pipx" in sys.prefix:
         return "pipx"
 

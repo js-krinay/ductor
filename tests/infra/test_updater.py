@@ -9,11 +9,44 @@ from unittest.mock import AsyncMock, patch
 
 from klir.infra.updater import (
     UpdateObserver,
+    _build_upgrade_command,
     consume_upgrade_sentinel,
     perform_upgrade_pipeline,
     write_upgrade_sentinel,
 )
 from klir.infra.version import VersionInfo
+
+# ---------------------------------------------------------------------------
+# Build upgrade command
+# ---------------------------------------------------------------------------
+
+
+class TestBuildUpgradeCommand:
+    """Test upgrade command generation per install mode."""
+
+    def test_uv_plain_upgrade(self) -> None:
+        cmd = _build_upgrade_command(mode="uv", target_version=None, force_reinstall=False)
+        assert cmd == ["uv", "tool", "upgrade", "klir"]
+
+    def test_uv_force_reinstall(self) -> None:
+        cmd = _build_upgrade_command(mode="uv", target_version=None, force_reinstall=True)
+        assert cmd == ["uv", "tool", "upgrade", "klir", "--reinstall"]
+
+    def test_uv_ignores_target_version(self) -> None:
+        cmd = _build_upgrade_command(mode="uv", target_version="2.0.0", force_reinstall=False)
+        assert cmd == ["uv", "tool", "upgrade", "klir"]
+
+    def test_pipx_plain_upgrade(self) -> None:
+        with patch("klir.infra.updater.sys") as mock_sys:
+            mock_sys.platform = "linux"
+            cmd = _build_upgrade_command(mode="pipx", target_version=None, force_reinstall=False)
+        assert cmd == ["pipx", "upgrade", "--force", "klir"]
+
+    def test_pip_plain_upgrade(self) -> None:
+        cmd = _build_upgrade_command(mode="pip", target_version=None, force_reinstall=False)
+        assert "pip" in cmd
+        assert "--upgrade" in cmd
+
 
 # ---------------------------------------------------------------------------
 # Upgrade Sentinel

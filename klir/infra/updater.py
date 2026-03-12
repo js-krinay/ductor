@@ -81,6 +81,12 @@ def _build_upgrade_command(
     force_reinstall: bool,
 ) -> list[str]:
     """Build provider-specific upgrade command."""
+    if mode == "uv":
+        cmd = ["uv", "tool", "upgrade", "klir"]
+        if force_reinstall:
+            cmd.append("--reinstall")
+        return cmd
+
     if mode == "pipx":
         # On non-Windows, prefer `pipx upgrade` for plain upgrades (no pin).
         if target_version is None and not force_reinstall and sys.platform != "win32":

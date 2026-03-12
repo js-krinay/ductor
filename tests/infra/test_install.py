@@ -11,6 +11,16 @@ from klir.infra.install import detect_install_mode, is_upgradeable
 class TestDetectInstallMode:
     """Test runtime installation method detection."""
 
+    def test_uv_tool_detected_from_sys_prefix(self) -> None:
+        with patch("klir.infra.install.sys") as mock_sys:
+            mock_sys.prefix = "/home/user/.local/share/uv/tools/klir-bot"
+            assert detect_install_mode() == "uv"
+
+    def test_uv_tool_detected_windows(self) -> None:
+        with patch("klir.infra.install.sys") as mock_sys:
+            mock_sys.prefix = "C:\\Users\\me\\AppData\\Roaming\\uv\\tools\\klir-bot"
+            assert detect_install_mode() == "uv"
+
     def test_pipx_detected_from_sys_prefix(self) -> None:
         with patch("klir.infra.install.sys") as mock_sys:
             mock_sys.prefix = "/home/user/.local/share/pipx/venvs/klir"
@@ -80,6 +90,10 @@ class TestDetectInstallMode:
 
 class TestIsUpgradeable:
     """Test upgrade eligibility helper."""
+
+    def test_uv_is_upgradeable(self) -> None:
+        with patch("klir.infra.install.detect_install_mode", return_value="uv"):
+            assert is_upgradeable() is True
 
     def test_pipx_is_upgradeable(self) -> None:
         with patch("klir.infra.install.detect_install_mode", return_value="pipx"):
