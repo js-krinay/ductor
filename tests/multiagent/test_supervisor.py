@@ -359,6 +359,12 @@ class TestStopAll:
         supervisor._watcher.start = AsyncMock()
         supervisor._watcher.stop = AsyncMock()
 
+        mock_api = MagicMock()
+        mock_api.start = AsyncMock(return_value=True)
+        mock_api.stop = AsyncMock()
+        mock_api.set_health_ref = MagicMock()
+        mock_api.set_task_hub = MagicMock()
+
         with (
             patch.object(supervisor, "_sync_sub_agents", new_callable=AsyncMock),
             patch(
@@ -369,6 +375,10 @@ class TestStopAll:
             patch(
                 "klir.multiagent.shared_knowledge.SharedKnowledgeSync",
             ) as mock_sks_cls,
+            patch(
+                "klir.multiagent.internal_api.InternalAgentAPI",
+                return_value=mock_api,
+            ),
         ):
             mock_sks = MagicMock()
             mock_sks.start = AsyncMock()

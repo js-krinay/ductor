@@ -398,6 +398,7 @@ def test_check_gemini_auth_klir_config_key(tmp_path: Path, monkeypatch: pytest.M
     monkeypatch.delenv("GEMINI_CLI_HOME", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("KLIR_HOME", raising=False)
 
     klir_config = tmp_path / ".klir" / "config" / "config.json"
     klir_config.parent.mkdir(parents=True)
@@ -419,6 +420,7 @@ def test_check_gemini_auth_klir_config_null_string_ignored(
     monkeypatch.delenv("GEMINI_CLI_HOME", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("KLIR_HOME", raising=False)
 
     klir_config = tmp_path / ".klir" / "config" / "config.json"
     klir_config.parent.mkdir(parents=True)
