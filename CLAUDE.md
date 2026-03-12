@@ -117,7 +117,7 @@ Optional multi-agent system (when `agents.json` is present):
 | `klir restart` | Restart bot |
 | `klir upgrade` | Stop, upgrade, restart |
 | `klir service install` | Install as background service |
-| `klir service [sub]` | Service management (status/stop/logs/...) |
+| `klir service [sub]` | Service management (status/stop/start/restart/logs/...) |
 | `klir agents` | List all sub-agents and their config |
 | `klir agents add <name>` | Add a new sub-agent (interactive) |
 | `klir agents remove <name>` | Remove a sub-agent |
