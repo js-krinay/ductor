@@ -55,6 +55,12 @@ def stop_service(console: Console | None = None) -> None:
     _backend.stop_service(console)
 
 
+def restart_service(console: Console | None = None) -> None:
+    """Stop and start the service."""
+    _backend.stop_service(console)
+    _backend.start_service(console)
+
+
 def print_service_status(console: Console | None = None) -> None:
     """Print the service status."""
     _backend.print_service_status(console)

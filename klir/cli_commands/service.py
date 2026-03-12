@@ -10,7 +10,7 @@ from rich.table import Table
 
 _console = Console()
 
-_SERVICE_SUBCOMMANDS = frozenset({"install", "status", "stop", "start", "logs", "uninstall"})
+_SERVICE_SUBCOMMANDS = frozenset({"install", "status", "stop", "start", "restart", "logs", "uninstall"})
 
 
 def _parse_service_subcommand(args: list[str]) -> str | None:
@@ -37,6 +37,7 @@ def print_service_help() -> None:
     table.add_row("klir service status", "Show service status")
     table.add_row("klir service start", "Start the service")
     table.add_row("klir service stop", "Stop the service")
+    table.add_row("klir service restart", "Restart the service")
     table.add_row("klir service logs", "View live logs")
     table.add_row("klir service uninstall", "Remove the service")
     _console.print(
@@ -51,6 +52,7 @@ def cmd_service(args: list[str]) -> None:
         install_service,
         print_service_logs,
         print_service_status,
+        restart_service,
         start_service,
         stop_service,
         uninstall_service,
@@ -73,6 +75,9 @@ def cmd_service(args: list[str]) -> None:
     def _stop() -> None:
         stop_service(_console)
 
+    def _restart() -> None:
+        restart_service(_console)
+
     def _logs() -> None:
         print_service_logs(_console)
 
@@ -84,6 +89,7 @@ def cmd_service(args: list[str]) -> None:
         "status": _status,
         "start": _start,
         "stop": _stop,
+        "restart": _restart,
         "logs": _logs,
         "uninstall": _uninstall_service_cmd,
     }
