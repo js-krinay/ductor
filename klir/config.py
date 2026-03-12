@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-ReplyToMode = Literal["off", "first", "all"]
-
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+ReplyToMode = Literal["off", "first", "all"]
 
 logger = logging.getLogger(__name__)
 NULLISH_TEXT_VALUES: frozenset[str] = frozenset({"null", "none"})

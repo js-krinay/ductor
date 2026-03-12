@@ -16,32 +16,34 @@ def extract_forward_context(message: Message) -> str | None:
 
     Returns ``None`` when the message is not forwarded.
     """
+    from aiogram.types import (
+        MessageOriginChannel,
+        MessageOriginChat,
+        MessageOriginHiddenUser,
+        MessageOriginUser,
+    )
+
     origin = message.forward_origin
     if origin is None:
         return None
 
     date_str = origin.date.isoformat() if origin.date else "unknown"
 
-    if origin.type == "user":
+    if isinstance(origin, MessageOriginUser):
         name = origin.sender_user.full_name
         uid = origin.sender_user.id
         return f"[Forwarded from {name} (user {uid}) at {date_str}]"
-    if origin.type == "channel":
+    if isinstance(origin, MessageOriginChannel):
         title = origin.chat.title
         cid = origin.chat.id
         mid = origin.message_id
         return f'[Forwarded from channel "{title}" (chat {cid}, message {mid}) at {date_str}]'
-    if origin.type == "hidden_user":
+    if isinstance(origin, MessageOriginHiddenUser):
         name = origin.sender_user_name
         return f"[Forwarded from {name} (hidden user) at {date_str}]"
-    if origin.type == "chat":
-        title = (
-            getattr(origin, "sender_chat", origin).title
-            if hasattr(origin, "sender_chat")
-            else "unknown"
-        )
-        return f'[Forwarded from chat "{title}" at {date_str}]'
-    return f"[Forwarded message at {date_str}]"
+    # MessageOriginChat is the only remaining variant.
+    title = origin.sender_chat.title if isinstance(origin, MessageOriginChat) and origin.sender_chat else "unknown"
+    return f'[Forwarded from chat "{title}" at {date_str}]'
 
 
 def prepend_forward_context(context: str, text: str) -> str:

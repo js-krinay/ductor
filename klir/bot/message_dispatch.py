@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from klir.bot.sender import SendRichOpts, send_files_from_text, send_rich
-from klir.bot.streaming import create_stream_editor
+from klir.bot.streaming import StreamContext, create_stream_editor
 from klir.bot.typing import TypingContext
 from klir.cli.coalescer import CoalesceConfig, StreamCoalescer
 from klir.config import ReplyToMode
@@ -97,10 +97,12 @@ async def run_streaming_message(
     editor = create_stream_editor(
         dispatch.bot,
         dispatch.key.chat_id,
-        reply_to=dispatch.message,
-        cfg=dispatch.streaming_cfg,
-        thread_id=dispatch.thread_id,
-        reply_to_mode=dispatch.reply_to_mode,
+        StreamContext(
+            reply_to=dispatch.message,
+            cfg=dispatch.streaming_cfg,
+            thread_id=dispatch.thread_id,
+            reply_to_mode=dispatch.reply_to_mode,
+        ),
     )
     coalescer = StreamCoalescer(
         config=CoalesceConfig(

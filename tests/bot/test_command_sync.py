@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 
 class TestSyncCommands:
     async def test_sets_private_and_group_scopes(self) -> None:
@@ -14,8 +12,8 @@ class TestSyncCommands:
 
         config = AgentConfig(telegram_token="test:token")
 
-        with patch("klir.bot.app.Bot") as MockBot:
-            mock_bot = MockBot.return_value
+        with patch("klir.bot.app.Bot") as mock_bot_cls:
+            mock_bot = mock_bot_cls.return_value
             mock_bot.get_my_commands = AsyncMock(return_value=[])
             mock_bot.set_my_commands = AsyncMock()
             mock_bot.delete_my_commands = AsyncMock()
@@ -41,8 +39,8 @@ class TestSyncCommands:
 
         config = AgentConfig(telegram_token="test:token")
 
-        with patch("klir.bot.app.Bot") as MockBot:
-            mock_bot = MockBot.return_value
+        with patch("klir.bot.app.Bot") as mock_bot_cls:
+            mock_bot = mock_bot_cls.return_value
             mock_bot.delete_my_commands = AsyncMock()
             mock_bot.delete_webhook = AsyncMock()
             mock_bot.session = MagicMock()

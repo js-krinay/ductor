@@ -56,6 +56,7 @@ class TestRetryLogging:
         from unittest.mock import AsyncMock
 
         from aiogram.exceptions import TelegramConflictError
+
         from klir.bot.retry import retry_async
         from klir.config import ResilienceConfig
 

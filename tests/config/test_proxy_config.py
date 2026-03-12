@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestProxyConfig:
     def test_default_empty(self) -> None:

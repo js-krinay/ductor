@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 
 class TestForwardSender:
     async def test_forward_message(self) -> None:

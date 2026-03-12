@@ -188,6 +188,11 @@ class TelegramBot:
         self._upgrade_lock = asyncio.Lock()
         self._group_audit_task: asyncio.Task[None] | None = None
 
+        self._init_services(config)
+        self._init_middleware(config)
+
+    def _init_services(self, config: AgentConfig) -> None:
+        """Initialize pairing, approval, tracker, bus, and related services."""
         allowed = set(config.allowed_user_ids)
         allowed_groups = set(config.allowed_group_ids)
         allowed_channels = set(config.allowed_channel_ids)
@@ -216,6 +221,11 @@ class TelegramBot:
         from klir.bus.telegram_transport import TelegramTransport
 
         self._bus.register_transport(TelegramTransport(self))
+
+    def _init_middleware(self, config: AgentConfig) -> None:
+        """Wire up auth and sequential middleware, register handlers."""
+        from klir.bot.middleware import AuthMiddlewareConfig
+
         self._sequential = SequentialMiddleware(
             lock_pool=self._lock_pool, topic_names=self._topic_names, config=self._config
         )
@@ -224,24 +234,35 @@ class TelegramBot:
         self._sequential.set_abort_handler(self._on_abort)
         self._sequential.set_abort_all_handler(self._on_abort_all)
         self._sequential.set_quick_command_handler(self._on_quick_command)
+
+        allowed = self._allowed_users
+        allowed_groups = self._allowed_groups
+        allowed_channels = self._allowed_channels
         on_rejected = self._on_group_rejected
-        auth = AuthMiddleware(
-            allowed,
+
+        auth = AuthMiddleware(AuthMiddlewareConfig(
+            allowed_user_ids=allowed,
             allowed_group_ids=allowed_groups,
             on_rejected=on_rejected,
             pairing_svc=self._pairing_svc,
             on_unknown_dm=self._on_unknown_dm if self._pairing_svc else None,
             on_paired=self._on_paired if self._pairing_svc else None,
-        )
+        ))
         self._router.message.outer_middleware(auth)
         self._router.message.outer_middleware(self._sequential)
         self._router.callback_query.outer_middleware(
-            AuthMiddleware(allowed, allowed_group_ids=allowed_groups, on_rejected=on_rejected)
+            AuthMiddleware(AuthMiddlewareConfig(
+                allowed_user_ids=allowed,
+                allowed_group_ids=allowed_groups,
+                on_rejected=on_rejected,
+            ))
         )
         self._router.channel_post.outer_middleware(
-            AuthMiddleware(
-                allowed, allowed_group_ids=allowed_groups, allowed_channel_ids=allowed_channels
-            )
+            AuthMiddleware(AuthMiddlewareConfig(
+                allowed_user_ids=allowed,
+                allowed_group_ids=allowed_groups,
+                allowed_channel_ids=allowed_channels,
+            ))
         )
         self._router.channel_post.outer_middleware(self._sequential)
 
@@ -409,7 +430,7 @@ class TelegramBot:
         current = list(self._config.allowed_user_ids)
         if user_id not in current:
             current.append(user_id)
-            config_path = KlirPaths(self._config.klir_home).config_json
+            config_path = KlirPaths(Path(self._config.klir_home)).config_path
             await update_config_file_async(config_path, allowed_user_ids=current)
             self._config.allowed_user_ids = current
             logger.info("Paired user %d added to allowed_user_ids", user_id)
@@ -1530,7 +1551,7 @@ class TelegramBot:
         private_cmds = _BOT_COMMANDS
         group_cmds = [BotCommand(command=c, description=d) for c, d in GROUP_COMMANDS]
 
-        scopes: list[tuple[object, list[BotCommand]]] = [
+        scopes: list[tuple[BotCommandScopeAllPrivateChats | BotCommandScopeAllGroupChats, list[BotCommand]]] = [
             (BotCommandScopeAllPrivateChats(), private_cmds),
             (BotCommandScopeAllGroupChats(), group_cmds),
         ]

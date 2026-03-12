@@ -30,7 +30,6 @@ from klir.config import NULLISH_TEXT_VALUES
 from klir.infra.platform import CREATION_FLAGS as _CREATION_FLAGS
 from klir.infra.process_tree import force_kill_process_tree
 
-
 if TYPE_CHECKING:
     from klir.cli.process_registry import ProcessRegistry, TrackedProcess
     from klir.cli.timeout_controller import TimeoutController

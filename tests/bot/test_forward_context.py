@@ -4,15 +4,25 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
+from aiogram.types import (
+    MessageOriginChannel,
+    MessageOriginHiddenUser,
+    MessageOriginUser,
+)
+
+
+def _mock_origin(cls: type) -> MagicMock:
+    """Create a MagicMock that passes isinstance checks for *cls*."""
+    mock = MagicMock()
+    mock.__class__ = cls
+    return mock
 
 
 class TestForwardContext:
     def test_extract_user_forward_origin(self) -> None:
         from klir.bot.forward_context import extract_forward_context
 
-        origin = MagicMock()
-        origin.type = "user"
+        origin = _mock_origin(MessageOriginUser)
         origin.sender_user.full_name = "Alice"
         origin.sender_user.id = 123
         origin.date.isoformat.return_value = "2026-03-10T12:00:00"
@@ -30,8 +40,7 @@ class TestForwardContext:
     def test_extract_channel_forward_origin(self) -> None:
         from klir.bot.forward_context import extract_forward_context
 
-        origin = MagicMock()
-        origin.type = "channel"
+        origin = _mock_origin(MessageOriginChannel)
         origin.chat.title = "News Channel"
         origin.chat.id = -1001234567890
         origin.message_id = 42
@@ -50,8 +59,7 @@ class TestForwardContext:
     def test_extract_hidden_user_forward_origin(self) -> None:
         from klir.bot.forward_context import extract_forward_context
 
-        origin = MagicMock()
-        origin.type = "hidden_user"
+        origin = _mock_origin(MessageOriginHiddenUser)
         origin.sender_user_name = "Hidden Name"
         origin.date.isoformat.return_value = "2026-03-10T12:00:00"
 

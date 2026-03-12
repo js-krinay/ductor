@@ -134,7 +134,6 @@ def test_update_available_providers() -> None:
 async def test_stream_callbacks_detects_tool_loop() -> None:
     from klir.cli.service import _StreamCallbacks
     from klir.cli.stream_events import ToolUseEvent
-
     from klir.cli.tool_activity import ToolActivity
 
     tools_seen: list[ToolActivity] = []

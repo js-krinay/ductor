@@ -35,9 +35,9 @@ class TestAuthMiddleware:
     """Test user ID filtering middleware."""
 
     async def test_allowed_user_passes(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100, 200})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100, 200}))
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100)
 
@@ -46,9 +46,9 @@ class TestAuthMiddleware:
         assert result == "ok"
 
     async def test_blocked_user_dropped(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}))
         handler = AsyncMock()
         msg = _make_message(user_id=999)
 
@@ -57,9 +57,9 @@ class TestAuthMiddleware:
         assert result is None
 
     async def test_no_from_user_dropped(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}))
         handler = AsyncMock()
         msg = _make_message()
         msg.from_user = None
@@ -69,9 +69,9 @@ class TestAuthMiddleware:
         assert result is None
 
     async def test_non_message_event_passes(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}))
         handler = AsyncMock(return_value="pass")
         event = MagicMock()  # Not a Message or CallbackQuery
         event.__class__ = type("Update", (), {})
@@ -82,9 +82,9 @@ class TestAuthMiddleware:
 
     async def test_group_allowed_group_and_user_passes(self) -> None:
         """Message passes when both group and user are allowlisted."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100}, allowed_group_ids={-1001})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}, allowed_group_ids={-1001}))
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100, chat_type="group", chat_id=-1001)
 
@@ -94,9 +94,9 @@ class TestAuthMiddleware:
 
     async def test_group_blocked_group(self) -> None:
         """Message dropped when group is not in allowed_group_ids."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100}, allowed_group_ids={-1002})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}, allowed_group_ids={-1002}))
         handler = AsyncMock()
         msg = _make_message(user_id=100, chat_type="group", chat_id=-1001)
 
@@ -106,9 +106,9 @@ class TestAuthMiddleware:
 
     async def test_group_blocked_user_in_allowed_group(self) -> None:
         """Message dropped when user is not allowed, even if group is."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100}, allowed_group_ids={-1001})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}, allowed_group_ids={-1001}))
         handler = AsyncMock()
         msg = _make_message(user_id=999, chat_type="group", chat_id=-1001)
 
@@ -118,9 +118,9 @@ class TestAuthMiddleware:
 
     async def test_group_empty_group_ids_blocks_all(self) -> None:
         """Empty allowed_group_ids means no groups are allowed (fail-closed)."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}))
         handler = AsyncMock()
         msg = _make_message(user_id=100, chat_type="group", chat_id=-1001)
 
@@ -130,9 +130,9 @@ class TestAuthMiddleware:
 
     async def test_supergroup_uses_group_check(self) -> None:
         """Supergroups also go through group allowlist check."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100}, allowed_group_ids={-1001})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}, allowed_group_ids={-1001}))
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100, chat_type="supergroup", chat_id=-1001)
 
@@ -142,9 +142,9 @@ class TestAuthMiddleware:
 
     async def test_private_message_ignores_group_ids(self) -> None:
         """Private messages only check allowed_user_ids, not group IDs."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100}, allowed_group_ids=set())
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}, allowed_group_ids=set()))
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100, chat_type="private")
 
@@ -156,9 +156,9 @@ class TestAuthMiddleware:
         """CallbackQuery from a group enforces both group and user checks."""
         from aiogram.types import CallbackQuery
 
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100}, allowed_group_ids={-1001})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}, allowed_group_ids={-1001}))
         handler = AsyncMock(return_value="ok")
 
         cb = MagicMock(spec=CallbackQuery)
@@ -177,9 +177,9 @@ class TestAuthMiddleware:
         """CallbackQuery from an unauthorized group is dropped."""
         from aiogram.types import CallbackQuery
 
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100}, allowed_group_ids={-1002})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}, allowed_group_ids={-1002}))
         handler = AsyncMock()
 
         cb = MagicMock(spec=CallbackQuery)
@@ -196,14 +196,14 @@ class TestAuthMiddleware:
 
     async def test_on_rejected_fires_for_blocked_group(self) -> None:
         """on_rejected callback fires when a group message is rejected."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         calls: list[tuple[int, str, str]] = []
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids={100},
             allowed_group_ids={-1002},
             on_rejected=lambda cid, ct, t: calls.append((cid, ct, t)),
-        )
+        ))
         handler = AsyncMock()
         msg = _make_message(user_id=100, chat_type="group", chat_id=-1001)
         msg.chat.title = "Bad Group"
@@ -214,14 +214,14 @@ class TestAuthMiddleware:
 
     async def test_on_rejected_not_fired_for_allowed_group(self) -> None:
         """on_rejected does NOT fire when the group is allowed."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         calls: list[tuple[int, str, str]] = []
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids={100},
             allowed_group_ids={-1001},
             on_rejected=lambda cid, ct, t: calls.append((cid, ct, t)),
-        )
+        ))
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100, chat_type="group", chat_id=-1001)
 
@@ -231,13 +231,13 @@ class TestAuthMiddleware:
 
     async def test_on_rejected_not_fired_for_private_chat(self) -> None:
         """on_rejected does NOT fire for rejected private messages."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         calls: list[tuple[int, str, str]] = []
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids={100},
             on_rejected=lambda cid, ct, t: calls.append((cid, ct, t)),
-        )
+        ))
         handler = AsyncMock()
         msg = _make_message(user_id=999, chat_type="private")
 
@@ -249,90 +249,90 @@ class TestAuthMiddlewarePairing:
     """Test pairing flow integration with AuthMiddleware."""
 
     async def test_unknown_user_gets_pairing_prompt(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         pairing_callback = AsyncMock()
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids={100},
             on_unknown_dm=pairing_callback,
-        )
+        ))
         handler = AsyncMock()
         msg = _make_message(user_id=999, chat_type="private")
 
-        result = await mw(handler, msg, {})
+        await mw(handler, msg, {})
 
         handler.assert_not_called()
         pairing_callback.assert_called_once()
 
     async def test_known_user_not_prompted(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         pairing_callback = AsyncMock()
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids={100},
             on_unknown_dm=pairing_callback,
-        )
+        ))
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100, chat_type="private")
 
-        result = await mw(handler, msg, {})
+        await mw(handler, msg, {})
 
         handler.assert_called_once()
         pairing_callback.assert_not_called()
 
     async def test_pairing_code_validates_and_adds_user(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         pairing_svc = MagicMock()
         pairing_svc.validate.return_value = True
 
         on_paired = AsyncMock()
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids={100},
             pairing_svc=pairing_svc,
             on_paired=on_paired,
-        )
+        ))
         handler = AsyncMock()
         msg = _make_message(user_id=999, text="ABC123", chat_type="private")
 
-        result = await mw(handler, msg, {})
+        await mw(handler, msg, {})
 
         pairing_svc.validate.assert_called_once_with("ABC123", user_id=999)
         on_paired.assert_called_once_with(999)
 
     async def test_invalid_code_triggers_prompt(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         pairing_svc = MagicMock()
         pairing_svc.validate.return_value = False
 
         on_unknown_dm = AsyncMock()
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids={100},
             pairing_svc=pairing_svc,
             on_unknown_dm=on_unknown_dm,
-        )
+        ))
         handler = AsyncMock()
         msg = _make_message(user_id=999, text="WRONG1", chat_type="private")
 
-        result = await mw(handler, msg, {})
+        await mw(handler, msg, {})
 
         handler.assert_not_called()
         on_unknown_dm.assert_called_once()
 
     async def test_paired_user_added_to_allowed_set(self) -> None:
         """After pairing, user should be in allowed set for future messages."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         pairing_svc = MagicMock()
         pairing_svc.validate.return_value = True
 
         allowed = {100}
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids=allowed,
             pairing_svc=pairing_svc,
             on_paired=AsyncMock(),
-        )
+        ))
         handler = AsyncMock()
         msg = _make_message(user_id=999, text="ABC123", chat_type="private")
 
@@ -895,12 +895,12 @@ class TestForumTopicIndicator:
 
 class TestAuthMiddlewareEnabled:
     async def test_disabled_chat_is_dropped(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         resolver = MagicMock()
         resolver.is_enabled.return_value = False
 
-        mw = AuthMiddleware(allowed_user_ids={100}, resolver=resolver)
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}, resolver=resolver))
         handler = AsyncMock()
         msg = _make_message(user_id=100, chat_id=555)
 
@@ -909,12 +909,12 @@ class TestAuthMiddlewareEnabled:
         assert result is None
 
     async def test_enabled_chat_passes(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         resolver = MagicMock()
         resolver.is_enabled.return_value = True
 
-        mw = AuthMiddleware(allowed_user_ids={100}, resolver=resolver)
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}, resolver=resolver))
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100, chat_id=555)
 
@@ -924,9 +924,9 @@ class TestAuthMiddlewareEnabled:
 
     async def test_no_resolver_defaults_enabled(self) -> None:
         """Without resolver, all chats are enabled (backward compat)."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(allowed_user_ids={100})
+        mw = AuthMiddleware(AuthMiddlewareConfig(allowed_user_ids={100}))
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100)
 
@@ -937,13 +937,13 @@ class TestAuthMiddlewareEnabled:
 class TestChannelAuth:
     async def test_channel_post_no_from_user_uses_chat_id(self) -> None:
         """Channel posts have no from_user; auth should check channel ID only."""
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids=set(),
             allowed_group_ids=set(),
             allowed_channel_ids={-1001234},
-        )
+        ))
         handler = AsyncMock(return_value="ok")
         msg = _make_message(chat_id=-1001234, user_id=0, chat_type="channel")
         msg.from_user = None  # Channel posts have no sender
@@ -953,13 +953,13 @@ class TestChannelAuth:
         assert result == "ok"
 
     async def test_unknown_channel_rejected(self) -> None:
-        from klir.bot.middleware import AuthMiddleware
+        from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(
+        mw = AuthMiddleware(AuthMiddlewareConfig(
             allowed_user_ids=set(),
             allowed_group_ids=set(),
             allowed_channel_ids={-1001234},
-        )
+        ))
         handler = AsyncMock()
         msg = _make_message(chat_id=-9999, user_id=0, chat_type="channel")
         msg.from_user = None
@@ -988,7 +988,7 @@ class TestSequentialMiddlewareBotMention:
         handler = AsyncMock(return_value="ok")
         msg = _make_message(text="/status@other_bot", chat_type="supergroup")
 
-        result = await mw(handler, msg, {})
+        await mw(handler, msg, {})
         quick_handler.assert_not_called()
         # Should fall through to the normal handler
         handler.assert_called_once()

@@ -22,7 +22,7 @@ class TestReactionConfig:
     def test_invalid_level_rejected(self) -> None:
         from klir.config import ReactionConfig
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="reaction level must be"):
             ReactionConfig(level="invalid")
 
     def test_default_emojis(self) -> None:

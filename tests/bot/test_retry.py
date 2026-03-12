@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from aiogram.exceptions import (
@@ -100,8 +99,8 @@ class TestComputeBackoff:
 class TestRetryAsync:
     @pytest.mark.asyncio
     async def test_succeeds_first_try(self) -> None:
-        from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
+        from klir.config import ResilienceConfig
 
         fn = AsyncMock(return_value="ok")
         result = await retry_async(fn, config=ResilienceConfig())
@@ -110,8 +109,8 @@ class TestRetryAsync:
 
     @pytest.mark.asyncio
     async def test_retries_on_recoverable_then_succeeds(self) -> None:
-        from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
+        from klir.config import ResilienceConfig
 
         fn = AsyncMock(
             side_effect=[
@@ -126,8 +125,8 @@ class TestRetryAsync:
 
     @pytest.mark.asyncio
     async def test_raises_permanent_immediately(self) -> None:
-        from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
+        from klir.config import ResilienceConfig
 
         fn = AsyncMock(side_effect=TelegramBadRequest(method=None, message="Bad Request"))
         cfg = ResilienceConfig(max_retries=3)
@@ -137,8 +136,8 @@ class TestRetryAsync:
 
     @pytest.mark.asyncio
     async def test_exhausts_retries_then_raises(self) -> None:
-        from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
+        from klir.config import ResilienceConfig
 
         fn = AsyncMock(side_effect=TelegramServerError(method=None, message="err"))
         cfg = ResilienceConfig(max_retries=2, base_backoff_seconds=0.01, max_backoff_seconds=0.1)
@@ -148,8 +147,8 @@ class TestRetryAsync:
 
     @pytest.mark.asyncio
     async def test_rate_limited_uses_retry_after(self) -> None:
-        from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
+        from klir.config import ResilienceConfig
 
         fn = AsyncMock(
             side_effect=[
@@ -164,8 +163,8 @@ class TestRetryAsync:
 
     @pytest.mark.asyncio
     async def test_conflict_raises_immediately(self) -> None:
-        from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
+        from klir.config import ResilienceConfig
 
         fn = AsyncMock(side_effect=TelegramConflictError(method=None, message="Conflict"))
         cfg = ResilienceConfig(max_retries=3)
@@ -175,8 +174,8 @@ class TestRetryAsync:
 
     @pytest.mark.asyncio
     async def test_network_error_retried(self) -> None:
-        from klir.config import ResilienceConfig
         from klir.bot.retry import retry_async
+        from klir.config import ResilienceConfig
 
         fn = AsyncMock(
             side_effect=[

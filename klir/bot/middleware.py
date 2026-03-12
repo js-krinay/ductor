@@ -7,7 +7,7 @@ import contextlib
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from aiogram import BaseMiddleware
 from aiogram.enums import ParseMode
@@ -85,6 +85,26 @@ RejectedCallback = Callable[[int, str, str], None]
 """Sync callback for rejected group messages: (chat_id, chat_type, title)."""
 
 
+class PairingValidator(Protocol):
+    """Structural type for objects that can validate a pairing code."""
+
+    def validate(self, code: str, user_id: int) -> bool: ...
+
+
+@dataclass
+class AuthMiddlewareConfig:
+    """Bundled configuration for :class:`AuthMiddleware`."""
+
+    allowed_user_ids: set[int]
+    allowed_group_ids: set[int] | None = None
+    allowed_channel_ids: set[int] | None = None
+    on_rejected: RejectedCallback | None = None
+    resolver: ChatConfigResolver | None = None
+    pairing_svc: PairingValidator | None = None
+    on_unknown_dm: Callable[[int, Message], Awaitable[None]] | None = None
+    on_paired: Callable[[int], Awaitable[None]] | None = None
+
+
 class AuthMiddleware(BaseMiddleware):
     """Outer middleware: silently drop messages from unauthorized users/groups.
 
@@ -93,26 +113,15 @@ class AuthMiddleware(BaseMiddleware):
     and the sender (``allowed_user_ids``) must be allowlisted.
     """
 
-    def __init__(
-        self,
-        allowed_user_ids: set[int],
-        *,
-        allowed_group_ids: set[int] | None = None,
-        allowed_channel_ids: set[int] | None = None,
-        on_rejected: RejectedCallback | None = None,
-        resolver: ChatConfigResolver | None = None,
-        pairing_svc: object | None = None,
-        on_unknown_dm: Callable[[int, Message], Awaitable[None]] | None = None,
-        on_paired: Callable[[int], Awaitable[None]] | None = None,
-    ) -> None:
-        self._allowed_users = allowed_user_ids
-        self._allowed_groups = allowed_group_ids or set()
-        self._allowed_channels = allowed_channel_ids or set()
-        self._on_rejected = on_rejected
-        self._resolver = resolver
-        self._pairing_svc = pairing_svc
-        self._on_unknown_dm = on_unknown_dm
-        self._on_paired = on_paired
+    def __init__(self, cfg: AuthMiddlewareConfig) -> None:
+        self._allowed_users = cfg.allowed_user_ids
+        self._allowed_groups = cfg.allowed_group_ids or set()
+        self._allowed_channels = cfg.allowed_channel_ids or set()
+        self._on_rejected = cfg.on_rejected
+        self._resolver = cfg.resolver
+        self._pairing_svc = cfg.pairing_svc
+        self._on_unknown_dm = cfg.on_unknown_dm
+        self._on_paired = cfg.on_paired
 
     async def __call__(
         self,
@@ -125,55 +134,86 @@ class AuthMiddleware(BaseMiddleware):
         else:
             return await handler(event, data)
 
-        # Channel posts have no from_user — authenticate by chat ID only.
         if not user:
-            if (
-                isinstance(event, Message)
-                and event.chat.type == "channel"
-                and event.chat.id in self._allowed_channels
-            ):
-                return await handler(event, data)
-            return None
+            return await self._handle_no_user(handler, event, data)
 
-        # Resolve chat: Message.chat directly, CallbackQuery via .message.chat.
-        chat = None
-        if isinstance(event, Message):
-            chat = event.chat
-        elif isinstance(event, CallbackQuery) and event.message is not None:
-            chat = getattr(event.message, "chat", None)
-
+        chat = self._resolve_chat(event)
         chat_type = chat.type if chat else None
 
         if chat_type in ("group", "supergroup"):
-            group_id = chat.id if chat else None
-            if group_id not in self._allowed_groups:
-                if self._on_rejected and chat:
-                    self._on_rejected(chat.id, chat_type, chat.title or "")
+            if not self._authorize_group(user, chat, chat_type):
                 return None
-            if user.id not in self._allowed_users:
-                return None
-        elif user.id not in self._allowed_users:
-            # Private chat — check for pairing flow
-            if chat_type == "private" and isinstance(event, Message):
-                text = (event.text or "").strip()
-                # Try to validate as pairing code
-                if self._pairing_svc and text:
-                    if self._pairing_svc.validate(text, user_id=user.id):
-                        self._allowed_users.add(user.id)
-                        if self._on_paired:
-                            await self._on_paired(user.id)
-                        return None  # Don't process the code as a message
-                # Send pairing prompt
-                if self._on_unknown_dm:
-                    await self._on_unknown_dm(user.id, event)
+            return await self._check_enabled_and_proceed(handler, event, data, user, chat)
+
+        if user.id not in self._allowed_users:
+            await self._handle_private_unknown(event, user, chat_type)
             return None
 
-        # Check per-chat enabled status
+        return await self._check_enabled_and_proceed(handler, event, data, user, chat)
+
+    # -- Private helpers -------------------------------------------------------
+
+    async def _handle_no_user(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
+        """Channel posts have no from_user -- authenticate by chat ID only."""
+        if (
+            isinstance(event, Message)
+            and event.chat.type == "channel"
+            and event.chat.id in self._allowed_channels
+        ):
+            return await handler(event, data)
+        return None
+
+    @staticmethod
+    def _resolve_chat(event: TelegramObject) -> Any:
+        """Extract the chat object from a Message or CallbackQuery."""
+        if isinstance(event, Message):
+            return event.chat
+        if isinstance(event, CallbackQuery) and event.message is not None:
+            return getattr(event.message, "chat", None)
+        return None
+
+    def _authorize_group(self, user: Any, chat: Any, chat_type: str | None) -> bool:
+        """Return True if the group AND user are allowlisted."""
+        group_id = chat.id if chat else None
+        if group_id not in self._allowed_groups:
+            if self._on_rejected and chat and chat_type:
+                self._on_rejected(chat.id, chat_type, chat.title or "")
+            return False
+        return user.id in self._allowed_users
+
+    async def _handle_private_unknown(
+        self, event: TelegramObject, user: Any, chat_type: str | None
+    ) -> None:
+        """Handle an unknown user in a private chat (pairing flow)."""
+        if chat_type != "private" or not isinstance(event, Message):
+            return
+        text = (event.text or "").strip()
+        if self._pairing_svc and text and self._pairing_svc.validate(text, user_id=user.id):
+            self._allowed_users.add(user.id)
+            if self._on_paired:
+                await self._on_paired(user.id)
+            return
+        if self._on_unknown_dm:
+            await self._on_unknown_dm(user.id, event)
+
+    async def _check_enabled_and_proceed(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+        user: Any,
+        chat: Any,
+    ) -> Any:
+        """Check per-chat enabled status, then proceed to the handler."""
         if self._resolver is not None:
             check_chat_id = chat.id if chat else (user.id if user else None)
             if check_chat_id is not None and not self._resolver.is_enabled(check_chat_id):
                 return None
-
         return await handler(event, data)
 
 

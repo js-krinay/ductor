@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
-from urllib.parse import urlparse, urlunparse
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse, urlunparse
 
 if TYPE_CHECKING:
     from klir.config import AgentConfig

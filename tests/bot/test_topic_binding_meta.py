@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import time_machine
 
-from klir.bot.topic import BindingMeta, TopicNameCache
+from klir.bot.topic import TopicNameCache
 
 
 class TestBindingMeta:

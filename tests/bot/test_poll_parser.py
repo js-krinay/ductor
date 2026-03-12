@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestPollParser:
     def test_parse_basic_poll(self) -> None:
-        from klir.bot.poll_parser import PollDirective, parse_polls
+        from klir.bot.poll_parser import parse_polls
 
         text = "Here's a poll: [poll:What's your favorite color?|Red|Blue|Green]"
         polls = parse_polls(text)

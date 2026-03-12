@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 import time_machine
 
 from klir.bot.topic import TopicNameCache

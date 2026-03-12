@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
 
 class TestOrchestratorResolverWiring:
     def test_orchestrator_has_resolver(self) -> None:

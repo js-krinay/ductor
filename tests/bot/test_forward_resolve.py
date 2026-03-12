@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
 
 class TestForwardResolve:
     def test_prepend_context_modifies_text(self) -> None:
@@ -22,9 +20,12 @@ class TestForwardResolve:
         assert "\n\n" in result
 
     def test_forward_context_with_empty_text(self) -> None:
+        from aiogram.types import MessageOriginUser
+
         from klir.bot.forward_context import extract_forward_context
 
         origin = MagicMock()
+        origin.__class__ = MessageOriginUser
         origin.type = "user"
         origin.sender_user.full_name = "Bob"
         origin.sender_user.id = 50

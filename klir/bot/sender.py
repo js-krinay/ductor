@@ -27,6 +27,15 @@ if TYPE_CHECKING:
 
 
 @dataclass(slots=True)
+class SendTextContext:
+    """Threading/reply context for :func:`_send_text_chunks`."""
+
+    reply_to_message_id: int | None = None
+    thread_id: int | None = None
+    reply_to_mode: ReplyToMode = "first"
+
+
+@dataclass(slots=True)
 class SendRichOpts:
     """Optional parameters for :func:`send_rich`."""
 
@@ -131,39 +140,37 @@ async def _send_text_chunks(
     bot: Bot,
     chat_id: int,
     clean_text: str,
-    *,
-    reply_to_message_id: int | None = None,
-    thread_id: int | None = None,
-    reply_to_mode: ReplyToMode = "first",
+    ctx: SendTextContext | None = None,
 ) -> Message | None:
     """Send *clean_text* as HTML chunks, falling back to plain text on error."""
+    c = ctx or SendTextContext()
     last_msg: Message | None = None
     html_text = markdown_to_telegram_html(clean_text)
     chunks = split_html_message(html_text)
     for i, chunk in enumerate(chunks):
         should_reply = (
-            reply_to_message_id is not None
-            and reply_to_mode != "off"
-            and (reply_to_mode == "all" or i == 0)
+            c.reply_to_message_id is not None
+            and c.reply_to_mode != "off"
+            and (c.reply_to_mode == "all" or i == 0)
         )
         try:
-            if should_reply and reply_to_message_id is not None:
+            if should_reply and c.reply_to_message_id is not None:
                 last_msg = await bot.send_message(
                     chat_id=chat_id,
                     text=chunk,
                     parse_mode=ParseMode.HTML,
                     reply_parameters=ReplyParameters(
-                        message_id=reply_to_message_id,
+                        message_id=c.reply_to_message_id,
                         allow_sending_without_reply=True,
                     ),
-                    message_thread_id=thread_id,
+                    message_thread_id=c.thread_id,
                 )
             else:
                 last_msg = await bot.send_message(
                     chat_id=chat_id,
                     text=chunk,
                     parse_mode=ParseMode.HTML,
-                    message_thread_id=thread_id,
+                    message_thread_id=c.thread_id,
                 )
         except TelegramNetworkError:
             logger.debug("Network error sending message (likely shutdown), skipping")
@@ -181,7 +188,7 @@ async def _send_text_chunks(
                     chat_id=chat_id,
                     text=pc,
                     parse_mode=None,
-                    message_thread_id=thread_id,
+                    message_thread_id=c.thread_id,
                 )
             break
     return last_msg
@@ -245,9 +252,11 @@ async def send_rich(
             bot,
             chat_id,
             clean_text,
-            reply_to_message_id=o.reply_to_message_id,
-            thread_id=o.thread_id,
-            reply_to_mode=o.reply_to_mode,
+            SendTextContext(
+                reply_to_message_id=o.reply_to_message_id,
+                thread_id=o.thread_id,
+                reply_to_mode=o.reply_to_mode,
+            ),
         )
 
     if button_markup is not None and last_msg is not None:

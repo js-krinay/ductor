@@ -35,14 +35,18 @@ def _make_editor(
     if reply_to is not None:
         object.__setattr__(reply_to, "answer", AsyncMock(return_value=sent_msg))
 
+    from klir.bot.streaming import StreamContext
+
     cfg = StreamingConfig(edit_interval_seconds=edit_interval, max_edit_failures=max_failures)
     editor = EditStreamEditor(
         bot,
         chat_id=1,
-        reply_to=reply_to,
-        cfg=cfg,
-        thread_id=thread_id,
-        reply_to_mode=reply_to_mode,
+        ctx=StreamContext(
+            reply_to=reply_to,
+            cfg=cfg,
+            thread_id=thread_id,
+            reply_to_mode=reply_to_mode,
+        ),
     )
     return bot, editor
 
@@ -467,8 +471,9 @@ class TestEditStreamEditorReplyToMode:
 
     async def test_mode_default_is_first(self) -> None:
         from klir.bot.edit_streaming import EditStreamEditor
+        from klir.bot.streaming import StreamContext
         from klir.config import StreamingConfig
 
         bot = MagicMock()
-        editor = EditStreamEditor(bot, chat_id=1, cfg=StreamingConfig())
+        editor = EditStreamEditor(bot, chat_id=1, ctx=StreamContext(cfg=StreamingConfig()))
         assert editor._reply_to_mode == "first"

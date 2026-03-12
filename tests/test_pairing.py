@@ -5,8 +5,6 @@ from __future__ import annotations
 import time
 from unittest.mock import MagicMock
 
-import pytest
-
 
 def _make_config(enabled: bool = True, ttl: int = 60, length: int = 6) -> MagicMock:
     cfg = MagicMock()
@@ -83,8 +81,8 @@ class TestPairingService:
         from klir.pairing import PairingService
 
         svc = PairingService(_make_config())
-        code1 = svc.generate_code(admin_user_id=100)
-        code2 = svc.generate_code(admin_user_id=100)
+        svc.generate_code(admin_user_id=100)
+        svc.generate_code(admin_user_id=100)
 
         active = svc.list_active()
         assert len(active) == 2

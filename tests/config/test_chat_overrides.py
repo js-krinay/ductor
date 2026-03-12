@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestChatOverrides:
     def test_empty_overrides_all_none(self) -> None:

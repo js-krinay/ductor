@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import html
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from aiogram.enums import ParseMode
@@ -30,6 +31,17 @@ if TYPE_CHECKING:
 
     from klir.cli.tool_activity import ToolActivity
     from klir.config import StreamingConfig
+
+
+@dataclass(slots=True)
+class StreamContext:
+    """Optional threading/reply/config context for stream editors."""
+
+    reply_to: Message | None = None
+    cfg: StreamingConfig | None = None
+    thread_id: int | None = None
+    reply_to_mode: ReplyToMode = "first"
+
 
 logger = logging.getLogger(__name__)
 
@@ -61,16 +73,14 @@ class StreamEditor:
         self,
         bot: Bot,
         chat_id: int,
-        *,
-        reply_to: Message | None = None,
-        thread_id: int | None = None,
-        reply_to_mode: ReplyToMode = "first",
+        ctx: StreamContext | None = None,
     ) -> None:
+        c = ctx or StreamContext()
         self._bot = bot
         self._chat_id = chat_id
-        self._reply_to = reply_to
-        self._thread_id = thread_id
-        self._reply_to_mode = reply_to_mode
+        self._reply_to = c.reply_to
+        self._thread_id = c.thread_id
+        self._reply_to_mode = c.reply_to_mode
         self._messages_sent = 0
         self._last_msg: Message | None = None
 
@@ -157,27 +167,20 @@ class StreamEditor:
 def create_stream_editor(
     bot: Bot,
     chat_id: int,
-    *,
-    reply_to: Message | None = None,
-    cfg: StreamingConfig | None = None,
-    thread_id: int | None = None,
-    reply_to_mode: ReplyToMode = "first",
+    ctx: StreamContext | None = None,
 ) -> StreamEditorProtocol:
     """Create the appropriate stream editor based on config."""
     from klir.config import StreamingConfig
 
-    c = cfg or StreamingConfig()
-    if c.append_mode:
-        return StreamEditor(
-            bot, chat_id, reply_to=reply_to, thread_id=thread_id, reply_to_mode=reply_to_mode
-        )
+    ctx = ctx or StreamContext()
+    cfg = ctx.cfg or StreamingConfig()
+    if cfg.append_mode:
+        return StreamEditor(bot, chat_id, ctx)
     from klir.bot.edit_streaming import EditStreamEditor
 
-    return EditStreamEditor(
-        bot,
-        chat_id,
-        reply_to=reply_to,
-        cfg=c,
-        thread_id=thread_id,
-        reply_to_mode=reply_to_mode,
-    )
+    return EditStreamEditor(bot, chat_id, StreamContext(
+        reply_to=ctx.reply_to,
+        cfg=cfg,
+        thread_id=ctx.thread_id,
+        reply_to_mode=ctx.reply_to_mode,
+    ))

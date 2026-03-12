@@ -87,13 +87,14 @@ def interrupt_process(pid: int) -> bool:
     sig = getattr(signal, "CTRL_C_EVENT", signal.SIGINT) if _IS_WINDOWS else signal.SIGINT
     try:
         os.kill(pid, sig)
-        return True
     except ProcessLookupError:
         logger.debug("interrupt_process: pid=%d already exited", pid)
         return False
     except (PermissionError, OSError):
         logger.warning("interrupt_process: failed to send SIGINT to pid=%d", pid, exc_info=True)
         return False
+    else:
+        return True
 
 
 def _run_taskkill(pid: int, *, force: bool) -> None:

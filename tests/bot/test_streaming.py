@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock
 from aiogram.enums import ParseMode
 from aiogram.types import Message
 
-from klir.bot.streaming import StreamEditor
+from klir.bot.streaming import StreamContext, StreamEditor
 from klir.cli.tool_activity import ToolActivity
 
 
@@ -45,7 +45,7 @@ class TestStreamEditor:
         reply_msg.answer = AsyncMock(return_value=sent_msg)
         bot.send_message = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, reply_to=reply_msg)
+        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg))
         await editor.append_text("First chunk")
         reply_msg.answer.assert_called_once()
 
@@ -182,7 +182,7 @@ class TestStreamEditorButtons:
         reply_msg = MagicMock(spec=Message)
         reply_msg.answer = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, reply_to=reply_msg)
+        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg))
         await editor.append_text("Choose one")
         await editor.finalize("Choose one\n\n[button:Yes] [button:No]")
         bot.edit_message_reply_markup.assert_called_once()
@@ -247,7 +247,7 @@ class TestStreamEditorButtons:
         reply_msg.answer = AsyncMock(return_value=sent_msg)
         bot.edit_message_reply_markup = AsyncMock()
 
-        editor = StreamEditor(bot, chat_id=1, reply_to=reply_msg)
+        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg))
         await editor.append_text("Content")
         await editor.finalize("Content\n[button:Go]")
         bot.edit_message_reply_markup.assert_called_once()
@@ -262,7 +262,7 @@ class TestStreamEditorThreadId:
         sent_msg = MagicMock(spec=Message)
         bot.send_message = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, thread_id=77)
+        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(thread_id=77))
         await editor.append_text("Hello")
         assert bot.send_message.call_args.kwargs["message_thread_id"] == 77
 
@@ -285,7 +285,7 @@ class TestStreamEditorThreadId:
         reply_msg.answer = AsyncMock(return_value=sent_msg)
         bot.send_message = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, reply_to=reply_msg, thread_id=77)
+        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, thread_id=77))
         await editor.append_text("First")
         await editor.append_text("Second")
         assert bot.send_message.call_args.kwargs["message_thread_id"] == 77
@@ -301,7 +301,7 @@ class TestStreamEditorReplyToMode:
         reply_msg.answer = AsyncMock(return_value=sent_msg)
         bot.send_message = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, reply_to=reply_msg, reply_to_mode="off")
+        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, reply_to_mode="off"))
         await editor.append_text("First chunk")
         reply_msg.answer.assert_not_called()
         bot.send_message.assert_called_once()
@@ -313,7 +313,7 @@ class TestStreamEditorReplyToMode:
         reply_msg.answer = AsyncMock(return_value=sent_msg)
         bot.send_message = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, reply_to=reply_msg, reply_to_mode="first")
+        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, reply_to_mode="first"))
         await editor.append_text("First")
         reply_msg.answer.assert_called_once()
         await editor.append_text("Second")
@@ -328,7 +328,7 @@ class TestStreamEditorReplyToMode:
         reply_msg.answer = AsyncMock(return_value=sent_msg)
         bot.send_message = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, reply_to=reply_msg, reply_to_mode="all")
+        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, reply_to_mode="all"))
         await editor.append_text("First")
         await editor.append_text("Second")
         await editor.append_text("Third")

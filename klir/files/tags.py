@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import mimetypes
-
 import re
 from pathlib import Path
 from urllib.parse import unquote, urlparse

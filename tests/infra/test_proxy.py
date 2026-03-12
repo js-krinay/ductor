@@ -5,8 +5,6 @@ from __future__ import annotations
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 class TestProxyResolution:
     def test_config_url_takes_priority(self) -> None:

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 
 class TestPollSender:
     async def test_send_poll(self) -> None:
@@ -20,7 +18,7 @@ class TestPollSender:
             options=["Red", "Blue", "Green"],
         )
 
-        result = await send_poll(bot, chat_id=42, directive=directive)
+        await send_poll(bot, chat_id=42, directive=directive)
         bot.send_poll.assert_called_once()
         call_kwargs = bot.send_poll.call_args.kwargs
         assert call_kwargs["chat_id"] == 42

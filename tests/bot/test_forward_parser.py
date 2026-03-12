@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestForwardParser:
     def test_parse_forward_directive(self) -> None:
-        from klir.bot.forward_parser import ForwardDirective, parse_forwards
+        from klir.bot.forward_parser import parse_forwards
 
         text = "Check this out [forward:123:456]"
         directives = parse_forwards(text)

@@ -23,14 +23,13 @@ from klir.bot.formatting import (
     markdown_to_telegram_html,
     split_html_message,
 )
-from klir.config import ReplyToMode
 
 if TYPE_CHECKING:
     from aiogram import Bot
     from aiogram.types import Message
 
+    from klir.bot.streaming import StreamContext
     from klir.cli.tool_activity import ToolActivity
-    from klir.config import StreamingConfig
 
 logger = logging.getLogger(__name__)
 
@@ -105,23 +104,22 @@ class EditStreamEditor:
     edit errors the editor degrades to append mode.
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         bot: Bot,
         chat_id: int,
-        *,
-        reply_to: Message | None = None,
-        cfg: StreamingConfig | None = None,
-        thread_id: int | None = None,
-        reply_to_mode: ReplyToMode = "first",
+        ctx: StreamContext | None = None,
     ) -> None:
+        from klir.bot.streaming import StreamContext
+
+        c = ctx or StreamContext()
         self._bot = bot
         self._chat_id = chat_id
-        self._reply_to = reply_to
-        self._interval = cfg.edit_interval_seconds if cfg else 2.0
-        self._max_failures = cfg.max_edit_failures if cfg else 3
-        self._thread_id = thread_id
-        self._reply_to_mode = reply_to_mode
+        self._reply_to = c.reply_to
+        self._interval = c.cfg.edit_interval_seconds if c.cfg else 2.0
+        self._max_failures = c.cfg.max_edit_failures if c.cfg else 3
+        self._thread_id = c.thread_id
+        self._reply_to_mode = c.reply_to_mode
         self._s = _EditorState()
 
     @property

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 def _make_config(**kwargs: object):
     from klir.config import AgentConfig
