@@ -42,7 +42,11 @@ def extract_forward_context(message: Message) -> str | None:
         name = origin.sender_user_name
         return f"[Forwarded from {name} (hidden user) at {date_str}]"
     # MessageOriginChat is the only remaining variant.
-    title = origin.sender_chat.title if isinstance(origin, MessageOriginChat) and origin.sender_chat else "unknown"
+    title = (
+        origin.sender_chat.title
+        if isinstance(origin, MessageOriginChat) and origin.sender_chat
+        else "unknown"
+    )
     return f'[Forwarded from chat "{title}" at {date_str}]'
 
 

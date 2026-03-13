@@ -301,7 +301,9 @@ class TestStreamEditorReplyToMode:
         reply_msg.answer = AsyncMock(return_value=sent_msg)
         bot.send_message = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, reply_to_mode="off"))
+        editor = StreamEditor(
+            bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, reply_to_mode="off")
+        )
         await editor.append_text("First chunk")
         reply_msg.answer.assert_not_called()
         bot.send_message.assert_called_once()
@@ -313,7 +315,9 @@ class TestStreamEditorReplyToMode:
         reply_msg.answer = AsyncMock(return_value=sent_msg)
         bot.send_message = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, reply_to_mode="first"))
+        editor = StreamEditor(
+            bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, reply_to_mode="first")
+        )
         await editor.append_text("First")
         reply_msg.answer.assert_called_once()
         await editor.append_text("Second")
@@ -328,7 +332,9 @@ class TestStreamEditorReplyToMode:
         reply_msg.answer = AsyncMock(return_value=sent_msg)
         bot.send_message = AsyncMock(return_value=sent_msg)
 
-        editor = StreamEditor(bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, reply_to_mode="all"))
+        editor = StreamEditor(
+            bot, chat_id=1, ctx=StreamContext(reply_to=reply_msg, reply_to_mode="all")
+        )
         await editor.append_text("First")
         await editor.append_text("Second")
         await editor.append_text("Third")

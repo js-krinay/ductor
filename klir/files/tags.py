@@ -84,7 +84,6 @@ def is_image_path(path_str: str) -> bool:
     return mime.startswith("image/") and Path(path_str).suffix.lower() not in _SVG_SUFFIXES
 
 
-
 def _normalize_windows_tag_path(value: str) -> str:
     """Normalize Windows drive-letter path variants from file tags."""
     path = value.replace("\\", "/")

@@ -10,7 +10,9 @@ from rich.table import Table
 
 _console = Console()
 
-_SERVICE_SUBCOMMANDS = frozenset({"install", "status", "stop", "start", "restart", "logs", "uninstall"})
+_SERVICE_SUBCOMMANDS = frozenset(
+    {"install", "status", "stop", "start", "restart", "logs", "uninstall"}
+)
 
 
 def _parse_service_subcommand(args: list[str]) -> str | None:

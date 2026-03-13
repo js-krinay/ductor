@@ -178,9 +178,13 @@ def create_stream_editor(
         return StreamEditor(bot, chat_id, ctx)
     from klir.bot.edit_streaming import EditStreamEditor
 
-    return EditStreamEditor(bot, chat_id, StreamContext(
-        reply_to=ctx.reply_to,
-        cfg=cfg,
-        thread_id=ctx.thread_id,
-        reply_to_mode=ctx.reply_to_mode,
-    ))
+    return EditStreamEditor(
+        bot,
+        chat_id,
+        StreamContext(
+            reply_to=ctx.reply_to,
+            cfg=cfg,
+            thread_id=ctx.thread_id,
+            reply_to_mode=ctx.reply_to_mode,
+        ),
+    )

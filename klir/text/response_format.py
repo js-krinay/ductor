@@ -123,6 +123,7 @@ def timeout_result_text(elapsed: float, configured: float) -> str:
         "Try a shorter prompt, or ask in smaller steps.",
     )
 
+
 # -- Startup lifecycle messages --
 
 

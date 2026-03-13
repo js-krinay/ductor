@@ -33,9 +33,7 @@ class TestCreateStreamEditor:
 
         bot = MagicMock()
         cfg = StreamingConfig(append_mode=True)
-        editor = create_stream_editor(
-            bot, chat_id=1, ctx=StreamContext(cfg=cfg, thread_id=42)
-        )
+        editor = create_stream_editor(bot, chat_id=1, ctx=StreamContext(cfg=cfg, thread_id=42))
         assert isinstance(editor, StreamEditor)
         assert editor._thread_id == 42
 
@@ -45,8 +43,6 @@ class TestCreateStreamEditor:
 
         bot = MagicMock()
         cfg = StreamingConfig(append_mode=False)
-        editor = create_stream_editor(
-            bot, chat_id=1, ctx=StreamContext(cfg=cfg, thread_id=42)
-        )
+        editor = create_stream_editor(bot, chat_id=1, ctx=StreamContext(cfg=cfg, thread_id=42))
         assert isinstance(editor, EditStreamEditor)
         assert editor._thread_id == 42

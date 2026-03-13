@@ -240,29 +240,35 @@ class TelegramBot:
         allowed_channels = self._allowed_channels
         on_rejected = self._on_group_rejected
 
-        auth = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids=allowed,
-            allowed_group_ids=allowed_groups,
-            on_rejected=on_rejected,
-            pairing_svc=self._pairing_svc,
-            on_unknown_dm=self._on_unknown_dm if self._pairing_svc else None,
-            on_paired=self._on_paired if self._pairing_svc else None,
-        ))
-        self._router.message.outer_middleware(auth)
-        self._router.message.outer_middleware(self._sequential)
-        self._router.callback_query.outer_middleware(
-            AuthMiddleware(AuthMiddlewareConfig(
+        auth = AuthMiddleware(
+            AuthMiddlewareConfig(
                 allowed_user_ids=allowed,
                 allowed_group_ids=allowed_groups,
                 on_rejected=on_rejected,
-            ))
+                pairing_svc=self._pairing_svc,
+                on_unknown_dm=self._on_unknown_dm if self._pairing_svc else None,
+                on_paired=self._on_paired if self._pairing_svc else None,
+            )
+        )
+        self._router.message.outer_middleware(auth)
+        self._router.message.outer_middleware(self._sequential)
+        self._router.callback_query.outer_middleware(
+            AuthMiddleware(
+                AuthMiddlewareConfig(
+                    allowed_user_ids=allowed,
+                    allowed_group_ids=allowed_groups,
+                    on_rejected=on_rejected,
+                )
+            )
         )
         self._router.channel_post.outer_middleware(
-            AuthMiddleware(AuthMiddlewareConfig(
-                allowed_user_ids=allowed,
-                allowed_group_ids=allowed_groups,
-                allowed_channel_ids=allowed_channels,
-            ))
+            AuthMiddleware(
+                AuthMiddlewareConfig(
+                    allowed_user_ids=allowed,
+                    allowed_group_ids=allowed_groups,
+                    allowed_channel_ids=allowed_channels,
+                )
+            )
         )
         self._router.channel_post.outer_middleware(self._sequential)
 
@@ -1551,7 +1557,9 @@ class TelegramBot:
         private_cmds = _BOT_COMMANDS
         group_cmds = [BotCommand(command=c, description=d) for c, d in GROUP_COMMANDS]
 
-        scopes: list[tuple[BotCommandScopeAllPrivateChats | BotCommandScopeAllGroupChats, list[BotCommand]]] = [
+        scopes: list[
+            tuple[BotCommandScopeAllPrivateChats | BotCommandScopeAllGroupChats, list[BotCommand]]
+        ] = [
             (BotCommandScopeAllPrivateChats(), private_cmds),
             (BotCommandScopeAllGroupChats(), group_cmds),
         ]

@@ -166,11 +166,13 @@ class TestParseOutput:
         assert resp.result == ""
 
     def test_json_output_with_result(self) -> None:
-        data = json.dumps({
-            "result": "The answer",
-            "session_id": "s-42",
-            "usage": {"input_tokens": 10, "output_tokens": 5},
-        })
+        data = json.dumps(
+            {
+                "result": "The answer",
+                "session_id": "s-42",
+                "usage": {"input_tokens": 10, "output_tokens": 5},
+            }
+        )
         resp = OpenCodeCLI._parse_output(data.encode(), b"", 0)
         assert resp.is_error is False
         assert resp.result == "The answer"

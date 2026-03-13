@@ -102,5 +102,9 @@ class TestStreamingDispatchReplyToMode:
             mock_cse.return_value = mock_editor
 
             await run_streaming_message(d)
-            ctx = mock_cse.call_args.args[2] if len(mock_cse.call_args.args) > 2 else mock_cse.call_args.kwargs["ctx"]
+            ctx = (
+                mock_cse.call_args.args[2]
+                if len(mock_cse.call_args.args) > 2
+                else mock_cse.call_args.kwargs["ctx"]
+            )
             assert ctx.reply_to_mode == "all"

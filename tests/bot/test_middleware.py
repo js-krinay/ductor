@@ -199,11 +199,13 @@ class TestAuthMiddleware:
         from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         calls: list[tuple[int, str, str]] = []
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids={100},
-            allowed_group_ids={-1002},
-            on_rejected=lambda cid, ct, t: calls.append((cid, ct, t)),
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids={100},
+                allowed_group_ids={-1002},
+                on_rejected=lambda cid, ct, t: calls.append((cid, ct, t)),
+            )
+        )
         handler = AsyncMock()
         msg = _make_message(user_id=100, chat_type="group", chat_id=-1001)
         msg.chat.title = "Bad Group"
@@ -217,11 +219,13 @@ class TestAuthMiddleware:
         from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         calls: list[tuple[int, str, str]] = []
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids={100},
-            allowed_group_ids={-1001},
-            on_rejected=lambda cid, ct, t: calls.append((cid, ct, t)),
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids={100},
+                allowed_group_ids={-1001},
+                on_rejected=lambda cid, ct, t: calls.append((cid, ct, t)),
+            )
+        )
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100, chat_type="group", chat_id=-1001)
 
@@ -234,10 +238,12 @@ class TestAuthMiddleware:
         from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         calls: list[tuple[int, str, str]] = []
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids={100},
-            on_rejected=lambda cid, ct, t: calls.append((cid, ct, t)),
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids={100},
+                on_rejected=lambda cid, ct, t: calls.append((cid, ct, t)),
+            )
+        )
         handler = AsyncMock()
         msg = _make_message(user_id=999, chat_type="private")
 
@@ -252,10 +258,12 @@ class TestAuthMiddlewarePairing:
         from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         pairing_callback = AsyncMock()
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids={100},
-            on_unknown_dm=pairing_callback,
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids={100},
+                on_unknown_dm=pairing_callback,
+            )
+        )
         handler = AsyncMock()
         msg = _make_message(user_id=999, chat_type="private")
 
@@ -268,10 +276,12 @@ class TestAuthMiddlewarePairing:
         from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
         pairing_callback = AsyncMock()
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids={100},
-            on_unknown_dm=pairing_callback,
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids={100},
+                on_unknown_dm=pairing_callback,
+            )
+        )
         handler = AsyncMock(return_value="ok")
         msg = _make_message(user_id=100, chat_type="private")
 
@@ -287,11 +297,13 @@ class TestAuthMiddlewarePairing:
         pairing_svc.validate.return_value = True
 
         on_paired = AsyncMock()
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids={100},
-            pairing_svc=pairing_svc,
-            on_paired=on_paired,
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids={100},
+                pairing_svc=pairing_svc,
+                on_paired=on_paired,
+            )
+        )
         handler = AsyncMock()
         msg = _make_message(user_id=999, text="ABC123", chat_type="private")
 
@@ -307,11 +319,13 @@ class TestAuthMiddlewarePairing:
         pairing_svc.validate.return_value = False
 
         on_unknown_dm = AsyncMock()
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids={100},
-            pairing_svc=pairing_svc,
-            on_unknown_dm=on_unknown_dm,
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids={100},
+                pairing_svc=pairing_svc,
+                on_unknown_dm=on_unknown_dm,
+            )
+        )
         handler = AsyncMock()
         msg = _make_message(user_id=999, text="WRONG1", chat_type="private")
 
@@ -328,11 +342,13 @@ class TestAuthMiddlewarePairing:
         pairing_svc.validate.return_value = True
 
         allowed = {100}
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids=allowed,
-            pairing_svc=pairing_svc,
-            on_paired=AsyncMock(),
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids=allowed,
+                pairing_svc=pairing_svc,
+                on_paired=AsyncMock(),
+            )
+        )
         handler = AsyncMock()
         msg = _make_message(user_id=999, text="ABC123", chat_type="private")
 
@@ -939,11 +955,13 @@ class TestChannelAuth:
         """Channel posts have no from_user; auth should check channel ID only."""
         from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids=set(),
-            allowed_group_ids=set(),
-            allowed_channel_ids={-1001234},
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids=set(),
+                allowed_group_ids=set(),
+                allowed_channel_ids={-1001234},
+            )
+        )
         handler = AsyncMock(return_value="ok")
         msg = _make_message(chat_id=-1001234, user_id=0, chat_type="channel")
         msg.from_user = None  # Channel posts have no sender
@@ -955,11 +973,13 @@ class TestChannelAuth:
     async def test_unknown_channel_rejected(self) -> None:
         from klir.bot.middleware import AuthMiddleware, AuthMiddlewareConfig
 
-        mw = AuthMiddleware(AuthMiddlewareConfig(
-            allowed_user_ids=set(),
-            allowed_group_ids=set(),
-            allowed_channel_ids={-1001234},
-        ))
+        mw = AuthMiddleware(
+            AuthMiddlewareConfig(
+                allowed_user_ids=set(),
+                allowed_group_ids=set(),
+                allowed_channel_ids={-1001234},
+            )
+        )
         handler = AsyncMock()
         msg = _make_message(chat_id=-9999, user_id=0, chat_type="channel")
         msg.from_user = None
