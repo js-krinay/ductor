@@ -115,11 +115,12 @@ _HELP_TEXT = fmt(
     "**Command Reference**",
     SEP,
     f"Daily\n{_help_line('new')}\n{_help_line('stop')}\n{_help_line('interrupt')}\n{_help_line('stop_all')}\n"
-    f"{_help_line('model')}\n{_help_line('status')}\n{_help_line('memory')}",
+    f"{_help_line('model')}\n{_help_line('think')}\n{_help_line('compact')}\n"
+    f"{_help_line('status')}\n{_help_line('memory')}",
     f"Automation\n{_help_line('session')}\n{_help_line('tasks')}\n{_help_line('cron')}",
     f"Multi-Agent\n{_help_line('agent_commands')}",
     f"Browse & Info\n{_help_line('where')}\n{_help_line('leave')}\n"
-    f"{_help_line('showfiles')}\n{_help_line('info')}\n{_help_line('help')}",
+    f"{_help_line('showfiles')}\n{_help_line('hooks')}\n{_help_line('info')}\n{_help_line('help')}",
     f"Maintenance\n{_help_line('diagnose')}\n{_help_line('upgrade')}\n{_help_line('restart')}\n"
     f"{_help_line('pair')}",
     SEP,
@@ -376,7 +377,17 @@ class TelegramBot:
         r.message(Command("showfiles", ignore_case=True))(self._on_showfiles)
         r.message(Command("pair", ignore_case=True))(self._on_pair)
         r.message(Command("agent_commands", ignore_case=True))(self._on_agent_commands)
-        base_cmds = ["status", "memory", "model", "cron", "diagnose", "upgrade"]
+        base_cmds = [
+            "status",
+            "memory",
+            "model",
+            "cron",
+            "diagnose",
+            "upgrade",
+            "think",
+            "compact",
+            "hooks",
+        ]
         if self._agent_name == "main":
             base_cmds += ["agents", "agent_start", "agent_stop", "agent_restart"]
         for cmd in base_cmds:
@@ -695,11 +706,22 @@ class TelegramBot:
 
     @_for_this_bot
     async def _on_help(self, message: Message) -> None:
-        """Handle /help: show command reference."""
+        """Handle /help: show command reference + installed skills."""
+        from klir.commands import discover_skill_commands
+
+        text = _HELP_TEXT
+        if self._orchestrator is not None:
+            skill_cmds = await asyncio.to_thread(
+                discover_skill_commands, self._orchestrator.paths.skills_dir
+            )
+            if skill_cmds:
+                lines = [f"/{cmd} -- {desc}" for cmd, desc in skill_cmds]
+                text += "\n\n" + fmt("**Installed Skills**", SEP, "\n".join(lines))
+
         await send_rich(
             self._bot,
             message.chat.id,
-            _HELP_TEXT,
+            text,
             SendRichOpts(reply_to_message_id=message.message_id, thread_id=get_thread_id(message)),
         )
 
@@ -1552,10 +1574,19 @@ class TelegramBot:
     async def _sync_commands(self) -> None:
         from aiogram.types import BotCommandScopeAllGroupChats, BotCommandScopeAllPrivateChats
 
-        from klir.commands import GROUP_COMMANDS
+        from klir.commands import GROUP_COMMANDS, discover_skill_commands
 
-        private_cmds = _BOT_COMMANDS
-        group_cmds = [BotCommand(command=c, description=d) for c, d in GROUP_COMMANDS]
+        skill_bot_cmds: list[BotCommand] = []
+        if self._orchestrator is not None:
+            skill_cmds = await asyncio.to_thread(
+                discover_skill_commands, self._orchestrator.paths.skills_dir
+            )
+            skill_bot_cmds = [BotCommand(command=c, description=d) for c, d in skill_cmds]
+
+        private_cmds = _BOT_COMMANDS + skill_bot_cmds
+        group_cmds = [
+            BotCommand(command=c, description=d) for c, d in GROUP_COMMANDS
+        ] + skill_bot_cmds
 
         scopes: list[
             tuple[BotCommandScopeAllPrivateChats | BotCommandScopeAllGroupChats, list[BotCommand]]
