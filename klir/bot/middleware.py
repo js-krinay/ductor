@@ -58,6 +58,7 @@ QUICK_COMMANDS: frozenset[str] = frozenset(
         "/where",
         "/leave",
         "/think",
+        "/cwd",
     }
 )
 

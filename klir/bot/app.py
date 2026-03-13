@@ -116,7 +116,7 @@ _HELP_TEXT = fmt(
     SEP,
     f"Daily\n{_help_line('new')}\n{_help_line('stop')}\n{_help_line('interrupt')}\n{_help_line('stop_all')}\n"
     f"{_help_line('model')}\n{_help_line('think')}\n{_help_line('compact')}\n"
-    f"{_help_line('status')}\n{_help_line('memory')}",
+    f"{_help_line('cwd')}\n{_help_line('status')}\n{_help_line('memory')}",
     f"Automation\n{_help_line('session')}\n{_help_line('tasks')}\n{_help_line('cron')}",
     f"Multi-Agent\n{_help_line('agent_commands')}",
     f"Browse & Info\n{_help_line('where')}\n{_help_line('leave')}\n"
@@ -387,6 +387,7 @@ class TelegramBot:
             "update_plugins",
             "think",
             "compact",
+            "cwd",
             "hooks",
         ]
         if self._agent_name == "main":

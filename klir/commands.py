@@ -25,6 +25,7 @@ BOT_COMMANDS: list[tuple[str, str]] = [
     ("model", "Show/switch model"),
     ("think", "Set thinking level"),
     ("compact", "Compress session"),
+    ("cwd", "Show/change work dir"),
     ("status", "Session info"),
     ("memory", "Show main memory"),
     # Automation & multi-agent

@@ -435,6 +435,31 @@ async def cmd_hooks(orch: Orchestrator, _key: SessionKey, _text: str) -> Orchest
     return OrchestratorResult(text="\n".join(lines))
 
 
+async def cmd_cwd(orch: Orchestrator, _key: SessionKey, text: str) -> OrchestratorResult:
+    """Handle /cwd [path]: show or change the AI subprocess working directory."""
+    from dataclasses import replace as dc_replace
+
+    parts = text.split(None, 1)
+    if len(parts) < 2:
+        current = orch.effective_working_dir
+        return OrchestratorResult(text=f"Working directory: `{current}`")
+
+    raw_path = parts[1].strip()
+
+    def _resolve() -> tuple[Path, bool]:
+        p = Path(raw_path).expanduser().resolve()
+        return p, p.is_dir()
+
+    target, is_dir = await asyncio.to_thread(_resolve)
+    if not is_dir:
+        return OrchestratorResult(text=f"Directory not found: `{target}`")
+
+    orch._cwd_override = str(target)
+    # Push the change to the CLI service immediately.
+    orch._cli_service.update_config(dc_replace(orch._cli_service._config, working_dir=str(target)))
+    return OrchestratorResult(text=f"Working directory set to `{target}`")
+
+
 async def _run_claude_plugin_update(claude_bin: str, plugin_key: str) -> tuple[str, int]:
     """Run ``claude plugin update <key>`` and return (output, returncode).
 

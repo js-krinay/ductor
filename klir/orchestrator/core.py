@@ -31,6 +31,7 @@ from klir.memory.store import MemoryStore
 from klir.orchestrator.commands import (
     cmd_compact,
     cmd_cron,
+    cmd_cwd,
     cmd_diagnose,
     cmd_hooks,
     cmd_memory,
@@ -135,9 +136,10 @@ class Orchestrator:
         self._sessions = SessionManager(paths.sessions_path, config)
         self._named_sessions = NamedSessionRegistry(paths.named_sessions_path)
         self._process_registry = ProcessRegistry()
+        self._cwd_override: str | None = None  # Set by /cwd command
         self._cli_service = CLIService(
             config=CLIServiceConfig(
-                working_dir=str(paths.workspace),
+                working_dir=self.effective_working_dir,
                 default_model=config.model,
                 provider=config.provider,
                 max_turns=config.max_turns,
@@ -188,6 +190,11 @@ class Orchestrator:
     def paths(self) -> KlirPaths:
         """Public access to resolved workspace paths."""
         return self._paths
+
+    @property
+    def effective_working_dir(self) -> str:
+        """Return the cwd for AI subprocesses (override or default workspace)."""
+        return self._cwd_override or str(self._paths.workspace)
 
     @property
     def task_hub(self) -> TaskHub | None:
@@ -406,6 +413,8 @@ class Orchestrator:
         reg.register_async("/sessions", cmd_sessions)
         reg.register_async("/tasks", cmd_tasks)
         reg.register_async("/hooks", cmd_hooks)
+        reg.register_async("/cwd", cmd_cwd)
+        reg.register_async("/cwd ", cmd_cwd)
         reg.register_async("/update_plugins", cmd_update_plugins)
 
     def _rebuild_user_hooks(self) -> None:
@@ -636,7 +645,7 @@ class Orchestrator:
         ):
             self._cli_service.update_config(
                 CLIServiceConfig(
-                    working_dir=str(self._paths.workspace),
+                    working_dir=self.effective_working_dir,
                     default_model=config.model,
                     provider=config.provider,
                     max_turns=config.max_turns,
