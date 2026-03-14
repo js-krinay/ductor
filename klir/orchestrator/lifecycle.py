@@ -54,7 +54,6 @@ async def create_orchestrator(
 
     await orch.db.open()
 
-
     from klir.cron.run_log import migrate_jsonl_to_sqlite
 
     await migrate_jsonl_to_sqlite(orch.db, paths.cron_state_dir)
