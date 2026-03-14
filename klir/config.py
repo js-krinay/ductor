@@ -402,6 +402,7 @@ class AgentConfig(BaseModel):
     timeouts: TimeoutConfig = Field(default_factory=TimeoutConfig)
     tasks: TasksConfig = Field(default_factory=TasksConfig)
     user_timezone: str = ""
+    language: str = "en"
     update_check: bool = True
     interagent_port: int = 8799
     peer_isolation: bool = False

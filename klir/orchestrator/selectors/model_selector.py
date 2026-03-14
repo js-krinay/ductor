@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from klir.cli.auth import AuthStatus, check_all_auth
 from klir.config import CLAUDE_MODELS_ORDERED, get_gemini_models, update_config_file_async
+from klir.i18n import t
 from klir.multiagent.registry import update_agent_fields
 from klir.orchestrator.selectors.models import Button, ButtonGrid, SelectorResponse
 
@@ -55,28 +56,32 @@ def _resume_state_for_provider(session: SessionData | None, provider: str) -> tu
 
 def _format_resume_hint(session_id: str, message_count: int, model_id: str) -> str:
     """Build post-switch resume hint text."""
-    message_label = "message" if message_count == 1 else "messages"
+    label = (
+        t("model.selector.msg_singular") if message_count == 1 else t("model.selector.msg_plural")
+    )
     sid_display = session_id or "pending"
-    return (
-        "\n"
-        f"Resuming session `{sid_display}`.\n"
-        f"You have already sent {message_count} {message_label} in this provider session.\n"
-        f"Current model: `{model_id}`.\n"
-        "Use /new to start a fresh session."
+    return t(
+        "model.selector.resume_hint",
+        session_id=sid_display,
+        count=message_count,
+        label=label,
+        model=model_id,
     )
 
 
 def _build_switch_summary(ctx: _SwitchSummaryContext) -> str:
     """Build user-facing model switch summary text."""
-    parts: list[str] = ["**Model switched.**"]
+    parts: list[str] = [t("model.selector.switched")]
     if ctx.old_model == ctx.new_model:
-        parts.append(f"Model: {ctx.new_model}")
+        parts.append(t("model.selector.model_same", model=ctx.new_model))
     else:
-        parts.append(f"Model: {ctx.old_model} -> {ctx.new_model}")
+        parts.append(t("model.selector.model_changed", old=ctx.old_model, new=ctx.new_model))
     if ctx.provider_changed:
-        parts.append(f"Provider: {ctx.old_provider} -> {ctx.new_provider}")
+        parts.append(
+            t("model.selector.provider_changed", old=ctx.old_provider, new=ctx.new_provider)
+        )
     if ctx.reasoning_effort:
-        parts.append(f"Reasoning: {ctx.reasoning_effort}")
+        parts.append(t("model.selector.reasoning", effort=ctx.reasoning_effort))
     if ctx.old_model != ctx.new_model and ctx.resume_message_count > 0:
         parts.append(
             _format_resume_hint(
@@ -86,7 +91,7 @@ def _build_switch_summary(ctx: _SwitchSummaryContext) -> str:
             )
         )
     if ctx.effort_only:
-        parts.append("\nReasoning effort updated.")
+        parts.append(t("model.selector.effort_updated"))
     return "\n".join(parts)
 
 
@@ -150,11 +155,7 @@ async def model_selector_start(
 
     if not authed:
         return SelectorResponse(
-            text=(
-                f"{header}\n\n"
-                "No authenticated providers found.\n"
-                "Run `claude auth`, `codex auth`, or authenticate in `gemini` to get started."
-            ),
+            text=f"{header}\n\n{t('model.selector.no_auth')}",
         )
 
     if len(authed) == 1:
@@ -175,7 +176,9 @@ async def model_selector_start(
         buttons.append(Button(text="OPENCODE", callback_data="ms:p:opencode"))
 
     keyboard = ButtonGrid(rows=[buttons])
-    return SelectorResponse(text=f"{header}\n\nPick a provider:", buttons=keyboard)
+    return SelectorResponse(
+        text=f"{header}\n\n{t('model.selector.pick_provider')}", buttons=keyboard
+    )
 
 
 async def handle_model_callback(
@@ -212,7 +215,7 @@ async def handle_model_callback(
         return await _build_model_step(payload, await _status_line(orch, key), codex_cache)
 
     logger.warning("Unknown model selector callback: %s", data)
-    return SelectorResponse(text="Unknown action.")
+    return SelectorResponse(text=t("model.selector.unknown"))
 
 
 async def switch_model(
@@ -234,7 +237,7 @@ async def switch_model(
     effort_only = same_model and reasoning_effort is not None
 
     if same_model and reasoning_effort is None:
-        return f"Already running {model_id}. No changes made."
+        return t("model.selector.already_running", model=model_id)
 
     old_provider = orch.models.provider_for(old)
     new_provider = orch.models.provider_for(model_id)
@@ -316,14 +319,14 @@ async def _status_line(orch: Orchestrator, key: SessionKey) -> str:
     effort = orch._config.reasoning_effort
 
     if provider == "codex":
-        current = f"**Model Selector**\nCurrent: {model} ({effort})"
+        current = f"{t('model.selector.title')}\n{t('model.selector.current_with_effort', model=model, effort=effort)}"
     else:
-        current = f"**Model Selector**\nCurrent: {model}"
+        current = f"{t('model.selector.title')}\n{t('model.selector.current', model=model)}"
 
     if key.topic_id is None:
         configured = orch._config.model
         if model != configured:
-            current += f"\nConfigured default: {configured}"
+            current += f"\n{t('model.selector.configured_default', model=configured)}"
 
     return current
 
@@ -339,38 +342,41 @@ async def _build_model_step(
         keyboard = ButtonGrid(
             rows=[
                 buttons,
-                [Button(text="<< Back", callback_data="ms:b:root")],
+                [Button(text=t("model.selector.btn_back"), callback_data="ms:b:root")],
             ]
         )
-        return SelectorResponse(text=f"{header}\n\nSelect Claude model:", buttons=keyboard)
+        return SelectorResponse(
+            text=f"{header}\n\n{t('model.selector.select_claude')}", buttons=keyboard
+        )
 
     if provider == "gemini":
         gemini_models = _gemini_models_for_selector()
         if not gemini_models:
             keyboard = ButtonGrid(
                 rows=[
-                    [Button(text="<< Back", callback_data="ms:b:root")],
+                    [Button(text=t("model.selector.btn_back"), callback_data="ms:b:root")],
                 ]
             )
             return SelectorResponse(
-                text=f"{header}\n\nNo Gemini models discovered from local Gemini CLI files.",
+                text=f"{header}\n\n{t('model.selector.no_gemini_models')}",
                 buttons=keyboard,
             )
 
         gemini_rows = _chunk_buttons(gemini_models)
-        gemini_rows.append([Button(text="<< Back", callback_data="ms:b:root")])
+        gemini_rows.append([Button(text=t("model.selector.btn_back"), callback_data="ms:b:root")])
         keyboard = ButtonGrid(rows=gemini_rows)
-        return SelectorResponse(text=f"{header}\n\nSelect Gemini model:", buttons=keyboard)
+        return SelectorResponse(
+            text=f"{header}\n\n{t('model.selector.select_gemini')}", buttons=keyboard
+        )
 
     if provider == "opencode":
         keyboard = ButtonGrid(
             rows=[
-                [Button(text="<< Back", callback_data="ms:b:root")],
+                [Button(text=t("model.selector.btn_back"), callback_data="ms:b:root")],
             ]
         )
         return SelectorResponse(
-            text=f"{header}\n\nOpenCode models use provider/model format "
-            f"(e.g. `anthropic/claude-sonnet-4`). Set via `@provider/model` in chat.",
+            text=f"{header}\n\n{t('model.selector.opencode_hint')}",
             buttons=keyboard,
         )
 
@@ -379,18 +385,22 @@ async def _build_model_step(
     if not codex_models:
         keyboard = ButtonGrid(
             rows=[
-                [Button(text="<< Back", callback_data="ms:b:root")],
+                [Button(text=t("model.selector.btn_back"), callback_data="ms:b:root")],
             ]
         )
-        return SelectorResponse(text=f"{header}\n\nNo Codex models available.", buttons=keyboard)
+        return SelectorResponse(
+            text=f"{header}\n\n{t('model.selector.no_codex_models')}", buttons=keyboard
+        )
 
     rows: list[list[Button]] = [
         [Button(text=m.display_name, callback_data=f"ms:m:{m.id}")] for m in codex_models
     ]
-    rows.append([Button(text="<< Back", callback_data="ms:b:root")])
+    rows.append([Button(text=t("model.selector.btn_back"), callback_data="ms:b:root")])
 
     keyboard = ButtonGrid(rows=rows)
-    return SelectorResponse(text=f"{header}\n\nSelect Codex model:", buttons=keyboard)
+    return SelectorResponse(
+        text=f"{header}\n\n{t('model.selector.select_codex')}", buttons=keyboard
+    )
 
 
 async def _handle_model_selected(
@@ -420,12 +430,15 @@ async def _handle_model_selected(
     keyboard = ButtonGrid(
         rows=[
             buttons,
-            [Button(text="<< Back", callback_data="ms:b:codex")],
+            [Button(text=t("model.selector.btn_back"), callback_data="ms:b:codex")],
         ]
     )
 
     header = await _status_line(orch, key)
-    return SelectorResponse(text=f"{header}\n\nThinking level for {model_id}:", buttons=keyboard)
+    return SelectorResponse(
+        text=f"{header}\n\n{t('model.selector.thinking_level_for', model=model_id)}",
+        buttons=keyboard,
+    )
 
 
 async def _handle_reasoning_selected(

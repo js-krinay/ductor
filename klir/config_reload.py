@@ -62,6 +62,7 @@ _HOT_RELOADABLE: frozenset[str] = frozenset(
         "pairing",
         "approval",
         "image",
+        "language",
     }
 )
 

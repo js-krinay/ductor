@@ -9,6 +9,7 @@ import secrets
 from typing import TYPE_CHECKING
 
 from klir.files.allowed_roots import resolve_allowed_roots
+from klir.i18n import load_translations
 from klir.workspace.init import inject_runtime_environment
 from klir.workspace.paths import KlirPaths, resolve_paths
 from klir.workspace.skill_sync import cleanup_klir_links
@@ -52,6 +53,7 @@ async def create_orchestrator(
     )
 
     await orch.db.open()
+    load_translations(config.language)
 
     from klir.cli.auth import AuthStatus, check_all_auth
 

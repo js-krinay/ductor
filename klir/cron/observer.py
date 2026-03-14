@@ -19,6 +19,7 @@ from klir.cron.alerts import format_failure_alert, should_alert
 from klir.cron.backoff import compute_backoff_seconds, should_auto_disable
 from klir.cron.manager import CronManager
 from klir.cron.run_log import CronRunLogEntry, append_run_log, resolve_run_log_path, save_run_output
+from klir.i18n import t
 from klir.infra.base_task_observer import BaseTaskObserver
 from klir.infra.file_watcher import FileWatcher
 from klir.infra.task_runner import execute_in_task_folder
@@ -483,10 +484,11 @@ class CronObserver(BaseTaskObserver):
             if job_after and should_auto_disable(
                 job_after.consecutive_errors, max_retries=job_after.max_retries
             ):
-                disable_msg = (
-                    f"⛔ Cron job auto-disabled after {job_after.consecutive_errors} "
-                    f"consecutive errors\nJob: {job_title}\n"
-                    f"Last error: {job_after.last_error or result.status}"
+                disable_msg = t(
+                    "cron.autodisabled",
+                    count=job_after.consecutive_errors,
+                    title=job_title,
+                    error=job_after.last_error or result.status,
                 )
                 await self._deliver_result(
                     job_id,

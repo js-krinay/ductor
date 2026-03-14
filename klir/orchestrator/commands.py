@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from klir.cli.auth import check_all_auth
+from klir.i18n import t
 from klir.infra.version import check_pypi, get_current_version
 from klir.orchestrator.registry import OrchestratorResult
 from klir.orchestrator.selectors.cron_selector import cron_selector_start
@@ -45,22 +46,20 @@ async def cmd_think(orch: Orchestrator, key: SessionKey, text: str) -> Orchestra
     if len(parts) < 2:
         current = session.thinking_level if session else None
         label = current or "default"
-        return OrchestratorResult(
-            text=f"Thinking level: *{label}*\n\nValid: {', '.join(sorted(THINKING_LEVELS))}"
-        )
+        valid = ", ".join(sorted(THINKING_LEVELS))
+        return OrchestratorResult(text=t("cmd.think.current", label=label, valid=valid))
 
     level = parts[1].strip().lower()
     if level not in THINKING_LEVELS:
-        return OrchestratorResult(
-            text=f"Invalid level `{level}`. Valid: {', '.join(sorted(THINKING_LEVELS))}"
-        )
+        valid = ", ".join(sorted(THINKING_LEVELS))
+        return OrchestratorResult(text=t("cmd.think.invalid", level=level, valid=valid))
 
     if not session:
-        return OrchestratorResult(text="No active session. Send a message first.")
+        return OrchestratorResult(text=t("cmd.think.no_session"))
 
     session.thinking_level = None if level == "off" else level
     await orch._sessions.save_session(session)
-    return OrchestratorResult(text=f"Thinking level set to *{level}*")
+    return OrchestratorResult(text=t("cmd.think.set", level=level))
 
 
 async def cmd_reset(orch: Orchestrator, key: SessionKey, _text: str) -> OrchestratorResult:
@@ -75,7 +74,7 @@ async def cmd_compact(orch: Orchestrator, key: SessionKey, _text: str) -> Orches
     """Handle /compact: summarize and compress session context."""
     session = await orch._sessions.get_active(key)
     if not session or not session.session_id:
-        return OrchestratorResult(text="No active session to compact.")
+        return OrchestratorResult(text=t("cmd.compact.no_session"))
 
     from klir.cli.types import AgentRequest
 
@@ -90,7 +89,7 @@ async def cmd_compact(orch: Orchestrator, key: SessionKey, _text: str) -> Orches
     )
     response = await orch._cli_service.execute(request)
     if response.is_error:
-        return OrchestratorResult(text=f"Compact failed: {response.result}")
+        return OrchestratorResult(text=t("cmd.compact.failed", error=response.result))
 
     await orch._sessions.update_session(
         session, cost_usd=response.cost_usd, tokens=response.total_tokens
@@ -123,20 +122,20 @@ async def cmd_memory(orch: Orchestrator, _key: SessionKey, _text: str) -> Orches
     if not content.strip():
         return OrchestratorResult(
             text=fmt(
-                "**Main Memory**",
+                t("cmd.memory.title"),
                 SEP,
-                "Empty. The agent will build memory as you interact.",
+                t("cmd.memory.empty"),
                 SEP,
-                '*Tip: Ask your agent to "remember" something to get started.*',
+                t("cmd.memory.tip_empty"),
             ),
         )
     return OrchestratorResult(
         text=fmt(
-            "**Main Memory**",
+            t("cmd.memory.title"),
             SEP,
             content,
             SEP,
-            "*Tip: The agent reads and updates this automatically.*",
+            t("cmd.memory.tip"),
         ),
     )
 
@@ -154,7 +153,7 @@ async def cmd_tasks(orch: Orchestrator, key: SessionKey, _text: str) -> Orchestr
     hub = orch.task_hub
     if hub is None:
         return OrchestratorResult(
-            text=fmt("**Background Tasks**", SEP, "Task system is not enabled."),
+            text=t("cmd.tasks.disabled"),
         )
     resp = task_selector_start(hub, key.chat_id)
     return OrchestratorResult(text=resp.text, buttons=resp.buttons)
@@ -176,10 +175,9 @@ async def cmd_upgrade(_orch: Orchestrator, _key: SessionKey, _text: str) -> Orch
     if detect_install_mode() == "dev":
         return OrchestratorResult(
             text=fmt(
-                "**Running From Source**",
+                t("cmd.upgrade.dev"),
                 SEP,
-                "Self-upgrade is not available for development installs.\n"
-                "Update with `git pull` in your project directory.",
+                t("cmd.upgrade.dev_body"),
             ),
         )
 
@@ -187,7 +185,7 @@ async def cmd_upgrade(_orch: Orchestrator, _key: SessionKey, _text: str) -> Orch
 
     if info is None:
         return OrchestratorResult(
-            text="Could not reach PyPI to check for updates. Try again later.",
+            text=t("cmd.upgrade.pypi_error"),
         )
 
     if not info.update_available:
@@ -195,7 +193,7 @@ async def cmd_upgrade(_orch: Orchestrator, _key: SessionKey, _text: str) -> Orch
             rows=[
                 [
                     Button(
-                        text=f"Changelog v{info.current}",
+                        text=t("cmd.upgrade.btn_changelog", version=info.current),
                         callback_data=f"upg:cl:{info.current}",
                     )
                 ],
@@ -203,11 +201,9 @@ async def cmd_upgrade(_orch: Orchestrator, _key: SessionKey, _text: str) -> Orch
         )
         return OrchestratorResult(
             text=fmt(
-                "**Already Up to Date**",
+                t("cmd.upgrade.up_to_date"),
                 SEP,
-                f"Installed: `{info.current}`\n"
-                f"Latest:    `{info.latest}`\n\n"
-                "You're running the latest version.",
+                t("cmd.upgrade.up_to_date_body", current=info.current, latest=info.latest),
             ),
             buttons=keyboard,
         )
@@ -216,25 +212,25 @@ async def cmd_upgrade(_orch: Orchestrator, _key: SessionKey, _text: str) -> Orch
         rows=[
             [
                 Button(
-                    text=f"Changelog v{info.latest}",
+                    text=t("cmd.upgrade.btn_changelog", version=info.latest),
                     callback_data=f"upg:cl:{info.latest}",
                 )
             ],
             [
                 Button(
-                    text="Yes, upgrade now",
+                    text=t("cmd.upgrade.btn_yes"),
                     callback_data=f"upg:yes:{info.latest}",
                 ),
-                Button(text="Not now", callback_data="upg:no"),
+                Button(text=t("cmd.upgrade.btn_no"), callback_data="upg:no"),
             ],
         ]
     )
 
     return OrchestratorResult(
         text=fmt(
-            "**Update Available**",
+            t("cmd.upgrade.available"),
             SEP,
-            f"Installed: `{info.current}`\nNew:       `{info.latest}`\n\nUpgrade now?",
+            t("cmd.upgrade.available_body", current=info.current, latest=info.latest),
         ),
         buttons=keyboard,
     )
@@ -308,12 +304,14 @@ async def cmd_diagnose(orch: Orchestrator, _key: SessionKey, _text: str) -> Orch
 
     log_tail = await _read_log_tail(_resolve_log_path(orch))
     log_block = (
-        f"Recent logs (last 50 lines):\n```\n{log_tail}\n```" if log_tail else "No log file found."
+        t("cmd.diagnose.log_header", n=50) + f"\n```\n{log_tail}\n```"
+        if log_tail
+        else t("cmd.diagnose.no_log")
     )
 
     return OrchestratorResult(
         text=fmt(
-            "**System Diagnostics**", SEP, info_block, cache_block, agent_block, SEP, log_block
+            t("cmd.diagnose.title"), SEP, info_block, cache_block, agent_block, SEP, log_block
         ),
     )
 
@@ -333,7 +331,7 @@ def _build_agent_health_block(orch: Orchestrator) -> str:
         "crashed": "✖",
         "stopped": "○",
     }
-    agent_lines = ["Agents:"]
+    agent_lines = [t("status.agents")]
     for name in sorted(supervisor.health.keys()):
         if name == "main":
             continue
@@ -357,32 +355,32 @@ async def _build_status(orch: Orchestrator, key: SessionKey) -> str:
 
     def _model_line(model_name: str) -> str:
         if model_name == configured_model:
-            return f"Model: {model_name}"
-        return f"Model: {model_name} (configured: {configured_model})"
+            return t("status.model", model=model_name)
+        return t("status.model_configured", runtime=model_name, configured=configured_model)
 
     session = await orch._sessions.get_active(key)
     if session:
-        topic_line = f"Topic: {session.topic_name}\n" if session.topic_name else ""
+        topic_line = t("status.topic", name=session.topic_name) + "\n" if session.topic_name else ""
         session_block = (
             f"{topic_line}"
-            f"Session: `{session.session_id[:8]}...`\n"
-            f"Messages: {session.message_count}\n"
-            f"Tokens: {session.total_tokens:,}\n"
-            f"Cost: ${session.total_cost_usd:.4f}\n"
+            f"{t('status.session_id', id=session.session_id[:8] + '...')}\n"
+            f"{t('status.messages', count=session.message_count)}\n"
+            f"{t('status.tokens', count=f'{session.total_tokens:,}')}\n"
+            f"{t('status.cost', cost=f'{session.total_cost_usd:.4f}')}\n"
             f"{_model_line(session.model)}"
         )
     else:
-        session_block = f"No active session.\n{_model_line(runtime_model)}"
+        session_block = f"{t('status.no_session')}\n{_model_line(runtime_model)}"
 
     bg_tasks = orch.active_background_tasks(key.chat_id)
     bg_block = ""
     if bg_tasks:
         import time
 
-        bg_lines = [f"Background tasks: {len(bg_tasks)} running"]
-        for t in bg_tasks:
-            age = time.monotonic() - t.submitted_at
-            bg_lines.append(f"  `{t.task_id}` {t.prompt[:40]}... ({age:.0f}s)")
+        bg_lines = [t("status.bg_tasks", count=len(bg_tasks))]
+        for task in bg_tasks:
+            age = time.monotonic() - task.submitted_at
+            bg_lines.append(f"  `{task.task_id}` {task.prompt[:40]}... ({age:.0f}s)")
         bg_block = "\n".join(bg_lines)
 
     auth = await asyncio.to_thread(check_all_auth)
@@ -390,11 +388,11 @@ async def _build_status(orch: Orchestrator, key: SessionKey) -> str:
     for provider, result in auth.items():
         age_label = f" ({result.age_human})" if result.age_human else ""
         auth_lines.append(f"  [{provider}] {result.status.value}{age_label}")
-    auth_block = "Auth:\n" + "\n".join(auth_lines)
+    auth_block = t("status.auth") + "\n" + "\n".join(auth_lines)
 
     agent_block = _build_agent_health_block(orch)
 
-    blocks = ["**Status**", SEP, session_block]
+    blocks = [t("status.title"), SEP, session_block]
     if bg_block:
         blocks += [SEP, bg_block]
     blocks += [SEP, auth_block]
@@ -413,7 +411,7 @@ async def _read_log_tail(log_path: Path, lines: int = 50) -> str:
             text = log_path.read_text(encoding="utf-8", errors="replace")
             return "\n".join(text.strip().splitlines()[-lines:])
         except OSError:
-            return "(could not read log file)"
+            return t("cmd.diagnose.log_read_error")
 
     return await asyncio.to_thread(_read)
 
@@ -422,13 +420,11 @@ async def cmd_hooks(orch: Orchestrator, _key: SessionKey, _text: str) -> Orchest
     """Handle /hooks: list configured user message hooks."""
     hooks = orch._config.message_hooks
     if not hooks:
-        return OrchestratorResult(
-            text="No user hooks configured.\n\nAdd hooks in config.json under `message_hooks`."
-        )
+        return OrchestratorResult(text=t("cmd.hooks.none"))
 
-    lines = ["*User Message Hooks*\n"]
+    lines = [t("cmd.hooks.title") + "\n"]
     for h in hooks:
-        status = "on" if h.enabled else "off"
+        status = t("cmd.hooks.status_on") if h.enabled else t("cmd.hooks.status_off")
         lines.append(f"\u2022 **{h.name}** \u2014 {h.phase}/{h.action} [{status}]")
         if h.condition != "always":
             lines.append(f"  condition: {h.condition}={h.pattern or h.provider}")
@@ -442,7 +438,7 @@ async def cmd_cwd(orch: Orchestrator, _key: SessionKey, text: str) -> Orchestrat
     parts = text.split(None, 1)
     if len(parts) < 2:
         current = orch.effective_working_dir
-        return OrchestratorResult(text=f"Working directory: `{current}`")
+        return OrchestratorResult(text=t("cmd.cwd.current", path=current))
 
     raw_path = parts[1].strip()
 
@@ -452,12 +448,12 @@ async def cmd_cwd(orch: Orchestrator, _key: SessionKey, text: str) -> Orchestrat
 
     target, is_dir = await asyncio.to_thread(_resolve)
     if not is_dir:
-        return OrchestratorResult(text=f"Directory not found: `{target}`")
+        return OrchestratorResult(text=t("cmd.cwd.not_found", path=target))
 
     orch._cwd_override = str(target)
     # Push the change to the CLI service immediately.
     orch._cli_service.update_config(dc_replace(orch._cli_service._config, working_dir=str(target)))
-    return OrchestratorResult(text=f"Working directory set to `{target}`")
+    return OrchestratorResult(text=t("cmd.cwd.set", path=target))
 
 
 async def _run_claude_plugin_update(claude_bin: str, plugin_key: str) -> tuple[str, int]:
@@ -488,20 +484,20 @@ async def cmd_update_plugins(
 
     claude_bin = shutil.which("claude")
     if not claude_bin:
-        return OrchestratorResult(text="Claude CLI not found on PATH.")
+        return OrchestratorResult(text=t("cmd.plugins.claude_missing"))
 
     settings_path = Path.home() / ".claude" / "settings.json"
     if not settings_path.exists():
-        return OrchestratorResult(text="No Claude Code settings found.")
+        return OrchestratorResult(text=t("cmd.plugins.settings_missing"))
 
     try:
         settings = json.loads(settings_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return OrchestratorResult(text="Failed to read Claude Code settings.")
+        return OrchestratorResult(text=t("cmd.plugins.settings_error"))
 
     enabled = {key for key, val in settings.get("enabledPlugins", {}).items() if val}
     if not enabled:
-        return OrchestratorResult(text="No enabled plugins found.")
+        return OrchestratorResult(text=t("cmd.plugins.none_enabled"))
 
     results: list[str] = []
     for plugin_key in sorted(enabled):
@@ -513,5 +509,5 @@ async def cmd_update_plugins(
         results.append(f"{icon} **{plugin_name}**: {status}")
 
     return OrchestratorResult(
-        text=fmt("**Plugin Updates**", SEP, "\n".join(results)),
+        text=fmt(t("cmd.plugins.title"), SEP, "\n".join(results)),
     )

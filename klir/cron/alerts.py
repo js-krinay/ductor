@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from klir.i18n import t
+
 DEFAULT_ALERT_AFTER = 3
 DEFAULT_COOLDOWN_SECONDS = 3600
 
@@ -40,9 +42,9 @@ def format_failure_alert(
     last_error: str,
 ) -> str:
     """Format a human-readable failure alert message."""
-    return (
-        f"\u26a0\ufe0f Cron job failure alert\n"
-        f"Job: {job_title}\n"
-        f"Consecutive errors: {consecutive_errors}\n"
-        f"Last error: {last_error}"
+    return t(
+        "cron.alert.failure",
+        title=job_title,
+        count=consecutive_errors,
+        error=last_error,
     )

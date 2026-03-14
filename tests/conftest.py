@@ -7,6 +7,11 @@ from unittest.mock import patch
 
 import pytest
 
+from klir.i18n import load_translations
+
+# Load English translations once at test-session start so t() returns real strings.
+load_translations("en")
+
 
 @pytest.fixture(autouse=True)
 def _no_real_process_signals() -> object:

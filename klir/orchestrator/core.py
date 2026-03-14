@@ -701,6 +701,12 @@ class Orchestrator:
         if "message_hooks" in hot:
             self._rebuild_user_hooks()
 
+        if "language" in hot:
+            from klir.i18n import load_translations
+
+            load_translations(config.language)
+            logger.info("i18n: switched to language %r", config.language)
+
         handler = getattr(self, "_config_hot_reload_handler", None)
         if handler is not None:
             handler(config, hot)
