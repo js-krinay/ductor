@@ -6,13 +6,16 @@ from pathlib import Path
 from typing import Any
 
 from klir.config import AgentConfig
+from klir.infra.db import KlirDB
 from klir.session.key import SessionKey
 from klir.session.manager import SessionData, SessionManager
 
 
-def _make_manager(tmp_path: Path, **overrides: Any) -> SessionManager:
+async def _make_manager(tmp_path: Path, **overrides: Any) -> SessionManager:
     cfg = AgentConfig(**overrides)
-    return SessionManager(sessions_path=tmp_path / "sessions.json", config=cfg)
+    db = KlirDB(tmp_path / "klir.db")
+    await db.open()
+    return SessionManager(db=db, config=cfg)
 
 
 async def _simulate_cli_response(
@@ -27,7 +30,7 @@ async def _simulate_cli_response(
 
 
 async def test_session_expires_after_max_messages(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path, max_session_messages=3)
+    mgr = await _make_manager(tmp_path, max_session_messages=3)
     s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, s1, "cli-id-1")
 
@@ -44,7 +47,7 @@ async def test_session_expires_after_max_messages(tmp_path: Path) -> None:
 
 
 async def test_session_stays_fresh_below_max_messages(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path, max_session_messages=5)
+    mgr = await _make_manager(tmp_path, max_session_messages=5)
     s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, s1, "cli-id-1")
 
@@ -57,7 +60,7 @@ async def test_session_stays_fresh_below_max_messages(tmp_path: Path) -> None:
 
 
 async def test_max_messages_none_means_unlimited(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path, max_session_messages=None)
+    mgr = await _make_manager(tmp_path, max_session_messages=None)
     s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, s1, "cli-id-1")
 
@@ -68,23 +71,19 @@ async def test_max_messages_none_means_unlimited(tmp_path: Path) -> None:
     assert is_new is False
 
 
-# -- corrupt session file recovery --
+# -- empty database recovery --
 
 
-async def test_corrupt_session_file_recovers(tmp_path: Path) -> None:
-    path = tmp_path / "sessions.json"
-    path.write_text("THIS IS NOT JSON {{{", encoding="utf-8")
-
-    mgr = _make_manager(tmp_path)
+async def test_empty_database_works(tmp_path: Path) -> None:
+    """A fresh empty database works fine -- sessions can be created from scratch."""
+    mgr = await _make_manager(tmp_path)
     session, is_new = await mgr.resolve_session(key=SessionKey(chat_id=1))
     assert is_new is True
     assert session.session_id == ""  # Empty until CLI fills it
 
 
-async def test_empty_session_file_recovers(tmp_path: Path) -> None:
-    path = tmp_path / "sessions.json"
-    path.write_text("", encoding="utf-8")
-
-    mgr = _make_manager(tmp_path)
+async def test_nonexistent_db_path_creates_fresh(tmp_path: Path) -> None:
+    """Manager works when the database file does not yet exist."""
+    mgr = await _make_manager(tmp_path / "subdir")
     _session, is_new = await mgr.resolve_session(key=SessionKey(chat_id=1))
     assert is_new is True

@@ -1,4 +1,4 @@
-"""Tests for JSON-based session manager."""
+"""Tests for SQLite-based session manager."""
 
 from __future__ import annotations
 
@@ -9,13 +9,16 @@ import pytest
 import time_machine
 
 from klir.config import AgentConfig
+from klir.infra.db import KlirDB
 from klir.session.key import SessionKey
 from klir.session.manager import SessionData, SessionManager
 
 
-def _make_manager(tmp_path: Path, **overrides: Any) -> SessionManager:
+async def _make_manager(tmp_path: Path, **overrides: Any) -> SessionManager:
     cfg = AgentConfig(**overrides)
-    return SessionManager(sessions_path=tmp_path / "sessions.json", config=cfg)
+    db = KlirDB(tmp_path / "klir.db")
+    await db.open()
+    return SessionManager(db=db, config=cfg)
 
 
 async def _simulate_cli_response(
@@ -27,7 +30,7 @@ async def _simulate_cli_response(
 
 
 async def test_resolve_creates_new_session(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     session, is_new = await mgr.resolve_session(key=SessionKey(chat_id=1))
     assert is_new is True
     assert session.chat_id == 1
@@ -35,7 +38,7 @@ async def test_resolve_creates_new_session(tmp_path: Path) -> None:
 
 
 async def test_resolve_reuses_fresh_session(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path, idle_timeout_minutes=30)
+    mgr = await _make_manager(tmp_path, idle_timeout_minutes=30)
     s1, new1 = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, s1, "cli-assigned-id")
 
@@ -46,7 +49,7 @@ async def test_resolve_reuses_fresh_session(tmp_path: Path) -> None:
 
 
 async def test_resolve_treats_empty_session_id_as_new(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path, idle_timeout_minutes=30)
+    mgr = await _make_manager(tmp_path, idle_timeout_minutes=30)
     _s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     # Don't simulate CLI response -- session_id stays empty
     s2, new2 = await mgr.resolve_session(key=SessionKey(chat_id=1))
@@ -56,7 +59,7 @@ async def test_resolve_treats_empty_session_id_as_new(tmp_path: Path) -> None:
 
 @time_machine.travel("2025-06-15 12:00:00", tick=False)
 async def test_session_expires_after_idle_timeout(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path, idle_timeout_minutes=30)
+    mgr = await _make_manager(tmp_path, idle_timeout_minutes=30)
     s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, s1, "cli-id-1")
 
@@ -73,7 +76,7 @@ async def test_session_expires_after_idle_timeout(tmp_path: Path) -> None:
 
 @time_machine.travel("2025-06-15 03:30:00+00:00", tick=False)
 async def test_session_expires_at_daily_reset(tmp_path: Path) -> None:
-    mgr = _make_manager(
+    mgr = await _make_manager(
         tmp_path,
         idle_timeout_minutes=120,
         daily_reset_hour=4,
@@ -92,7 +95,9 @@ async def test_session_expires_at_daily_reset(tmp_path: Path) -> None:
 @time_machine.travel("2025-06-15 03:30:00+00:00", tick=False)
 async def test_daily_reset_disabled_by_default(tmp_path: Path) -> None:
     """When daily_reset_enabled=False (default), the reset_hour has no effect."""
-    mgr = _make_manager(tmp_path, idle_timeout_minutes=0, daily_reset_hour=4, user_timezone="UTC")
+    mgr = await _make_manager(
+        tmp_path, idle_timeout_minutes=0, daily_reset_hour=4, user_timezone="UTC"
+    )
     s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, s1, "cli-id-1")
 
@@ -108,7 +113,7 @@ async def test_daily_reset_over_midnight(tmp_path: Path) -> None:
     """Session created before yesterday's reset_hour must expire even when now is before today's."""
     # Session created yesterday at 02:00, before the 04:00 reset
     with time_machine.travel("2025-06-14 02:00:00+00:00", tick=False):
-        mgr = _make_manager(
+        mgr = await _make_manager(
             tmp_path,
             idle_timeout_minutes=0,
             daily_reset_hour=4,
@@ -118,7 +123,7 @@ async def test_daily_reset_over_midnight(tmp_path: Path) -> None:
         s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
         await _simulate_cli_response(mgr, s1, "old-session")
 
-    # Now it's 01:00 today — before today's 04:00 reset, but after yesterday's 04:00 reset
+    # Now it's 01:00 today -- before today's 04:00 reset, but after yesterday's 04:00 reset
     s2, new2 = await mgr.resolve_session(key=SessionKey(chat_id=1))
     assert new2 is True
     assert s2.session_id == ""
@@ -127,9 +132,9 @@ async def test_daily_reset_over_midnight(tmp_path: Path) -> None:
 @time_machine.travel("2025-06-15 01:00:00+00:00", tick=False)
 async def test_daily_reset_not_triggered_for_recent_session(tmp_path: Path) -> None:
     """Session created after yesterday's reset_hour should survive until today's reset."""
-    # Session created yesterday at 06:00 — after the 04:00 reset
+    # Session created yesterday at 06:00 -- after the 04:00 reset
     with time_machine.travel("2025-06-14 06:00:00+00:00", tick=False):
-        mgr = _make_manager(
+        mgr = await _make_manager(
             tmp_path,
             idle_timeout_minutes=0,
             daily_reset_hour=4,
@@ -139,7 +144,7 @@ async def test_daily_reset_not_triggered_for_recent_session(tmp_path: Path) -> N
         s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
         await _simulate_cli_response(mgr, s1, "recent-session")
 
-    # Now it's 01:00 today — before today's 04:00 reset, session should still be fresh
+    # Now it's 01:00 today -- before today's 04:00 reset, session should still be fresh
     s2, new2 = await mgr.resolve_session(key=SessionKey(chat_id=1))
     assert new2 is False
     assert s2.session_id == "recent-session"
@@ -149,7 +154,7 @@ async def test_update_session_serialized(tmp_path: Path) -> None:
     """Concurrent update_session calls must not lose increments (lost-update guard)."""
     import asyncio as _asyncio
 
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     s, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, s, "sess-id")
 
@@ -164,7 +169,7 @@ async def test_update_session_serialized(tmp_path: Path) -> None:
 
 
 async def test_provider_switch_resets_session(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1), provider="claude")
     await _simulate_cli_response(mgr, s1, "claude-session-id")
 
@@ -178,7 +183,7 @@ async def test_provider_switch_resets_session(tmp_path: Path) -> None:
 
 
 async def test_reset_session(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, s1, "cli-id-1")
 
@@ -188,7 +193,7 @@ async def test_reset_session(tmp_path: Path) -> None:
 
 
 async def test_update_session_increments(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     s, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     assert s.message_count == 0
     await mgr.update_session(s, cost_usd=0.05, tokens=1000)
@@ -198,7 +203,7 @@ async def test_update_session_increments(tmp_path: Path) -> None:
 
 
 async def test_update_session_accumulates(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     s, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await mgr.update_session(s, cost_usd=0.01, tokens=100)
     await mgr.update_session(s, cost_usd=0.02, tokens=200)
@@ -208,15 +213,19 @@ async def test_update_session_accumulates(tmp_path: Path) -> None:
 
 
 async def test_persistence_across_instances(tmp_path: Path) -> None:
-    path = tmp_path / "sessions.json"
+    db_path = tmp_path / "klir.db"
     cfg = AgentConfig()
 
-    mgr1 = SessionManager(sessions_path=path, config=cfg)
+    db1 = KlirDB(db_path)
+    await db1.open()
+    mgr1 = SessionManager(db=db1, config=cfg)
     s1, _ = await mgr1.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr1, s1, "persisted-id")
     await mgr1.update_session(s1, cost_usd=0.1, tokens=500)
 
-    mgr2 = SessionManager(sessions_path=path, config=cfg)
+    db2 = KlirDB(db_path)
+    await db2.open()
+    mgr2 = SessionManager(db=db2, config=cfg)
     s2, new2 = await mgr2.resolve_session(key=SessionKey(chat_id=1))
     assert new2 is False
     assert s2.session_id == "persisted-id"
@@ -233,7 +242,7 @@ async def test_session_data_defaults() -> None:
 
 
 async def test_model_update_without_provider_switch(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     s1, _ = await mgr.resolve_session(
         key=SessionKey(chat_id=1), provider="codex", model="gpt-5.1-codex-mini"
     )
@@ -249,13 +258,16 @@ async def test_model_update_without_provider_switch(tmp_path: Path) -> None:
 
 
 async def test_legacy_session_without_model_is_migrated_on_resolve(tmp_path: Path) -> None:
-    path = tmp_path / "sessions.json"
-    path.write_text(
+    # Write legacy JSON, then migrate into SQLite
+    json_path = tmp_path / "sessions.json"
+    json_path.write_text(
         '{"1":{"session_id":"legacy-sid","chat_id":1,"provider":"codex"}}',
         encoding="utf-8",
     )
 
-    mgr = _make_manager(tmp_path, idle_timeout_minutes=30)
+    mgr = await _make_manager(tmp_path, idle_timeout_minutes=30)
+    await mgr.migrate_from_json(json_path)
+
     s1, is_new = await mgr.resolve_session(
         key=SessionKey(chat_id=1), provider="codex", model="gpt-5.2-codex"
     )
@@ -264,34 +276,42 @@ async def test_legacy_session_without_model_is_migrated_on_resolve(tmp_path: Pat
     assert s1.provider == "codex"
     assert s1.model == "gpt-5.2-codex"
 
-    persisted = path.read_text(encoding="utf-8")
-    assert '"model": "gpt-5.2-codex"' in persisted
+    # Verify via API that model is persisted
+    active = await mgr.get_active(SessionKey(chat_id=1))
+    assert active is not None
+    assert active.model == "gpt-5.2-codex"
 
 
 async def test_sync_session_target_migrates_missing_model_without_value_change(
     tmp_path: Path,
 ) -> None:
-    path = tmp_path / "sessions.json"
-    path.write_text(
+    # Write legacy JSON, then migrate into SQLite
+    json_path = tmp_path / "sessions.json"
+    json_path.write_text(
         '{"1":{"session_id":"legacy-sid","chat_id":1,"provider":"claude"}}',
         encoding="utf-8",
     )
 
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
+    await mgr.migrate_from_json(json_path)
+
     session = await mgr.get_active(SessionKey(chat_id=1))
     assert session is not None
     assert session.model == "opus"
 
     await mgr.sync_session_target(session, provider="claude", model="opus")
-    persisted = path.read_text(encoding="utf-8")
-    assert '"model": "opus"' in persisted
+
+    # Verify via API that model is persisted
+    reloaded = await mgr.get_active(SessionKey(chat_id=1))
+    assert reloaded is not None
+    assert reloaded.model == "opus"
 
 
 async def test_sync_session_target_does_not_overwrite_metrics_from_stale_snapshot(
     tmp_path: Path,
 ) -> None:
     """sync_session_target must merge target fields without resetting counters."""
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     base, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, base, "sess-id")
 
@@ -317,7 +337,7 @@ async def test_update_session_uses_latest_persisted_counters_from_stale_snapshot
     tmp_path: Path,
 ) -> None:
     """update_session should not drop increments when called with stale snapshots."""
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     base, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     await _simulate_cli_response(mgr, base, "sess-id")
 
@@ -337,7 +357,7 @@ async def test_update_session_uses_latest_persisted_counters_from_stale_snapshot
 
 
 async def test_separate_chat_ids(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     s1, n1 = await mgr.resolve_session(key=SessionKey(chat_id=1))
     s2, n2 = await mgr.resolve_session(key=SessionKey(chat_id=2))
     assert n1 is True
@@ -355,7 +375,7 @@ async def test_topic_name_defaults_to_none() -> None:
 
 async def test_topic_name_round_trip(tmp_path: Path) -> None:
     """topic_name persists through save/load cycle."""
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     s, _ = await mgr.resolve_session(key=SessionKey(chat_id=-100, topic_id=42))
     s.topic_name = "test 1"
     await mgr.update_session(s)
@@ -366,13 +386,15 @@ async def test_topic_name_round_trip(tmp_path: Path) -> None:
 
 
 async def test_topic_name_backward_compat(tmp_path: Path) -> None:
-    """Old sessions without topic_name load cleanly."""
-    path = tmp_path / "sessions.json"
-    path.write_text(
+    """Old sessions without topic_name load cleanly via JSON migration."""
+    json_path = tmp_path / "sessions.json"
+    json_path.write_text(
         '{"1":{"chat_id":1,"provider":"claude","model":"opus"}}',
         encoding="utf-8",
     )
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
+    await mgr.migrate_from_json(json_path)
+
     s = await mgr.get_active(SessionKey(chat_id=1))
     assert s is not None
     assert s.topic_name is None
@@ -380,7 +402,7 @@ async def test_topic_name_backward_compat(tmp_path: Path) -> None:
 
 async def test_topic_name_resolver_fills_on_resolve(tmp_path: Path) -> None:
     """When a resolver is set, new sessions get topic_name automatically."""
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     mgr.set_topic_name_resolver(lambda _c, _t: "resolved topic")
     s, _ = await mgr.resolve_session(key=SessionKey(chat_id=-100, topic_id=42))
     assert s.topic_name == "resolved topic"
@@ -388,7 +410,7 @@ async def test_topic_name_resolver_fills_on_resolve(tmp_path: Path) -> None:
 
 async def test_topic_name_resolver_backfills_existing(tmp_path: Path) -> None:
     """Resolver fills topic_name on existing sessions that lack one."""
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     s, _ = await mgr.resolve_session(key=SessionKey(chat_id=-100, topic_id=42))
     await _simulate_cli_response(mgr, s, "sid")
     assert s.topic_name is None
@@ -407,7 +429,7 @@ async def test_resolver_not_called_for_non_topic_sessions(tmp_path: Path) -> Non
         called = True
         return "should not appear"
 
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     mgr.set_topic_name_resolver(resolver)
     s, _ = await mgr.resolve_session(key=SessionKey(chat_id=1))
     assert s.topic_name is None
@@ -418,7 +440,7 @@ async def test_resolver_not_called_for_non_topic_sessions(tmp_path: Path) -> Non
 
 
 async def test_list_active_for_chat(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
     await mgr.resolve_session(key=SessionKey(chat_id=-100))
     await mgr.resolve_session(key=SessionKey(chat_id=-100, topic_id=1))
     await mgr.resolve_session(key=SessionKey(chat_id=-100, topic_id=2))
@@ -431,7 +453,7 @@ async def test_list_active_for_chat(tmp_path: Path) -> None:
 
 
 async def test_list_active_for_chat_excludes_stale(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path, idle_timeout_minutes=30)
+    mgr = await _make_manager(tmp_path, idle_timeout_minutes=30)
     s1, _ = await mgr.resolve_session(key=SessionKey(chat_id=-100, topic_id=1))
     await _simulate_cli_response(mgr, s1, "sid")
 
@@ -444,7 +466,7 @@ async def test_list_active_for_chat_excludes_stale(tmp_path: Path) -> None:
 
 async def test_peer_isolated_sessions_get_separate_storage_keys(tmp_path: Path) -> None:
     """Two users in the same chat get distinct storage keys when user_id is set."""
-    mgr = _make_manager(tmp_path, idle_timeout_minutes=30)
+    mgr = await _make_manager(tmp_path, idle_timeout_minutes=30)
 
     key_user1 = SessionKey(chat_id=100, user_id=1)
     key_user2 = SessionKey(chat_id=100, user_id=2)
@@ -470,10 +492,10 @@ async def test_peer_isolated_sessions_get_separate_storage_keys(tmp_path: Path) 
 
 
 async def test_session_data_user_id_round_trips(tmp_path: Path) -> None:
-    """user_id is persisted and restored from JSON storage."""
+    """user_id is persisted and restored from SQLite storage."""
     from dataclasses import asdict
 
-    mgr = _make_manager(tmp_path, idle_timeout_minutes=30)
+    mgr = await _make_manager(tmp_path, idle_timeout_minutes=30)
     key = SessionKey(chat_id=100, user_id=42)
 
     s, _ = await mgr.resolve_session(key=key)
@@ -487,7 +509,9 @@ async def test_session_data_user_id_round_trips(tmp_path: Path) -> None:
     d = asdict(s)
     assert d["user_id"] == 42
 
-    # Reload from disk — user_id must survive round-trip
-    mgr2 = _make_manager(tmp_path, idle_timeout_minutes=30)
+    # Reload from a new manager with the same DB -- user_id must survive round-trip
+    db2 = KlirDB(tmp_path / "klir.db")
+    await db2.open()
+    mgr2 = SessionManager(db=db2, config=AgentConfig(idle_timeout_minutes=30))
     loaded, _ = await mgr2.resolve_session(key=key)
     assert loaded.user_id == 42

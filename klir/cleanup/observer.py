@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from klir.bot.chat_tracker import ChatTracker
     from klir.config import AgentConfig, CleanupConfig
     from klir.infra.db import KlirDB
+    from klir.session.manager import SessionManager
     from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
@@ -69,10 +70,15 @@ class CleanupObserver(BaseObserver):
         self._db = db
         self._last_run_date: str = ""
         self._chat_tracker: ChatTracker | None = None
+        self._session_manager: SessionManager | None = None
 
     def set_chat_tracker(self, tracker: ChatTracker) -> None:
         """Wire the chat tracker for retention-based cleanup."""
         self._chat_tracker = tracker
+
+    def set_session_manager(self, manager: SessionManager) -> None:
+        """Late-bind the session manager (avoids circular imports)."""
+        self._session_manager = manager
 
     @property
     def _cfg(self) -> CleanupConfig:
@@ -149,14 +155,23 @@ class CleanupObserver(BaseObserver):
         if self._chat_tracker:
             activity_pruned = await self._chat_tracker.prune_inactive(self._cfg.chat_activity_days)
 
-        if any(results) or cron_deleted or activity_pruned:
+        # Prune stale sessions from SQLite.
+        session_pruned = 0
+        if self._session_manager is not None:
+            session_pruned = await self._session_manager.prune_stale(
+                retention_days=self._cfg.session_retention_days
+            )
+
+        if any(results) or cron_deleted or activity_pruned or session_pruned:
             logger.info(
-                "Cleanup complete: telegram=%d, output=%d, api=%d, cron_runs=%d, chat_activity=%d",
+                "Cleanup complete: telegram=%d, output=%d, api=%d, "
+                "cron_runs=%d, chat_activity=%d, sessions=%d",
                 results[0],
                 results[1],
                 results[2],
                 cron_deleted,
                 activity_pruned,
+                session_pruned,
             )
         else:
             logger.debug("Cleanup: nothing to delete")

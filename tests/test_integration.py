@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -10,6 +9,7 @@ import pytest
 
 from klir.cli.types import AgentResponse, CLIResponse
 from klir.config import AgentConfig
+from klir.infra.db import KlirDB
 from klir.orchestrator.core import Orchestrator
 from klir.orchestrator.hooks import MessageHook
 from klir.orchestrator.registry import OrchestratorResult
@@ -101,7 +101,7 @@ def _make_agent_response(
 
 
 @pytest.fixture
-def orch_with_mock_cli(
+async def orch_with_mock_cli(
     workspace: tuple[KlirPaths, AgentConfig],
 ) -> tuple[Orchestrator, AsyncMock]:
     """Real Orchestrator with the CLIService.execute/execute_streaming mocked.
@@ -110,6 +110,7 @@ def orch_with_mock_cli(
     """
     paths, config = workspace
     o = Orchestrator(config, paths)
+    await o.db.open()
     o._providers._available_providers = frozenset({"claude"})
     o._cli_service.update_available_providers(frozenset({"claude"}))
 
@@ -512,10 +513,10 @@ class TestStreamingFlow:
         mock_streaming = self._get_mock_streaming(orch)
         mock_streaming.return_value = _make_agent_response(result="Tool result")
 
-        tools: list[str] = []
+        tools: list[object] = []
 
-        async def on_tool(name: str) -> None:
-            tools.append(name)
+        async def on_tool(activity: object) -> None:
+            tools.append(activity)
 
         await orch.handle_message_streaming(
             KEY,
@@ -538,29 +539,37 @@ class TestSessionPersistence:
     ) -> None:
         paths, config = workspace
 
-        mgr1 = SessionManager(paths.sessions_path, config)
+        db1 = KlirDB(paths.db_path)
+        await db1.open()
+        mgr1 = SessionManager(db1, config)
         session, is_new = await mgr1.resolve_session(KEY, provider="claude")
         assert is_new
         session.session_id = "persistent-sess"
         await mgr1.update_session(session, cost_usd=0.1, tokens=200)
+        await db1.close()
 
-        mgr2 = SessionManager(paths.sessions_path, config)
+        db2 = KlirDB(paths.db_path)
+        await db2.open()
+        mgr2 = SessionManager(db2, config)
         session2, is_new2 = await mgr2.resolve_session(KEY, provider="claude")
 
         assert not is_new2
         assert session2.session_id == "persistent-sess"
         assert session2.message_count == 1
         assert session2.total_cost_usd == pytest.approx(0.1)
+        await db2.close()
 
-    async def test_session_json_is_valid(self, workspace: tuple[KlirPaths, AgentConfig]) -> None:
+    async def test_session_stored_in_sqlite(self, workspace: tuple[KlirPaths, AgentConfig]) -> None:
         paths, config = workspace
 
-        mgr = SessionManager(paths.sessions_path, config)
+        db = KlirDB(paths.db_path)
+        await db.open()
+        mgr = SessionManager(db, config)
         await mgr.resolve_session(KEY, provider="claude")
 
-        raw = paths.sessions_path.read_text(encoding="utf-8")
-        data = json.loads(raw)
-        assert str(CHAT_ID) in data
+        row = await db.fetch_one("SELECT * FROM sessions WHERE chat_id = ?", (CHAT_ID,))
+        assert row is not None
+        await db.close()
 
 
 # ---------------------------------------------------------------------------

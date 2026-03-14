@@ -54,10 +54,11 @@ def workspace(tmp_path: Path) -> tuple[KlirPaths, AgentConfig]:
 
 
 @pytest.fixture
-def orch(workspace: tuple[KlirPaths, AgentConfig]) -> Orchestrator:
+async def orch(workspace: tuple[KlirPaths, AgentConfig]) -> Orchestrator:
     """Orchestrator with mocked CLIService."""
     paths, config = workspace
     o = Orchestrator(config, paths)
+    await o.db.open()
     mock_cli = MagicMock()
     mock_cli.execute = AsyncMock()
     mock_cli.execute_streaming = AsyncMock()

@@ -1,4 +1,4 @@
-"""Session lifecycle: creation, freshness checks, reset. JSON-based persistence."""
+"""Session lifecycle: creation, freshness checks, reset. SQLite-based persistence."""
 
 from __future__ import annotations
 
@@ -11,10 +11,17 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from klir.config import AgentConfig, resolve_user_timezone
-from klir.infra.json_store import atomic_json_save, load_json
+from klir.infra.db import KlirDB
+from klir.infra.json_store import load_json
 from klir.session.key import SessionKey
 
 logger = logging.getLogger(__name__)
+
+_PERSIST_SQL = """\
+INSERT OR REPLACE INTO sessions
+(storage_key, chat_id, topic_id, user_id, topic_name, provider, model,
+ created_at, last_active, thinking_level, provider_sessions)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
 
 def _as_mapping(value: object) -> Mapping[str, object] | None:
@@ -261,11 +268,49 @@ TopicNameResolver = Callable[[int, int], str]
 """Callback: (chat_id, topic_id) → human-readable topic name."""
 
 
-class SessionManager:
-    """Manages session lifecycle with JSON file persistence."""
+def _row_to_session(row: dict[str, object]) -> SessionData:
+    """Convert a SQLite row dict to SessionData."""
+    ps_raw = row.get("provider_sessions", "{}")
+    provider_sessions = json.loads(ps_raw) if isinstance(ps_raw, str) else {}
+    chat_id = row["chat_id"]
+    if not isinstance(chat_id, int):
+        chat_id = int(str(chat_id))
+    return SessionData(
+        chat_id=chat_id,
+        topic_id=row.get("topic_id"),
+        user_id=row.get("user_id"),
+        topic_name=row.get("topic_name"),
+        provider=row.get("provider", "claude"),
+        model=row.get("model", "opus"),
+        created_at=row.get("created_at", ""),
+        last_active=row.get("last_active", ""),
+        thinking_level=row.get("thinking_level"),
+        provider_sessions=provider_sessions,
+    )
 
-    def __init__(self, sessions_path: Path, config: AgentConfig) -> None:
-        self._path = sessions_path
+
+def _session_to_params(session: SessionData) -> tuple[object, ...]:
+    """Convert SessionData to SQL parameter tuple for INSERT OR REPLACE."""
+    return (
+        session.session_key.storage_key,
+        session.chat_id,
+        session.topic_id,
+        session.user_id,
+        session.topic_name,
+        session.provider,
+        session.model,
+        session.created_at,
+        session.last_active,
+        session.thinking_level,
+        json.dumps({k: asdict(v) for k, v in session.provider_sessions.items()}),
+    )
+
+
+class SessionManager:
+    """Manages session lifecycle with SQLite persistence."""
+
+    def __init__(self, db: KlirDB, config: AgentConfig) -> None:
+        self._db = db
         self._config = config
         self._lock = asyncio.Lock()
         self._topic_name_resolver: TopicNameResolver | None = None
@@ -283,12 +328,74 @@ class SessionManager:
         session.topic_name = self._topic_name_resolver(session.chat_id, session.topic_id)
         return True
 
+    # ── SQLite data access ───────────────────────────────────────
+
+    async def _load_one(self, storage_key: str) -> SessionData | None:
+        """Fetch a single session row by storage key."""
+        row = await self._db.fetch_one(
+            "SELECT * FROM sessions WHERE storage_key = ?", (storage_key,)
+        )
+        if row is None:
+            return None
+        return _row_to_session(row)
+
+    async def _load_all(self) -> list[SessionData]:
+        """Fetch all session rows."""
+        rows = await self._db.fetch_all("SELECT * FROM sessions")
+        return [_row_to_session(r) for r in rows]
+
+    async def _load_by_chat(self, chat_id: int) -> list[SessionData]:
+        """Fetch all sessions for a given chat_id."""
+        rows = await self._db.fetch_all("SELECT * FROM sessions WHERE chat_id = ?", (chat_id,))
+        return [_row_to_session(r) for r in rows]
+
+    async def _persist(self, session: SessionData) -> None:
+        """INSERT OR REPLACE a single session into SQLite."""
+        await self._db.execute(_PERSIST_SQL, _session_to_params(session))
+
+    # ── migration ────────────────────────────────────────────────
+
+    async def migrate_from_json(self, sessions_path: Path) -> int:
+        """Import sessions from a legacy JSON file into SQLite.
+
+        Renames the file to ``sessions.json.migrated`` after import.
+        Returns the count of migrated sessions.
+        """
+        exists = await asyncio.to_thread(sessions_path.exists)
+        if not exists:
+            return 0
+
+        data = await asyncio.to_thread(load_json, sessions_path)
+        if not data:
+            return 0
+
+        sessions: list[SessionData] = []
+        for k, v in data.items():
+            parsed = SessionKey.parse(k)
+            if "topic_id" not in v and parsed.topic_id is not None:
+                v["topic_id"] = parsed.topic_id
+            if "user_id" not in v and parsed.user_id is not None:
+                v["user_id"] = parsed.user_id
+            sessions.append(SessionData(**v))
+
+        if not sessions:
+            return 0
+
+        params_seq = [_session_to_params(s) for s in sessions]
+        await self._db.executemany(_PERSIST_SQL, params_seq)
+
+        migrated_path = sessions_path.with_suffix(".json.migrated")
+        await asyncio.to_thread(sessions_path.rename, migrated_path)
+
+        logger.info("Migrated %d sessions from %s to SQLite", len(sessions), sessions_path)
+        return len(sessions)
+
+    # ── public API ───────────────────────────────────────────────
+
     async def save_session(self, session: SessionData) -> None:
-        """Persist a single session's current state to disk."""
+        """Persist a single session's current state."""
         async with self._lock:
-            sessions = await self._load()
-            sessions[session.session_key.storage_key] = session
-            await self._save(sessions)
+            await self._persist(session)
 
     async def resolve_session(
         self,
@@ -299,9 +406,7 @@ class SessionManager:
         preserve_existing_target: bool = False,
     ) -> tuple[SessionData, bool]:
         """Returns (session, is_new). Reuses if fresh, creates if stale."""
-        sessions = await self._load()
-        skey = key.storage_key
-        existing = sessions.get(skey)
+        existing = await self._load_one(key.storage_key)
 
         prov = provider or self._config.provider
         model_name = model or self._config.model
@@ -313,7 +418,7 @@ class SessionManager:
                 and bool(existing.model.strip())
             ):
                 if self._apply_topic_name(existing):
-                    await self._save(sessions)
+                    await self._persist(existing)
                 return existing, not bool(existing.session_id)
             changed = False
             if existing.provider != prov:
@@ -326,7 +431,7 @@ class SessionManager:
             if self._apply_topic_name(existing):
                 changed = True
             if changed:
-                await self._save(sessions)
+                await self._persist(existing)
             return existing, not bool(existing.session_id)
 
         topic_name: str | None = None
@@ -342,25 +447,22 @@ class SessionManager:
             model=model_name,
             provider_sessions={},
         )
-        sessions[skey] = new
-        await self._save(sessions)
+        await self._persist(new)
         logger.info("Session created provider=%s model=%s", prov, model_name)
         return new, True
 
     async def get_active(self, key: SessionKey) -> SessionData | None:
         """Return the current session for *key* without creating one."""
-        sessions = await self._load()
-        return sessions.get(key.storage_key)
+        return await self._load_one(key.storage_key)
 
     async def list_active_for_chat(self, chat_id: int) -> list[SessionData]:
         """Return all fresh sessions belonging to *chat_id*."""
-        sessions = await self._load()
-        return [s for s in sessions.values() if s.chat_id == chat_id and self._is_fresh(s)]
+        sessions = await self._load_by_chat(chat_id)
+        return [s for s in sessions if self._is_fresh(s)]
 
     async def list_all(self) -> list[SessionData]:
         """Return all persisted sessions (fresh or stale)."""
-        sessions = await self._load()
-        return list(sessions.values())
+        return await self._load_all()
 
     async def reset_session(
         self,
@@ -370,7 +472,6 @@ class SessionManager:
         model: str | None = None,
     ) -> SessionData:
         """Force-create a new session (empty ID, filled by CLI on first call)."""
-        sessions = await self._load()
         prov = provider or self._config.provider
         model_name = model or self._config.model
         new = SessionData(
@@ -381,8 +482,7 @@ class SessionManager:
             model=model_name,
             provider_sessions={},
         )
-        sessions[key.storage_key] = new
-        await self._save(sessions)
+        await self._persist(new)
         logger.info("Session reset")
         return new
 
@@ -393,9 +493,7 @@ class SessionManager:
         model: str,
     ) -> SessionData:
         """Reset only one provider-local session and keep all others intact."""
-        sessions = await self._load()
-        skey = key.storage_key
-        current = sessions.get(skey)
+        current = await self._load_one(key.storage_key)
         if current is None:
             current = SessionData(
                 chat_id=key.chat_id,
@@ -410,8 +508,7 @@ class SessionManager:
             current.provider = provider
             current.model = model
             current.last_active = datetime.now(UTC).isoformat()
-        sessions[skey] = current
-        await self._save(sessions)
+        await self._persist(current)
         logger.info("Provider session reset provider=%s model=%s", provider, model)
         return current
 
@@ -427,9 +524,8 @@ class SessionManager:
         callers (e.g. heartbeat + normal flow) update the same session.
         """
         async with self._lock:
-            sessions = await self._load()
             key = session.session_key.storage_key
-            current = sessions.get(key)
+            current = await self._load_one(key)
             if current is None:
                 current = session
             else:
@@ -445,8 +541,7 @@ class SessionManager:
             current.message_count += 1
             current.total_cost_usd += cost_usd
             current.total_tokens += tokens
-            sessions[key] = current
-            await self._save(sessions)
+            await self._persist(current)
 
             # Keep caller reference in sync with persisted aggregate values.
             session.provider = current.provider
@@ -500,9 +595,8 @@ class SessionManager:
     ) -> None:
         """Persist provider/model changes without touching activity counters."""
         async with self._lock:
-            sessions = await self._load()
             skey = session.session_key.storage_key
-            current = sessions.get(skey)
+            current = await self._load_one(skey)
             if current is None:
                 return
 
@@ -514,32 +608,26 @@ class SessionManager:
                 current.model = model
                 changed = True
 
-            needs_model_migration = False
             if not changed:
-                needs_model_migration = await asyncio.to_thread(
-                    self._raw_entry_missing_model,
-                    skey,
-                )
-            if not changed and not needs_model_migration:
                 return
 
-            sessions[skey] = current
-            await self._save(sessions)
+            await self._persist(current)
 
             # Keep caller reference aligned with persisted target.
             session.provider = current.provider
             session.model = current.model
 
-    def _raw_entry_missing_model(self, storage_key: str) -> bool:
-        """Return True when raw session JSON exists but has no ``model`` key."""
-        if not self._path.exists():
-            return False
-        try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return False
-        entry = data.get(storage_key)
-        return isinstance(entry, dict) and "model" not in entry
+    async def prune_stale(self, retention_days: int = 30) -> int:
+        """Delete sessions older than retention_days. Returns count deleted."""
+        cutoff = (datetime.now(UTC) - timedelta(days=retention_days)).isoformat()
+        rows = await self._db.fetch_all(
+            "SELECT storage_key FROM sessions WHERE last_active < ?", (cutoff,)
+        )
+        if not rows:
+            return 0
+        await self._db.execute("DELETE FROM sessions WHERE last_active < ?", (cutoff,))
+        logger.info("Pruned %d stale sessions (older than %d days)", len(rows), retention_days)
+        return len(rows)
 
     def _is_fresh(self, session: SessionData) -> bool:
         now = datetime.now(UTC)
@@ -584,30 +672,3 @@ class SessionManager:
 
         logger.debug("Session fresh check: fresh=yes reason=still_valid")
         return True
-
-    async def _load(self) -> dict[str, SessionData]:
-        """Load sessions from JSON file."""
-
-        def _read() -> dict[str, SessionData]:
-            data = load_json(self._path)
-            if data is None:
-                return {}
-            result: dict[str, SessionData] = {}
-            for k, v in data.items():
-                parsed = SessionKey.parse(k)
-                if "topic_id" not in v and parsed.topic_id is not None:
-                    v["topic_id"] = parsed.topic_id
-                if "user_id" not in v and parsed.user_id is not None:
-                    v["user_id"] = parsed.user_id
-                result[k] = SessionData(**v)
-            return result
-
-        return await asyncio.to_thread(_read)
-
-    async def _save(self, sessions: dict[str, SessionData]) -> None:
-        """Atomically write sessions to JSON file."""
-
-        def _write() -> None:
-            atomic_json_save(self._path, {k: asdict(v) for k, v in sessions.items()})
-
-        await asyncio.to_thread(_write)

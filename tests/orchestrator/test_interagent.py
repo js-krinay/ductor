@@ -17,12 +17,23 @@ from klir.orchestrator.injection import (
 from klir.workspace.paths import KlirPaths
 
 
+def _mock_execute(orch: Orchestrator) -> AsyncMock:
+    """Return the mock ``execute`` on the mocked CLI service."""
+    return orch._cli_service.execute  # type: ignore[return-value]
+
+
+def _set_execute(orch: Orchestrator, mock: AsyncMock) -> None:
+    """Replace the mock ``execute`` on the mocked CLI service."""
+    orch._cli_service.execute = mock  # type: ignore[method-assign]
+
+
 @pytest.fixture
-def orch_ia(workspace: tuple[KlirPaths, AgentConfig]) -> Orchestrator:
+async def orch_ia(workspace: tuple[KlirPaths, AgentConfig]) -> Orchestrator:
     """Orchestrator with mocked CLIService for inter-agent tests."""
     paths, config = workspace
     config.allowed_user_ids = [12345]
     o = Orchestrator(config, paths, agent_name="codex")
+    await o.db.open()
     mock_cli = MagicMock()
     mock_cli._config = MagicMock()
     mock_cli._config.agent_name = "codex"
@@ -137,22 +148,24 @@ class TestHandleInteragentMessage:
         await orch_ia.handle_interagent_message("main", "Task 1")
 
         # Second call should resume with the session_id
-        orch_ia._cli_service.execute = AsyncMock(  # type: ignore[method-assign]
-            return_value=CLIResponse(session_id="sess-002", result="continued")
+        _set_execute(
+            orch_ia,
+            AsyncMock(return_value=CLIResponse(session_id="sess-002", result="continued")),
         )
         result_text, _, _ = await orch_ia.handle_interagent_message("main", "Task 2")
         assert result_text == "continued"
 
         # Verify resume_session was passed
-        call_args = orch_ia._cli_service.execute.call_args
+        call_args = _mock_execute(orch_ia).call_args
         request = call_args[0][0]
         assert request.resume_session == "sess-001"
 
     async def test_new_session_flag_starts_fresh(self, orch_ia: Orchestrator) -> None:
         await orch_ia.handle_interagent_message("main", "Task 1")
 
-        orch_ia._cli_service.execute = AsyncMock(  # type: ignore[method-assign]
-            return_value=CLIResponse(session_id="sess-new", result="fresh start")
+        _set_execute(
+            orch_ia,
+            AsyncMock(return_value=CLIResponse(session_id="sess-new", result="fresh start")),
         )
         result_text, _, _ = await orch_ia.handle_interagent_message(
             "main", "New task", new_session=True
@@ -160,13 +173,13 @@ class TestHandleInteragentMessage:
         assert result_text == "fresh start"
 
         # Verify resume_session is None (fresh session)
-        call_args = orch_ia._cli_service.execute.call_args
+        call_args = _mock_execute(orch_ia).call_args
         request = call_args[0][0]
         assert request.resume_session is None
 
     async def test_prompt_contains_interagent_markers(self, orch_ia: Orchestrator) -> None:
         await orch_ia.handle_interagent_message("main", "Hello world")
-        call_args = orch_ia._cli_service.execute.call_args  # type: ignore[attr-defined]
+        call_args = _mock_execute(orch_ia).call_args
         request = call_args[0][0]
         assert "[INTER-AGENT MESSAGE from 'main'" in request.prompt
         assert "Hello world" in request.prompt
@@ -174,12 +187,12 @@ class TestHandleInteragentMessage:
 
     async def test_process_label_set_correctly(self, orch_ia: Orchestrator) -> None:
         await orch_ia.handle_interagent_message("main", "Test")
-        call_args = orch_ia._cli_service.execute.call_args  # type: ignore[attr-defined]
+        call_args = _mock_execute(orch_ia).call_args
         request = call_args[0][0]
         assert request.process_label == "interagent:main"
 
     async def test_error_returns_error_text(self, orch_ia: Orchestrator) -> None:
-        orch_ia._cli_service.execute = AsyncMock(side_effect=RuntimeError("crash"))  # type: ignore[method-assign]
+        _set_execute(orch_ia, AsyncMock(side_effect=RuntimeError("crash")))
         result_text, session_name, _ = await orch_ia.handle_interagent_message("main", "Crash")
         assert "Error" in result_text
         assert session_name == "ia-main"
@@ -191,18 +204,19 @@ class TestHandleInteragentMessage:
 
         # Switch to claude provider
         orch_ia._config.model = "sonnet"
-        orch_ia._cli_service.execute = AsyncMock(  # type: ignore[method-assign]
-            return_value=CLIResponse(session_id="claude-sess", result="switched")
+        _set_execute(
+            orch_ia,
+            AsyncMock(return_value=CLIResponse(session_id="claude-sess", result="switched")),
         )
         result_text, _, notice = await orch_ia.handle_interagent_message("main", "Task 2")
         assert result_text == "switched"
         assert "provider" in notice.lower()
         # Fresh session → no resume
-        call_args = orch_ia._cli_service.execute.call_args
+        call_args = _mock_execute(orch_ia).call_args
         assert call_args[0][0].resume_session is None
 
     async def test_session_idle_after_error(self, orch_ia: Orchestrator) -> None:
-        orch_ia._cli_service.execute = AsyncMock(side_effect=RuntimeError("crash"))  # type: ignore[method-assign]
+        _set_execute(orch_ia, AsyncMock(side_effect=RuntimeError("crash")))
         await orch_ia.handle_interagent_message("main", "Crash")
         ns = orch_ia._named_sessions.get(12345, "ia-main")
         assert ns is not None
@@ -243,7 +257,7 @@ class TestHandleAsyncInteragentResult:
             self._make_result(session_name="ia-codex"),
             chat_id=12345,
         )
-        call_args = orch_ia._cli_service.execute.call_args  # type: ignore[attr-defined]
+        call_args = _mock_execute(orch_ia).call_args
         request = call_args[0][0]
         assert "ia-codex" in request.prompt
         assert "@ia-codex" in request.prompt
@@ -253,12 +267,12 @@ class TestHandleAsyncInteragentResult:
             self._make_result(session_name=""),
             chat_id=12345,
         )
-        call_args = orch_ia._cli_service.execute.call_args  # type: ignore[attr-defined]
+        call_args = _mock_execute(orch_ia).call_args
         request = call_args[0][0]
         assert "@" not in request.prompt or "ia-" not in request.prompt
 
     async def test_error_handling(self, orch_ia: Orchestrator) -> None:
-        orch_ia._cli_service.execute = AsyncMock(side_effect=RuntimeError("oops"))  # type: ignore[method-assign]
+        _set_execute(orch_ia, AsyncMock(side_effect=RuntimeError("oops")))
         result = await orch_ia.handle_async_interagent_result(
             self._make_result(),
         )
@@ -269,7 +283,7 @@ class TestHandleAsyncInteragentResult:
             self._make_result(original_message="Check the system specs"),
             chat_id=12345,
         )
-        call_args = orch_ia._cli_service.execute.call_args  # type: ignore[attr-defined]
+        call_args = _mock_execute(orch_ia).call_args
         request = call_args[0][0]
         assert "Check the system specs" in request.prompt
         assert "Original task you sent" in request.prompt
@@ -281,14 +295,17 @@ class TestHandleAsyncInteragentResult:
         sd = SessionData(12345, session_id="active-session-999")
         orch_ia._sessions.get_active = AsyncMock(return_value=sd)  # type: ignore[method-assign]
         orch_ia._sessions.update_session = AsyncMock()  # type: ignore[method-assign]
-        orch_ia._cli_service.execute = AsyncMock(  # type: ignore[method-assign]
-            return_value=AgentResponse(result="done", session_id="active-session-999"),
+        _set_execute(
+            orch_ia,
+            AsyncMock(
+                return_value=AgentResponse(result="done", session_id="active-session-999"),
+            ),
         )
 
         await orch_ia.handle_async_interagent_result(
             self._make_result(),
             chat_id=12345,
         )
-        call_args = orch_ia._cli_service.execute.call_args
+        call_args = _mock_execute(orch_ia).call_args
         request = call_args[0][0]
         assert request.resume_session == "active-session-999"

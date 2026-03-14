@@ -8,13 +8,16 @@ from typing import Any
 import pytest
 
 from klir.config import AgentConfig
+from klir.infra.db import KlirDB
 from klir.session.key import SessionKey
 from klir.session.manager import SessionData, SessionManager
 
 
-def _make_manager(tmp_path: Path, **overrides: Any) -> SessionManager:
+async def _make_manager(tmp_path: Path, **overrides: Any) -> SessionManager:
     cfg = AgentConfig(**overrides)
-    return SessionManager(sessions_path=tmp_path / "sessions.json", config=cfg)
+    db = KlirDB(tmp_path / "klir.db")
+    await db.open()
+    return SessionManager(db=db, config=cfg)
 
 
 async def _simulate_cli_response(
@@ -30,7 +33,7 @@ async def _simulate_cli_response(
 
 
 async def test_provider_switch_preserves_other_session(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
 
     claude, _ = await mgr.resolve_session(
         key=SessionKey(chat_id=1), provider="claude", model="opus"
@@ -47,7 +50,7 @@ async def test_provider_switch_preserves_other_session(tmp_path: Path) -> None:
 
 
 async def test_switch_back_resumes_original_session(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
 
     claude, _ = await mgr.resolve_session(
         key=SessionKey(chat_id=1), provider="claude", model="opus"
@@ -66,7 +69,7 @@ async def test_switch_back_resumes_original_session(tmp_path: Path) -> None:
 
 
 async def test_provider_switch_preserves_other_metrics(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
 
     claude, _ = await mgr.resolve_session(
         key=SessionKey(chat_id=1), provider="claude", model="opus"
@@ -92,7 +95,7 @@ async def test_provider_switch_preserves_other_metrics(tmp_path: Path) -> None:
 
 
 async def test_reset_session_clears_all_providers(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
 
     claude, _ = await mgr.resolve_session(
         key=SessionKey(chat_id=1), provider="claude", model="opus"
@@ -111,7 +114,7 @@ async def test_reset_session_clears_all_providers(tmp_path: Path) -> None:
 
 
 async def test_reset_provider_session_clears_only_one(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
 
     claude, _ = await mgr.resolve_session(
         key=SessionKey(chat_id=1), provider="claude", model="opus"
@@ -136,7 +139,7 @@ async def test_reset_provider_session_clears_only_one(tmp_path: Path) -> None:
 
 
 async def test_resolve_session_no_existing_codex_is_new(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
 
     claude, _ = await mgr.resolve_session(
         key=SessionKey(chat_id=1), provider="claude", model="opus"
@@ -152,7 +155,7 @@ async def test_resolve_session_no_existing_codex_is_new(tmp_path: Path) -> None:
 
 
 async def test_metrics_increment_only_active_provider(tmp_path: Path) -> None:
-    mgr = _make_manager(tmp_path)
+    mgr = await _make_manager(tmp_path)
 
     claude, _ = await mgr.resolve_session(
         key=SessionKey(chat_id=1), provider="claude", model="opus"
@@ -177,10 +180,12 @@ async def test_metrics_increment_only_active_provider(tmp_path: Path) -> None:
 
 
 async def test_persistence_round_trip_multi_provider(tmp_path: Path) -> None:
-    path = tmp_path / "sessions.json"
+    db_path = tmp_path / "klir.db"
     cfg = AgentConfig()
 
-    mgr1 = SessionManager(sessions_path=path, config=cfg)
+    db1 = KlirDB(db_path)
+    await db1.open()
+    mgr1 = SessionManager(db=db1, config=cfg)
     claude, _ = await mgr1.resolve_session(
         key=SessionKey(chat_id=1), provider="claude", model="opus"
     )
@@ -191,7 +196,9 @@ async def test_persistence_round_trip_multi_provider(tmp_path: Path) -> None:
     )
     await _simulate_cli_response(mgr1, codex, "codex-sid", cost_usd=0.1, tokens=50)
 
-    mgr2 = SessionManager(sessions_path=path, config=cfg)
+    db2 = KlirDB(db_path)
+    await db2.open()
+    mgr2 = SessionManager(db=db2, config=cfg)
 
     claude_loaded, claude_is_new = await mgr2.resolve_session(
         key=SessionKey(chat_id=1),

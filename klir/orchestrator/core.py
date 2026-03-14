@@ -134,7 +134,8 @@ class Orchestrator:
         self._paths: KlirPaths = paths
         self._resolver = ChatConfigResolver(config)
         self._providers = ProviderManager(config)
-        self._sessions = SessionManager(paths.sessions_path, config)
+        self._db = KlirDB(paths.db_path)
+        self._sessions = SessionManager(self._db, config)
         self._named_sessions = NamedSessionRegistry(paths.named_sessions_path)
         self._process_registry = ProcessRegistry()
         self._cwd_override: str | None = None  # Set by /cwd command
@@ -162,7 +163,6 @@ class Orchestrator:
             available_providers=frozenset(),
             process_registry=self._process_registry,
         )
-        self._db = KlirDB(paths.db_path)
         self._cron_manager = CronManager(jobs_path=paths.cron_jobs_path)
         self._webhook_manager = WebhookManager(hooks_path=paths.webhooks_path)
         self._observers = ObserverManager(config, paths, self._db)

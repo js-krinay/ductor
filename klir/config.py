@@ -139,6 +139,7 @@ class CleanupConfig(BaseModel):
     output_to_user_days: int = 30
     api_files_days: int = 30
     chat_activity_days: int = 90
+    session_retention_days: int = 30
     check_hour: int = 3
 
 

@@ -54,9 +54,11 @@ async def create_orchestrator(
 
     await orch.db.open()
 
+
     from klir.cron.run_log import migrate_jsonl_to_sqlite
 
     await migrate_jsonl_to_sqlite(orch.db, paths.cron_state_dir)
+    await orch._sessions.migrate_from_json(paths.sessions_path)
 
     load_translations(config.language)
 
@@ -90,6 +92,7 @@ async def create_orchestrator(
         db=orch._db,
     )
     orch._providers._codex_cache_fn = lambda: orch._observers.codex_cache
+    orch._observers.cleanup.set_session_manager(orch._sessions)
     await orch._observers.start_all()
 
     # Direct API server (WebSocket, designed for Tailscale)
