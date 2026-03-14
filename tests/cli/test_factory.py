@@ -13,7 +13,8 @@ from klir.cli.opencode_provider import OpenCodeCLI
 
 
 def test_create_cli_returns_claude_by_default() -> None:
-    cli = create_cli(CLIConfig(provider="claude"))
+    with patch.object(ClaudeCodeCLI, "_find_cli", return_value="/usr/bin/claude"):
+        cli = create_cli(CLIConfig(provider="claude"))
     assert isinstance(cli, ClaudeCodeCLI)
 
 
@@ -39,5 +40,6 @@ def test_create_cli_returns_opencode() -> None:
 
 
 def test_create_cli_unknown_provider_returns_claude() -> None:
-    cli = create_cli(CLIConfig(provider="unknown"))
+    with patch.object(ClaudeCodeCLI, "_find_cli", return_value="/usr/bin/claude"):
+        cli = create_cli(CLIConfig(provider="unknown"))
     assert isinstance(cli, ClaudeCodeCLI)
