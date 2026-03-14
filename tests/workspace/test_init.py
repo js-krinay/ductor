@@ -111,7 +111,8 @@ def test_creates_tools_dir(tmp_path: Path) -> None:
 # -- Zone 2: framework files always overwritten --
 
 
-def test_copies_claude_md(tmp_path: Path) -> None:
+@patch("klir.cli.auth.check_all_auth", return_value=_mock_all_authenticated())
+def test_copies_claude_md(_mock_auth: object, tmp_path: Path) -> None:
     paths = _make_paths(tmp_path)
     init_workspace(paths)
     target = paths.workspace / "CLAUDE.md"
@@ -132,7 +133,8 @@ def test_copies_agents_md_mirrors_claude_md(_mock_auth: object, tmp_path: Path) 
     assert agents.read_text() == claude.read_text()
 
 
-def test_framework_files_updated_on_reinit(tmp_path: Path) -> None:
+@patch("klir.cli.auth.check_all_auth", return_value=_mock_all_authenticated())
+def test_framework_files_updated_on_reinit(_mock_auth: object, tmp_path: Path) -> None:
     """Framework files are overwritten on every init (not user-owned)."""
     paths = _make_paths(tmp_path)
     init_workspace(paths)
@@ -145,7 +147,8 @@ def test_framework_files_updated_on_reinit(tmp_path: Path) -> None:
     assert (paths.workspace / "CLAUDE.md").read_text() == "# Updated CLAUDE.md"
 
 
-def test_subdirectory_claude_md_updated_on_reinit(tmp_path: Path) -> None:
+@patch("klir.cli.auth.check_all_auth", return_value=_mock_all_authenticated())
+def test_subdirectory_claude_md_updated_on_reinit(_mock_auth: object, tmp_path: Path) -> None:
     """Subdirectory CLAUDE.md files (Zone 2) are overwritten on every init."""
     paths = _make_paths(tmp_path)
     init_workspace(paths)
