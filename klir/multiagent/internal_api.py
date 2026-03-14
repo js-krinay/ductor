@@ -266,7 +266,7 @@ class InternalAgentAPI:
         )
 
         try:
-            task_id = self._task_hub.submit(submit)
+            task_id = await self._task_hub.submit(submit)
         except ValueError as exc:
             return web.json_response({"success": False, "error": str(exc)})
 
@@ -310,7 +310,7 @@ class InternalAgentAPI:
                 )
 
         try:
-            resumed_id = self._task_hub.resume(task_id, prompt, parent_agent=sender)
+            resumed_id = await self._task_hub.resume(task_id, prompt, parent_agent=sender)
         except ValueError as exc:
             return web.json_response({"success": False, "error": str(exc)})
 
@@ -441,7 +441,7 @@ class InternalAgentAPI:
                 status=403,
             )
 
-        if not self._task_hub.registry.delete(task_id):
+        if not await self._task_hub.registry.delete(task_id):
             return web.json_response(
                 {"success": False, "error": "Task is still running or waiting"},
                 status=409,

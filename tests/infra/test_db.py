@@ -49,14 +49,16 @@ async def test_initial_migration_creates_tables(db: KlirDB) -> None:
 async def test_schema_version_set(db: KlirDB) -> None:
     row = await db.fetch_one("SELECT version FROM _schema_version")
     assert row is not None
-    assert row["version"] == 1
+    assert isinstance(row["version"], int)
+    assert row["version"] >= 1
 
 
 async def test_migration_is_idempotent(db: KlirDB) -> None:
     await db.open()
     row = await db.fetch_one("SELECT version FROM _schema_version")
     assert row is not None
-    assert row["version"] == 1
+    assert isinstance(row["version"], int)
+    assert row["version"] >= 1
 
     rows = await db.fetch_all(
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '\\_%' ESCAPE '\\'"

@@ -3,23 +3,34 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from klir.infra.db import KlirDB
 from klir.tasks.hub import TaskHub
 from klir.tasks.models import TaskResult, TaskSubmit
 from klir.tasks.registry import TaskRegistry
 
 
 @pytest.fixture
-def registry(tmp_path: Path) -> TaskRegistry:
-    return TaskRegistry(
-        registry_path=tmp_path / "tasks.json",
-        tasks_dir=tmp_path / "tasks",
-    )
+async def db(tmp_path: Path) -> AsyncIterator[KlirDB]:
+    instance = KlirDB(tmp_path / "klir.db")
+    await instance.open()
+    try:
+        yield instance
+    finally:
+        await instance.close()
+
+
+@pytest.fixture
+async def registry(db: KlirDB, tmp_path: Path) -> TaskRegistry:
+    reg = TaskRegistry(db=db, tasks_dir=tmp_path / "tasks")
+    await reg.load()
+    return reg
 
 
 def _make_config(**overrides: object) -> MagicMock:
@@ -68,7 +79,7 @@ class TestSubmit:
             cli_service=_make_cli_service(),
             config=_make_config(),
         )
-        task_id = hub.submit(_submit())
+        task_id = await hub.submit(_submit())
         assert isinstance(task_id, str)
         assert len(task_id) == 8  # hex(4)
 
@@ -86,7 +97,7 @@ class TestSubmit:
             config=_make_config(enabled=False),
         )
         with pytest.raises(ValueError, match="disabled"):
-            hub.submit(_submit())
+            await hub.submit(_submit())
 
     async def test_raises_at_max_parallel(self, registry: TaskRegistry, tmp_path: Path) -> None:
         async def _hang(_: object) -> MagicMock:
@@ -103,9 +114,9 @@ class TestSubmit:
             cli_service=cli,
             config=_make_config(max_parallel=1),
         )
-        hub.submit(_submit(name="T1"))
+        await hub.submit(_submit(name="T1"))
         with pytest.raises(ValueError, match="Too many"):
-            hub.submit(_submit(name="T2"))
+            await hub.submit(_submit(name="T2"))
 
         await hub.shutdown()
 
@@ -123,7 +134,7 @@ class TestRunAndDeliver:
         )
         hub.set_result_handler("main", handler)
 
-        task_id = hub.submit(_submit())
+        task_id = await hub.submit(_submit())
         await asyncio.sleep(0.1)  # Let task run
 
         assert len(delivered) == 1
@@ -155,7 +166,7 @@ class TestRunAndDeliver:
         )
         hub.set_result_handler("main", AsyncMock(side_effect=delivered.append))
 
-        hub.submit(_submit())
+        await hub.submit(_submit())
         await asyncio.sleep(0.1)
 
         assert len(delivered) == 1
@@ -183,7 +194,7 @@ class TestCancel:
         )
         hub.set_result_handler("main", AsyncMock(side_effect=delivered.append))
 
-        task_id = hub.submit(_submit())
+        task_id = await hub.submit(_submit())
         await asyncio.sleep(0.05)
 
         success = await hub.cancel(task_id)
@@ -218,7 +229,7 @@ class TestForwardQuestion:
             config=_make_config(),
         )
 
-        entry = registry.create(_submit("build a website"), "claude", "opus")
+        entry = await registry.create(_submit("build a website"), "claude", "opus")
 
         question_handler = AsyncMock()
         hub.set_question_handler("main", question_handler)
@@ -237,7 +248,7 @@ class TestForwardQuestion:
             cli_service=_make_cli_service(),
             config=_make_config(),
         )
-        entry = registry.create(_submit(), "claude", "opus")
+        entry = await registry.create(_submit(), "claude", "opus")
         hub.set_question_handler("main", AsyncMock())
 
         await hub.forward_question(entry.task_id, "question 1")
@@ -264,7 +275,7 @@ class TestForwardQuestion:
             cli_service=_make_cli_service(),
             config=_make_config(),
         )
-        entry = registry.create(_submit(), "claude", "opus")
+        entry = await registry.create(_submit(), "claude", "opus")
         result = await hub.forward_question(entry.task_id, "question?")
         assert "no question handler" in result.lower()
 
@@ -284,7 +295,7 @@ class TestWaitingStatus:
         hub.set_result_handler("main", AsyncMock())
         hub.set_question_handler("main", AsyncMock())
 
-        task_id = hub.submit(_submit())
+        task_id = await hub.submit(_submit())
 
         # Simulate: task asks a question while running (before CLI returns)
         entry = registry.get(task_id)
@@ -311,7 +322,7 @@ class TestWaitingStatus:
         hub.set_result_handler("main", AsyncMock())
         hub.set_question_handler("main", AsyncMock())
 
-        task_id = hub.submit(_submit())
+        task_id = await hub.submit(_submit())
         await hub.forward_question(task_id, "Which framework?")
         await asyncio.sleep(0.1)
 
@@ -319,7 +330,7 @@ class TestWaitingStatus:
         assert entry is not None
         assert entry.status == "waiting"
 
-        resumed_id = hub.resume(task_id, "Use React")
+        resumed_id = await hub.resume(task_id, "Use React")
         assert resumed_id == task_id
         await asyncio.sleep(0.1)
 
@@ -342,7 +353,7 @@ class TestResume:
 
     async def test_resume_reuses_same_task(self, registry: TaskRegistry, tmp_path: Path) -> None:
         hub = self._hub(registry, tmp_path)
-        task_id = hub.submit(_submit())
+        task_id = await hub.submit(_submit())
         await asyncio.sleep(0.1)
 
         entry = registry.get(task_id)
@@ -350,7 +361,7 @@ class TestResume:
         assert entry.status == "done"
         assert entry.session_id == "sess-1"
 
-        resumed_id = hub.resume(task_id, "now for 2 weeks")
+        resumed_id = await hub.resume(task_id, "now for 2 weeks")
         assert resumed_id == task_id  # Same task, no new entry
         await asyncio.sleep(0.1)
 
@@ -359,15 +370,18 @@ class TestResume:
         assert entry.status == "done"  # Completed again
         assert entry.name == "Test Task"
 
+        await hub.shutdown()
+
     async def test_resume_uses_original_provider_model(
         self, registry: TaskRegistry, tmp_path: Path
     ) -> None:
         hub = self._hub(registry, tmp_path)
-        entry = registry.create(_submit(), "codex", "gpt-4.1", thinking="high")
-        registry.update_status(entry.task_id, "done", session_id="codex-sess")
+        entry = await registry.create(_submit(), "codex", "gpt-4.1", thinking="high")
+        await registry.update_status(entry.task_id, "done", session_id="codex-sess")
 
-        resumed_id = hub.resume(entry.task_id, "follow up")
+        resumed_id = await hub.resume(entry.task_id, "follow up")
         assert resumed_id == entry.task_id
+        await asyncio.sleep(0.1)
 
         updated = registry.get(entry.task_id)
         assert updated is not None
@@ -375,34 +389,44 @@ class TestResume:
         assert updated.model == "gpt-4.1"
         assert updated.thinking == "high"
 
-    def test_resume_fails_if_no_session_id(self, registry: TaskRegistry, tmp_path: Path) -> None:
+        await hub.shutdown()
+
+    async def test_resume_fails_if_no_session_id(
+        self, registry: TaskRegistry, tmp_path: Path
+    ) -> None:
         hub = self._hub(registry, tmp_path)
-        entry = registry.create(_submit(), "claude", "opus")
-        registry.update_status(entry.task_id, "done")  # No session_id
+        entry = await registry.create(_submit(), "claude", "opus")
+        await registry.update_status(entry.task_id, "done")  # No session_id
 
         with pytest.raises(ValueError, match="no resumable session"):
-            hub.resume(entry.task_id, "follow up")
+            await hub.resume(entry.task_id, "follow up")
 
-    def test_resume_fails_if_still_running(self, registry: TaskRegistry, tmp_path: Path) -> None:
+    async def test_resume_fails_if_still_running(
+        self, registry: TaskRegistry, tmp_path: Path
+    ) -> None:
         hub = self._hub(registry, tmp_path)
-        entry = registry.create(_submit(), "claude", "opus")
+        entry = await registry.create(_submit(), "claude", "opus")
         # Status is "running" by default
 
         with pytest.raises(ValueError, match="still running"):
-            hub.resume(entry.task_id, "follow up")
+            await hub.resume(entry.task_id, "follow up")
 
-    def test_resume_fails_if_no_provider(self, registry: TaskRegistry, tmp_path: Path) -> None:
+    async def test_resume_fails_if_no_provider(
+        self, registry: TaskRegistry, tmp_path: Path
+    ) -> None:
         hub = self._hub(registry, tmp_path)
-        entry = registry.create(_submit(), "", "")
-        registry.update_status(entry.task_id, "done", session_id="sess-1")
+        entry = await registry.create(_submit(), "", "")
+        await registry.update_status(entry.task_id, "done", session_id="sess-1")
 
         with pytest.raises(ValueError, match="no provider recorded"):
-            hub.resume(entry.task_id, "follow up")
+            await hub.resume(entry.task_id, "follow up")
 
-    def test_resume_fails_if_task_not_found(self, registry: TaskRegistry, tmp_path: Path) -> None:
+    async def test_resume_fails_if_task_not_found(
+        self, registry: TaskRegistry, tmp_path: Path
+    ) -> None:
         hub = self._hub(registry, tmp_path)
         with pytest.raises(ValueError, match="not found"):
-            hub.resume("nonexistent", "follow up")
+            await hub.resume("nonexistent", "follow up")
 
 
 class TestThinkingPersisted:
@@ -424,10 +448,12 @@ class TestThinkingPersisted:
         )
         hub.set_result_handler("main", AsyncMock())
 
-        task_id = hub.submit(submit)
+        task_id = await hub.submit(submit)
         entry = registry.get(task_id)
         assert entry is not None
         assert entry.thinking == "high"
+
+        await hub.shutdown()
 
 
 class TestNumTurns:
@@ -442,7 +468,7 @@ class TestNumTurns:
         )
         hub.set_result_handler("main", AsyncMock())
 
-        task_id = hub.submit(_submit())
+        task_id = await hub.submit(_submit())
         await asyncio.sleep(0.1)
 
         entry = registry.get(task_id)
@@ -460,7 +486,7 @@ class TestNumTurns:
         )
         hub.set_result_handler("main", AsyncMock())
 
-        task_id = hub.submit(_submit())
+        task_id = await hub.submit(_submit())
         await asyncio.sleep(0.1)
 
         original = registry.get(task_id)
@@ -469,7 +495,7 @@ class TestNumTurns:
 
         # Resume — CLI returns 3 more turns
         cli.execute.return_value.num_turns = 3
-        resumed_id = hub.resume(task_id, "follow up")
+        resumed_id = await hub.resume(task_id, "follow up")
         assert resumed_id == task_id
         await asyncio.sleep(0.1)
 
@@ -505,7 +531,7 @@ class TestPerAgentTasksDir:
             parent_agent="test",
             name="Agent Task",
         )
-        task_id = hub.submit(submit)
+        task_id = await hub.submit(submit)
         await asyncio.sleep(0.1)
 
         # Task folder should be in agent's workspace, not main
@@ -535,7 +561,7 @@ class TestPerAgentTasksDir:
         )
         hub.set_result_handler("main", AsyncMock())
 
-        task_id = hub.submit(_submit())
+        task_id = await hub.submit(_submit())
         await asyncio.sleep(0.1)
 
         folder = registry.task_folder(task_id)
@@ -569,7 +595,7 @@ class TestPerAgentCLI:
             parent_agent="sub1",
             name="Sub Task",
         )
-        hub.submit(submit)
+        await hub.submit(submit)
         await asyncio.sleep(0.1)
 
         # sub_cli should have been called, not main_cli
@@ -602,7 +628,7 @@ class TestPerAgentCLI:
             parent_agent="unknown_agent",
             name="Fallback Task",
         )
-        hub.submit(submit)
+        await hub.submit(submit)
         await asyncio.sleep(0.1)
 
         default_cli.execute.assert_called_once()
@@ -627,7 +653,7 @@ class TestPerAgentCLI:
         delivered: list[TaskResult] = []
         hub.set_result_handler("main", AsyncMock(side_effect=delivered.append))
 
-        hub.submit(_submit())
+        await hub.submit(_submit())
         await asyncio.sleep(0.1)
 
         agent_cli.execute.assert_called_once()

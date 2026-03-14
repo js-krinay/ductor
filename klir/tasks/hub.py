@@ -123,7 +123,7 @@ class TaskHub:
             msg = "CLIService not available"
             raise ValueError(msg)
 
-    def submit(self, submit: TaskSubmit) -> str:
+    async def submit(self, submit: TaskSubmit) -> str:
         """Create a task, spawn CLI subprocess. Returns task_id."""
         self._check_enabled()
 
@@ -148,7 +148,7 @@ class TaskHub:
 
         # Resolve per-agent tasks_dir for folder isolation
         agent_tasks_dir = self._agent_tasks_dirs.get(submit.parent_agent)
-        entry = self._registry.create(
+        entry = await self._registry.create(
             submit, provider, model, thinking=thinking, tasks_dir=agent_tasks_dir
         )
 
@@ -167,7 +167,7 @@ class TaskHub:
         )
         return entry.task_id
 
-    def resume(self, task_id: str, follow_up: str, *, parent_agent: str = "") -> str:
+    async def resume(self, task_id: str, follow_up: str, *, parent_agent: str = "") -> str:
         """Resume a completed task's CLI session with a follow-up. Returns task_id."""
         self._check_enabled()
 
@@ -186,7 +186,7 @@ class TaskHub:
             raise ValueError(msg)
 
         # Reset to running — same entry, same folder, same task_id
-        self._registry.update_status(
+        await self._registry.update_status(
             task_id,
             "running",
             completed_at=0.0,
@@ -248,7 +248,7 @@ class TaskHub:
             question[:80],
         )
 
-        self._registry.update_status(
+        await self._registry.update_status(
             task_id,
             entry.status,
             question_count=entry.question_count + 1,
@@ -351,7 +351,7 @@ class TaskHub:
             while True:
                 await asyncio.sleep(_MAINTENANCE_INTERVAL)
                 try:
-                    removed = self._registry.cleanup_orphans()
+                    removed = await self._registry.cleanup_orphans()
                     if removed:
                         logger.info("Task maintenance: removed %d orphan(s)", removed)
                 except Exception:
@@ -390,7 +390,7 @@ class TaskHub:
             # Pre-resolve effective provider/model so the entry is never empty
             eff_provider, eff_model = cli.resolve_provider(request)
             if eff_provider and not entry.provider:
-                self._registry.update_status(
+                await self._registry.update_status(
                     entry.task_id, "running", provider=eff_provider, model=eff_model
                 )
                 entry.provider = eff_provider
@@ -414,7 +414,7 @@ class TaskHub:
             # Accumulate turns (resume adds to previous count)
             total_turns = entry.num_turns + response.num_turns
 
-            self._registry.update_status(
+            await self._registry.update_status(
                 entry.task_id,
                 status,
                 session_id=response.session_id or "",
@@ -462,7 +462,7 @@ class TaskHub:
 
         except asyncio.CancelledError:
             elapsed = time.monotonic() - t0
-            self._registry.update_status(
+            await self._registry.update_status(
                 entry.task_id,
                 "cancelled",
                 completed_at=time.time(),
@@ -491,7 +491,7 @@ class TaskHub:
             logger.exception("Task failed id=%s name='%s'", entry.task_id, entry.name)
             elapsed = time.monotonic() - t0
             error_msg = "Internal error (check logs)"
-            self._registry.update_status(
+            await self._registry.update_status(
                 entry.task_id,
                 "failed",
                 completed_at=time.time(),

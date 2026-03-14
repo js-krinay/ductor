@@ -8,6 +8,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from klir.config import AgentConfig, update_config_file_async
+from klir.infra.db import KlirDB
 from klir.infra.file_watcher import FileWatcher
 from klir.infra.restart import EXIT_RESTART
 from klir.multiagent.health import AgentHealth
@@ -55,6 +56,7 @@ class AgentSupervisor:
         self._internal_api: InternalAgentAPI | None = None
         self._shared_knowledge: SharedKnowledgeSync | None = None
         self._task_hub: TaskHub | None = None
+        self._task_db: KlirDB | None = None
         self._notify_sender: NotifyCallback | None = None
 
     def set_notification_sender(self, callback: NotifyCallback) -> None:
@@ -102,9 +104,14 @@ class AgentSupervisor:
             from klir.tasks.hub import TaskHub
             from klir.tasks.registry import TaskRegistry
 
+            self._task_db = KlirDB(self._main_paths.db_path)
+            await self._task_db.open()
             registry = TaskRegistry(
-                registry_path=self._main_paths.tasks_registry_path,
+                db=self._task_db,
                 tasks_dir=self._main_paths.tasks_dir,
+            )
+            await registry.load(
+                legacy_json_path=self._main_paths.tasks_registry_path,
             )
             self._task_hub = TaskHub(
                 registry,
@@ -626,12 +633,18 @@ class AgentSupervisor:
         if self._bus:
             self._bus.unregister("main")
 
-        # Stop task hub
-        if self._task_hub:
-            await self._task_hub.shutdown()
+        # Stop task hub and its database
+        await self._stop_task_system()
 
         # Stop internal API
         if self._internal_api:
             await self._internal_api.stop()
 
         logger.info("AgentSupervisor stopped (all agents shut down)")
+
+    async def _stop_task_system(self) -> None:
+        """Shut down task hub and close its database connection."""
+        if self._task_hub:
+            await self._task_hub.shutdown()
+        if self._task_db is not None:
+            await self._task_db.close()

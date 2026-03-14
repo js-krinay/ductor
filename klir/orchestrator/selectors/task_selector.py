@@ -65,7 +65,7 @@ async def handle_task_callback(
         return _build_page(hub, chat_id, note=note)
 
     if action == "cleanup":
-        count = hub.registry.cleanup_finished(chat_id)
+        count = await hub.registry.cleanup_finished(chat_id)
         note = (
             t("task.selector.cleanup_count", count=count)
             if count
