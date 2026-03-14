@@ -68,6 +68,7 @@ def _make_observer(
         mgr,
         config=_make_config(**config_overrides),
         codex_cache=codex_cache or _make_codex_cache(),
+        db=AsyncMock(),
     )
 
 

@@ -165,7 +165,7 @@ class Orchestrator:
         self._db = KlirDB(paths.db_path)
         self._cron_manager = CronManager(jobs_path=paths.cron_jobs_path)
         self._webhook_manager = WebhookManager(hooks_path=paths.webhooks_path)
-        self._observers = ObserverManager(config, paths)
+        self._observers = ObserverManager(config, paths, self._db)
 
         async def _hb_handler(
             chat_id: int,

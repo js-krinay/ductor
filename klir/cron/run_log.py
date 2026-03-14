@@ -1,15 +1,20 @@
-"""Per-run logging for cron jobs: JSONL log files and output capture."""
+"""Per-run logging for cron jobs: SQLite-backed run index and disk-based output capture."""
 
 from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time as _time
+import uuid
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-DEFAULT_MAX_BYTES = 2_000_000
-DEFAULT_KEEP_LINES = 2_000
+if TYPE_CHECKING:
+    from klir.infra.db import KlirDB
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -57,45 +62,38 @@ class CronRunLogEntry:
             return None
 
 
-def resolve_run_log_path(cron_state_dir: Path, job_id: str) -> Path:
-    """Return JSONL log path for a job. Raises ValueError on path traversal attempt."""
-    state_resolved = cron_state_dir.resolve()
-    job_path = (cron_state_dir / job_id).resolve()
-    if not str(job_path).startswith(str(state_resolved) + "/") and job_path != state_resolved:
-        raise ValueError(f"Invalid job_id (path traversal detected): {job_id!r}")
-    return job_path / "runs.jsonl"
+# ── SQLite operations ────────────────────────────────────────────────
+
+_INSERT_SQL = """\
+INSERT INTO cron_runs (id, ts, job_id, status, error, summary, duration_ms,
+                       delivery_status, delivery_error, provider, model,
+                       input_tokens, output_tokens, output_path)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
 
 
-async def append_run_log(
-    path: Path,
-    entry: CronRunLogEntry,
-    *,
-    max_bytes: int = DEFAULT_MAX_BYTES,
-    keep_lines: int = DEFAULT_KEEP_LINES,
-) -> None:
-    """Append entry to JSONL log. Prunes file if it exceeds max_bytes."""
-    await asyncio.to_thread(_do_append_and_prune, path, entry, max_bytes, keep_lines)
-
-
-def _do_append_and_prune(
-    path: Path,
-    entry: CronRunLogEntry,
-    max_bytes: int,
-    keep_lines: int,
-) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as f:
-        f.write(entry.to_json_line() + "\n")
-    if path.stat().st_size > max_bytes:
-        _prune_if_needed(path, keep_lines)
-
-
-def _prune_if_needed(path: Path, keep_lines: int) -> None:
-    """Trim log file keeping only the most recent keep_lines lines."""
-    lines = path.read_text(encoding="utf-8").splitlines()
-    if len(lines) > keep_lines:
-        kept = lines[-keep_lines:]
-        path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+async def append_run_log(db: KlirDB, entry: CronRunLogEntry) -> None:
+    """Insert a run log entry into the cron_runs table."""
+    row_id = entry.run_id or uuid.uuid4().hex
+    await db.execute(
+        _INSERT_SQL,
+        (
+            row_id,
+            entry.ts,
+            entry.job_id,
+            entry.status,
+            entry.error,
+            entry.summary,
+            entry.duration_ms,
+            entry.delivery_status,
+            entry.delivery_error,
+            entry.provider,
+            entry.model,
+            entry.input_tokens,
+            entry.output_tokens,
+            entry.output_path,
+        ),
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,24 +107,45 @@ class RunLogPage:
     has_more: bool
 
 
-async def read_run_log_page(
-    path: Path,
+async def read_run_log_page(  # noqa: PLR0913
+    db: KlirDB,
     *,
+    job_id: str | None = None,
     limit: int = 50,
     offset: int = 0,
     status_filter: str = "all",
     sort_dir: str = "desc",
 ) -> RunLogPage:
-    """Read paginated run log entries with optional status filtering."""
-    entries = await asyncio.to_thread(_parse_all_entries, path)
+    """Read paginated run log entries from SQLite with optional filtering."""
+    conditions: list[str] = []
+    params: list[object] = []
+
+    if job_id is not None:
+        conditions.append("job_id = ?")
+        params.append(job_id)
     if status_filter != "all":
-        entries = [e for e in entries if e.status == status_filter]
-    if sort_dir == "desc":
-        entries = list(reversed(entries))
-    total = len(entries)
-    page_entries = entries[offset : offset + limit]
+        conditions.append("status = ?")
+        params.append(status_filter)
+
+    where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+    direction = "DESC" if sort_dir == "desc" else "ASC"
+
+    count_sql = "SELECT COUNT(*) AS cnt FROM cron_runs" + where  # noqa: S608
+    count_row = await db.fetch_one(count_sql, tuple(params))
+    total = int(count_row["cnt"]) if count_row else 0  # type: ignore[call-overload]
+
+    query_sql = (
+        "SELECT * FROM cron_runs"  # noqa: S608
+        + where
+        + " ORDER BY ts "
+        + direction
+        + " LIMIT ? OFFSET ?"
+    )
+    rows = await db.fetch_all(query_sql, (*params, limit, offset))
+
+    entries = [_row_to_entry(r) for r in rows]
     return RunLogPage(
-        entries=page_entries,
+        entries=entries,
         total=total,
         offset=offset,
         limit=limit,
@@ -134,18 +153,96 @@ async def read_run_log_page(
     )
 
 
-def _parse_all_entries(path: Path) -> list[CronRunLogEntry]:
-    """Parse all valid entries from a JSONL file, skipping malformed lines."""
-    if not path.exists():
-        return []
-    entries = []
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        stripped = raw_line.strip()
-        if stripped:
-            entry = CronRunLogEntry.from_json_line(stripped)
-            if entry is not None:
-                entries.append(entry)
+def _row_to_entry(row: dict[str, object]) -> CronRunLogEntry:
+    """Convert a SQLite row dict to a CronRunLogEntry."""
+    valid_keys = {f.name for f in fields(CronRunLogEntry)}
+    # Map 'id' column back to 'run_id' field
+    data: dict[str, object] = {}
+    for k, v in row.items():
+        if k == "id":
+            data["run_id"] = v
+        elif k in valid_keys:
+            data[k] = v
+    return CronRunLogEntry(**data)  # type: ignore[arg-type]
+
+
+# ── Retention cleanup ────────────────────────────────────────────────
+
+
+async def cleanup_old_runs(db: KlirDB, *, max_age_days: int = 30) -> None:
+    """Delete cron_runs rows older than max_age_days."""
+    cutoff = _time.time() - max_age_days * 86400
+    await db.execute("DELETE FROM cron_runs WHERE ts < ?", (cutoff,))
+
+
+# ── JSONL migration ──────────────────────────────────────────────────
+
+
+async def migrate_jsonl_to_sqlite(db: KlirDB, cron_state_dir: Path) -> int:
+    """One-time migration: import all existing runs.jsonl files into SQLite.
+
+    Returns the number of entries imported. Skips entries whose run_id
+    already exists in the database (idempotent).
+    """
+    if not await asyncio.to_thread(cron_state_dir.is_dir):
+        return 0
+
+    entries = await asyncio.to_thread(_collect_jsonl_entries, cron_state_dir)
+    if not entries:
+        return 0
+
+    # Fetch existing IDs in bulk to avoid O(N) queries
+    existing_rows = await db.fetch_all("SELECT id FROM cron_runs")
+    existing_ids = {r["id"] for r in existing_rows}
+
+    batch: list[tuple[object, ...]] = []
+    for entry in entries:
+        row_id = entry.run_id or uuid.uuid4().hex
+        if row_id in existing_ids:
+            continue
+        existing_ids.add(row_id)  # prevent duplicates within batch
+        batch.append(
+            (
+                row_id,
+                entry.ts,
+                entry.job_id,
+                entry.status,
+                entry.error,
+                entry.summary,
+                entry.duration_ms,
+                entry.delivery_status,
+                entry.delivery_error,
+                entry.provider,
+                entry.model,
+                entry.input_tokens,
+                entry.output_tokens,
+                entry.output_path,
+            )
+        )
+
+    if batch:
+        await db.executemany(_INSERT_SQL, batch)
+        logger.info(
+            "Migrated %d cron run log entries from JSONL to SQLite",
+            len(batch),
+        )
+    return len(batch)
+
+
+def _collect_jsonl_entries(cron_state_dir: Path) -> list[CronRunLogEntry]:
+    """Scan all runs.jsonl files under cron_state_dir and parse valid entries."""
+    entries: list[CronRunLogEntry] = []
+    for jsonl_path in cron_state_dir.rglob("runs.jsonl"):
+        for raw_line in jsonl_path.read_text(encoding="utf-8").splitlines():
+            stripped = raw_line.strip()
+            if stripped:
+                entry = CronRunLogEntry.from_json_line(stripped)
+                if entry is not None:
+                    entries.append(entry)
     return entries
+
+
+# ── Disk-based output files (unchanged) ──────────────────────────────
 
 
 async def save_run_output(
@@ -180,7 +277,7 @@ def prune_run_outputs(state_dir: Path, *, max_age_seconds: float = 30 * 86400) -
     """Delete run output files older than max_age_seconds.
 
     Call periodically (e.g. from the daily cleanup observer) to prevent
-    orphaned .log files accumulating after their JSONL entries are pruned.
+    orphaned .log files accumulating after their SQLite entries are pruned.
     Returns the number of files deleted.
     """
     runs_dir = state_dir / "runs"

@@ -53,6 +53,11 @@ async def create_orchestrator(
     )
 
     await orch.db.open()
+
+    from klir.cron.run_log import migrate_jsonl_to_sqlite
+
+    await migrate_jsonl_to_sqlite(orch.db, paths.cron_state_dir)
+
     load_translations(config.language)
 
     from klir.cli.auth import AuthStatus, check_all_auth
@@ -82,6 +87,7 @@ async def create_orchestrator(
         webhook_manager=orch._webhook_manager,
         cli_service=orch._cli_service,
         codex_cache=codex_cache,
+        db=orch._db,
     )
     orch._providers._codex_cache_fn = lambda: orch._observers.codex_cache
     await orch._observers.start_all()

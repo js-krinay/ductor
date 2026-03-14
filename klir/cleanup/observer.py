@@ -11,12 +11,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from klir.config import resolve_user_timezone
-from klir.cron.run_log import prune_run_outputs
+from klir.cron.run_log import cleanup_old_runs, prune_run_outputs
 from klir.infra.base_observer import BaseObserver
 
 if TYPE_CHECKING:
     from klir.bot.chat_tracker import ChatTracker
     from klir.config import AgentConfig, CleanupConfig
+    from klir.infra.db import KlirDB
     from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
@@ -61,10 +62,11 @@ class CleanupObserver(BaseObserver):
     ``start()`` / ``stop()`` with an asyncio background task.
     """
 
-    def __init__(self, config: AgentConfig, paths: KlirPaths) -> None:
+    def __init__(self, config: AgentConfig, paths: KlirPaths, db: KlirDB) -> None:
         super().__init__()
         self._config = config
         self._paths = paths
+        self._db = db
         self._last_run_date: str = ""
         self._chat_tracker: ChatTracker | None = None
 
@@ -136,9 +138,10 @@ class CleanupObserver(BaseObserver):
             (self._paths.output_to_user_dir, self._cfg.output_to_user_days),
             (self._paths.api_files_dir, self._cfg.api_files_days),
         ]
-        results, cron_deleted = await asyncio.gather(
+        results, cron_deleted, _ = await asyncio.gather(
             asyncio.to_thread(_run_cleanup, targets),
             asyncio.to_thread(prune_run_outputs, self._paths.cron_state_dir),
+            cleanup_old_runs(self._db),
         )
 
         # Prune inactive chat activity records from SQLite.

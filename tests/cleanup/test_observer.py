@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from datetime import UTC
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from klir.cleanup.observer import CleanupObserver, _delete_old_files
 from klir.config import AgentConfig, CleanupConfig
@@ -97,7 +97,7 @@ def _make_paths(tmp_path: Path) -> KlirPaths:
 
 async def test_start_disabled_does_not_spawn_task(tmp_path: Path) -> None:
     config = _make_config(enabled=False)
-    observer = CleanupObserver(config, _make_paths(tmp_path))
+    observer = CleanupObserver(config, _make_paths(tmp_path), AsyncMock())
     await observer.start()
     assert observer._task is None
     await observer.stop()
@@ -105,7 +105,7 @@ async def test_start_disabled_does_not_spawn_task(tmp_path: Path) -> None:
 
 async def test_start_and_stop(tmp_path: Path) -> None:
     config = _make_config()
-    observer = CleanupObserver(config, _make_paths(tmp_path))
+    observer = CleanupObserver(config, _make_paths(tmp_path), AsyncMock())
     await observer.start()
     assert observer._task is not None
     assert observer._running
@@ -133,7 +133,7 @@ async def test_execute_deletes_files(tmp_path: Path) -> None:
     recent_tg.write_text("new")
 
     config = _make_config()
-    observer = CleanupObserver(config, paths)
+    observer = CleanupObserver(config, paths, AsyncMock())
     await observer._execute()
 
     assert not old_tg.exists()
@@ -143,7 +143,7 @@ async def test_execute_deletes_files(tmp_path: Path) -> None:
 
 async def test_maybe_run_skips_wrong_hour(tmp_path: Path) -> None:
     config = _make_config(check_hour=3)
-    observer = CleanupObserver(config, _make_paths(tmp_path))
+    observer = CleanupObserver(config, _make_paths(tmp_path), AsyncMock())
 
     from datetime import datetime
 
@@ -161,7 +161,7 @@ async def test_maybe_run_skips_duplicate_same_day(tmp_path: Path) -> None:
     paths = _make_paths(tmp_path)
     paths.telegram_files_dir.mkdir(parents=True, exist_ok=True)
     paths.output_to_user_dir.mkdir(parents=True, exist_ok=True)
-    observer = CleanupObserver(config, paths)
+    observer = CleanupObserver(config, paths, AsyncMock())
 
     from datetime import datetime
 

@@ -18,7 +18,7 @@ from klir.config import resolve_user_timezone
 from klir.cron.alerts import format_failure_alert, should_alert
 from klir.cron.backoff import compute_backoff_seconds, should_auto_disable
 from klir.cron.manager import CronManager
-from klir.cron.run_log import CronRunLogEntry, append_run_log, resolve_run_log_path, save_run_output
+from klir.cron.run_log import CronRunLogEntry, append_run_log, save_run_output
 from klir.i18n import t
 from klir.infra.base_task_observer import BaseTaskObserver
 from klir.infra.file_watcher import FileWatcher
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from klir.cli.codex_cache import CodexModelCache
     from klir.config import AgentConfig
     from klir.cron.manager import CronJob
+    from klir.infra.db import KlirDB
     from klir.workspace.paths import KlirPaths
 
 logger = logging.getLogger(__name__)
@@ -68,9 +69,11 @@ class CronObserver(BaseTaskObserver):
         *,
         config: AgentConfig,
         codex_cache: CodexModelCache,
+        db: KlirDB,
     ) -> None:
         super().__init__(paths, config, codex_cache)
         self._manager = manager
+        self._db = db
         self._on_result: CronResultCallback | None = None
         self._scheduled: dict[str, asyncio.Task[None]] = {}
         self._backoff_until: dict[str, float] = {}
@@ -352,7 +355,6 @@ class CronObserver(BaseTaskObserver):
 
         run_id = f"{int(time.time())}_{secrets.token_hex(4)}"
         state_dir = self._paths.cron_job_state_dir(job_id)
-        log_path = resolve_run_log_path(self._paths.cron_state_dir, job_id)
 
         logger.info("Cron job starting job=%s run_id=%s", job_title, run_id)
         t0 = time.monotonic()
@@ -388,7 +390,7 @@ class CronObserver(BaseTaskObserver):
                 delivery_status="skipped",
             )
             await append_run_log(
-                log_path,
+                self._db,
                 self._build_log_entry(
                     job_id=job_id,
                     run_id=run_id,
@@ -418,7 +420,7 @@ class CronObserver(BaseTaskObserver):
                 delivery_error=delivery_error,
             )
             await append_run_log(
-                log_path,
+                self._db,
                 self._build_log_entry(
                     job_id=job_id,
                     run_id=run_id,
@@ -535,7 +537,7 @@ class CronObserver(BaseTaskObserver):
                 )
 
         await append_run_log(
-            log_path,
+            self._db,
             self._build_log_entry(
                 job_id=job_id,
                 run_id=run_id,

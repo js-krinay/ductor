@@ -63,6 +63,7 @@ def observer(tmp_path: Path, mock_codex_cache: CodexModelCache) -> CronObserver:
         manager=manager,
         config=config,
         codex_cache=mock_codex_cache,
+        db=AsyncMock(),
     )
 
 

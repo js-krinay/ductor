@@ -27,6 +27,7 @@ from klir.config_reload import ConfigReloader
 from klir.cron.manager import CronManager
 from klir.cron.observer import CronObserver
 from klir.heartbeat import HeartbeatObserver
+from klir.infra.db import KlirDB
 from klir.webhook.manager import WebhookManager
 from klir.webhook.models import WebhookResult
 from klir.webhook.observer import WebhookObserver
@@ -40,11 +41,11 @@ logger = logging.getLogger(__name__)
 class ObserverManager:
     """Owns all background observers and manages their lifecycle."""
 
-    def __init__(self, config: AgentConfig, paths: KlirPaths) -> None:
+    def __init__(self, config: AgentConfig, paths: KlirPaths, db: KlirDB) -> None:
         self._config = config
         self._paths = paths
         self.heartbeat = HeartbeatObserver(config)
-        self.cleanup = CleanupObserver(config, paths)
+        self.cleanup = CleanupObserver(config, paths, db)
 
         self.cron: CronObserver | None = None
         self.webhook: WebhookObserver | None = None
@@ -96,6 +97,7 @@ class ObserverManager:
         webhook_manager: WebhookManager,
         cli_service: CLIService,
         codex_cache: CodexModelCache,
+        db: KlirDB,
     ) -> None:
         """Create Background, Cron, and Webhook observers (after caches are ready)."""
         config, paths = self._config, self._paths
@@ -103,7 +105,7 @@ class ObserverManager:
         self.background = BackgroundObserver(
             paths, timeout_seconds=config.timeouts.background, cli_service=cli_service
         )
-        self.cron = CronObserver(paths, cron_manager, config=config, codex_cache=codex_cache)
+        self.cron = CronObserver(paths, cron_manager, config=config, codex_cache=codex_cache, db=db)
         self.webhook = WebhookObserver(
             paths, webhook_manager, config=config, codex_cache=codex_cache
         )

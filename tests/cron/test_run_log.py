@@ -1,8 +1,10 @@
-"""Tests for CronRunLogEntry model and JSONL log operations."""
+"""Tests for CronRunLogEntry model and SQLite-backed run log operations."""
 
 from __future__ import annotations
 
 import json
+import time
+from collections.abc import AsyncIterator
 from pathlib import Path
 
 import pytest
@@ -11,10 +13,20 @@ from klir.cron.run_log import (
     CronRunLogEntry,
     RunLogPage,
     append_run_log,
+    cleanup_old_runs,
+    migrate_jsonl_to_sqlite,
     read_run_log_page,
-    resolve_run_log_path,
     save_run_output,
 )
+from klir.infra.db import KlirDB
+
+
+@pytest.fixture
+async def db(tmp_path: Path) -> AsyncIterator[KlirDB]:
+    instance = KlirDB(tmp_path / "klir.db")
+    await instance.open()
+    yield instance
+    await instance.close()
 
 
 class TestCronRunLogEntry:
@@ -75,94 +87,141 @@ class TestCronRunLogEntry:
         assert CronRunLogEntry.from_json_line('{"ts": 1234567890.0}') is None
 
 
-class TestResolveRunLogPath:
-    def test_returns_jsonl_path(self, tmp_path: Path) -> None:
-        path = resolve_run_log_path(tmp_path / "state", "daily")
-        assert path == tmp_path / "state" / "daily" / "runs.jsonl"
-
-    def test_rejects_path_traversal(self, tmp_path: Path) -> None:
-        with pytest.raises(ValueError, match="path traversal"):
-            resolve_run_log_path(tmp_path / "state", "../escape")
-
-
 class TestAppendRunLog:
-    async def test_creates_file_and_appends(self, tmp_path: Path) -> None:
-        path = tmp_path / "daily" / "runs.jsonl"
-        entry = CronRunLogEntry(ts=1.0, job_id="daily", status="success")
-        await append_run_log(path, entry)
-        assert path.exists()
-        lines = path.read_text().splitlines()
-        assert len(lines) == 1
-        data = json.loads(lines[0])
-        assert data["status"] == "success"
+    async def test_insert_and_fetch(self, db: KlirDB) -> None:
+        entry = CronRunLogEntry(ts=1.0, job_id="daily", status="success", run_id="run001")
+        await append_run_log(db, entry)
+        row = await db.fetch_one("SELECT * FROM cron_runs WHERE id = ?", ("run001",))
+        assert row is not None
+        assert row["job_id"] == "daily"
+        assert row["status"] == "success"
+        assert row["ts"] == 1.0
 
-    async def test_multiple_appends(self, tmp_path: Path) -> None:
-        path = tmp_path / "runs.jsonl"
+    async def test_multiple_inserts(self, db: KlirDB) -> None:
         for i in range(3):
-            entry = CronRunLogEntry(ts=float(i), job_id="job", status="success")
-            await append_run_log(path, entry)
-        lines = path.read_text().splitlines()
-        assert len(lines) == 3
-
-    async def test_prunes_when_exceeds_max_bytes(self, tmp_path: Path) -> None:
-        path = tmp_path / "runs.jsonl"
-        # Write enough entries to exceed 100 bytes with keep_lines=2
-        for i in range(10):
-            entry = CronRunLogEntry(ts=float(i), job_id="job", status="success")
-            await append_run_log(path, entry, max_bytes=100, keep_lines=2)
-        lines = path.read_text().splitlines()
-        assert len(lines) <= 2
+            entry = CronRunLogEntry(ts=float(i), job_id="job", status="success", run_id=f"run{i}")
+            await append_run_log(db, entry)
+        row = await db.fetch_one("SELECT COUNT(*) AS cnt FROM cron_runs")
+        assert row is not None
+        assert row["cnt"] == 3
 
 
 class TestReadRunLogPage:
-    async def test_empty_file_returns_empty_page(self, tmp_path: Path) -> None:
-        path = tmp_path / "runs.jsonl"
-        page = await read_run_log_page(path)
+    async def test_empty_db_returns_empty_page(self, db: KlirDB) -> None:
+        page = await read_run_log_page(db)
         assert page.entries == []
         assert page.total == 0
         assert page.has_more is False
 
-    async def test_missing_file_returns_empty_page(self, tmp_path: Path) -> None:
-        path = tmp_path / "nonexistent.jsonl"
-        page = await read_run_log_page(path)
-        assert page.entries == []
-        assert page.total == 0
-
-    async def test_desc_order(self, tmp_path: Path) -> None:
-        path = tmp_path / "runs.jsonl"
+    async def test_desc_order(self, db: KlirDB) -> None:
         for i in range(3):
-            entry = CronRunLogEntry(ts=float(i), job_id="job", status="success")
-            await append_run_log(path, entry)
-        page = await read_run_log_page(path, sort_dir="desc")
+            entry = CronRunLogEntry(ts=float(i), job_id="job", status="success", run_id=f"run{i}")
+            await append_run_log(db, entry)
+        page = await read_run_log_page(db, sort_dir="desc")
         assert page.entries[0].ts == 2.0
         assert page.entries[-1].ts == 0.0
 
-    async def test_status_filter(self, tmp_path: Path) -> None:
-        path = tmp_path / "runs.jsonl"
-        await append_run_log(path, CronRunLogEntry(ts=1.0, job_id="job", status="success"))
-        await append_run_log(path, CronRunLogEntry(ts=2.0, job_id="job", status="error:exit_1"))
-        page = await read_run_log_page(path, status_filter="success")
+    async def test_status_filter(self, db: KlirDB) -> None:
+        await append_run_log(
+            db, CronRunLogEntry(ts=1.0, job_id="job", status="success", run_id="r1")
+        )
+        await append_run_log(
+            db,
+            CronRunLogEntry(ts=2.0, job_id="job", status="error:exit_1", run_id="r2"),
+        )
+        page = await read_run_log_page(db, status_filter="success")
         assert page.total == 1
         assert page.entries[0].status == "success"
 
-    async def test_pagination_offset(self, tmp_path: Path) -> None:
-        path = tmp_path / "runs.jsonl"
+    async def test_pagination_offset(self, db: KlirDB) -> None:
         for i in range(5):
-            await append_run_log(path, CronRunLogEntry(ts=float(i), job_id="job", status="success"))
-        page = await read_run_log_page(path, limit=2, offset=2)
+            await append_run_log(
+                db,
+                CronRunLogEntry(ts=float(i), job_id="job", status="success", run_id=f"run{i}"),
+            )
+        page = await read_run_log_page(db, limit=2, offset=2)
         assert len(page.entries) == 2
         assert page.total == 5
         assert page.has_more is True
 
-    async def test_skips_malformed_lines(self, tmp_path: Path) -> None:
-        path = tmp_path / "runs.jsonl"
-        path.write_text('{"ts": 1.0, "job_id": "ok", "action": "finished"}\nnot-json\n')
-        page = await read_run_log_page(path)
-        assert page.total == 1
+    async def test_job_id_filter(self, db: KlirDB) -> None:
+        await append_run_log(
+            db, CronRunLogEntry(ts=1.0, job_id="alpha", status="success", run_id="a1")
+        )
+        await append_run_log(
+            db, CronRunLogEntry(ts=2.0, job_id="alpha", status="success", run_id="a2")
+        )
+        await append_run_log(
+            db, CronRunLogEntry(ts=3.0, job_id="beta", status="success", run_id="b1")
+        )
+        page = await read_run_log_page(db, job_id="alpha")
+        assert page.total == 2
+        assert all(e.job_id == "alpha" for e in page.entries)
 
     def test_run_log_page_type(self) -> None:
         """RunLogPage is accessible from the import."""
         assert RunLogPage is not None
+
+
+class TestCleanupOldRuns:
+    async def test_deletes_old_entries(self, db: KlirDB) -> None:
+        old_ts = time.time() - 60 * 86400  # 60 days ago
+        await append_run_log(
+            db, CronRunLogEntry(ts=old_ts, job_id="job", status="success", run_id="old1")
+        )
+        await append_run_log(
+            db, CronRunLogEntry(ts=old_ts - 100, job_id="job", status="success", run_id="old2")
+        )
+        await cleanup_old_runs(db, max_age_days=30)
+        page = await read_run_log_page(db)
+        assert page.total == 0
+
+    async def test_keeps_recent_entries(self, db: KlirDB) -> None:
+        recent_ts = time.time() - 86400  # 1 day ago
+        await append_run_log(
+            db, CronRunLogEntry(ts=recent_ts, job_id="job", status="success", run_id="new1")
+        )
+        await cleanup_old_runs(db, max_age_days=30)
+        page = await read_run_log_page(db)
+        assert page.total == 1
+
+
+class TestMigrateJsonlToSqlite:
+    async def test_imports_jsonl_entries(self, db: KlirDB, tmp_path: Path) -> None:
+        state_dir = tmp_path / "cron_state"
+        job_dir = state_dir / "daily"
+        job_dir.mkdir(parents=True)
+        entries = [
+            CronRunLogEntry(ts=1.0, job_id="daily", status="success", run_id="m1"),
+            CronRunLogEntry(ts=2.0, job_id="daily", status="error", run_id="m2"),
+        ]
+        jsonl = "\n".join(e.to_json_line() for e in entries) + "\n"
+        (job_dir / "runs.jsonl").write_text(jsonl)
+
+        count = await migrate_jsonl_to_sqlite(db, state_dir)
+        assert count == 2
+        page = await read_run_log_page(db)
+        assert page.total == 2
+
+    async def test_idempotent_migration(self, db: KlirDB, tmp_path: Path) -> None:
+        state_dir = tmp_path / "cron_state"
+        job_dir = state_dir / "daily"
+        job_dir.mkdir(parents=True)
+        entry = CronRunLogEntry(ts=1.0, job_id="daily", status="success", run_id="idem1")
+        (job_dir / "runs.jsonl").write_text(entry.to_json_line() + "\n")
+
+        first = await migrate_jsonl_to_sqlite(db, state_dir)
+        second = await migrate_jsonl_to_sqlite(db, state_dir)
+        assert first == 1
+        assert second == 0
+        page = await read_run_log_page(db)
+        assert page.total == 1
+
+    async def test_empty_dir_returns_zero(self, db: KlirDB, tmp_path: Path) -> None:
+        state_dir = tmp_path / "cron_state"
+        state_dir.mkdir()
+        count = await migrate_jsonl_to_sqlite(db, state_dir)
+        assert count == 0
 
 
 class TestSaveRunOutput:

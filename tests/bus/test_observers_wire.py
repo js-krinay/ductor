@@ -13,7 +13,7 @@ def _make_observers() -> ObserverManager:
     """Build an ObserverManager with mocked sub-observers."""
     config = MagicMock()
     paths = MagicMock()
-    mgr = ObserverManager(config, paths)
+    mgr = ObserverManager(config, paths, MagicMock())
     # Replace heartbeat with a mock that accepts set_result_handler
     mgr.heartbeat = MagicMock()
     return mgr
