@@ -42,25 +42,6 @@ class CronRunLogEntry:
         data = {k: v for k, v in asdict(self).items() if v is not None}
         return json.dumps(data, separators=(",", ":"))
 
-    @classmethod
-    def from_json_line(cls, line: str) -> CronRunLogEntry | None:
-        """Parse a JSON line. Returns None for malformed or missing-field entries."""
-        try:
-            data = json.loads(line.strip())
-        except (json.JSONDecodeError, TypeError):
-            return None
-        if not isinstance(data, dict):
-            return None
-        ts = data.get("ts")
-        job_id = data.get("job_id")
-        if not isinstance(ts, (int, float)) or not isinstance(job_id, str) or not job_id.strip():
-            return None
-        valid_keys = {f.name for f in fields(cls)}
-        try:
-            return cls(**{k: v for k, v in data.items() if k in valid_keys})
-        except Exception:
-            return None
-
 
 # ── SQLite operations ────────────────────────────────────────────────
 
@@ -175,74 +156,7 @@ async def cleanup_old_runs(db: KlirDB, *, max_age_days: int = 30) -> None:
     await db.execute("DELETE FROM cron_runs WHERE ts < ?", (cutoff,))
 
 
-# ── JSONL migration ──────────────────────────────────────────────────
-
-
-async def migrate_jsonl_to_sqlite(db: KlirDB, cron_state_dir: Path) -> int:
-    """One-time migration: import all existing runs.jsonl files into SQLite.
-
-    Returns the number of entries imported. Skips entries whose run_id
-    already exists in the database (idempotent).
-    """
-    if not await asyncio.to_thread(cron_state_dir.is_dir):
-        return 0
-
-    entries = await asyncio.to_thread(_collect_jsonl_entries, cron_state_dir)
-    if not entries:
-        return 0
-
-    # Fetch existing IDs in bulk to avoid O(N) queries
-    existing_rows = await db.fetch_all("SELECT id FROM cron_runs")
-    existing_ids = {r["id"] for r in existing_rows}
-
-    batch: list[tuple[object, ...]] = []
-    for entry in entries:
-        row_id = entry.run_id or uuid.uuid4().hex
-        if row_id in existing_ids:
-            continue
-        existing_ids.add(row_id)  # prevent duplicates within batch
-        batch.append(
-            (
-                row_id,
-                entry.ts,
-                entry.job_id,
-                entry.status,
-                entry.error,
-                entry.summary,
-                entry.duration_ms,
-                entry.delivery_status,
-                entry.delivery_error,
-                entry.provider,
-                entry.model,
-                entry.input_tokens,
-                entry.output_tokens,
-                entry.output_path,
-            )
-        )
-
-    if batch:
-        await db.executemany(_INSERT_SQL, batch)
-        logger.info(
-            "Migrated %d cron run log entries from JSONL to SQLite",
-            len(batch),
-        )
-    return len(batch)
-
-
-def _collect_jsonl_entries(cron_state_dir: Path) -> list[CronRunLogEntry]:
-    """Scan all runs.jsonl files under cron_state_dir and parse valid entries."""
-    entries: list[CronRunLogEntry] = []
-    for jsonl_path in cron_state_dir.rglob("runs.jsonl"):
-        for raw_line in jsonl_path.read_text(encoding="utf-8").splitlines():
-            stripped = raw_line.strip()
-            if stripped:
-                entry = CronRunLogEntry.from_json_line(stripped)
-                if entry is not None:
-                    entries.append(entry)
-    return entries
-
-
-# ── Disk-based output files (unchanged) ──────────────────────────────
+# ── Disk-based output files ──────────────────────────────
 
 
 async def save_run_output(

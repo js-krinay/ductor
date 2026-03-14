@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -99,94 +98,6 @@ class TestChatTracker:
     async def test_empty_db_loads_cleanly(self, db: KlirDB) -> None:
         tracker = await ChatTracker.create(db)
         assert tracker.get_all() == []
-
-
-class TestChatTrackerMigration:
-    """One-time migration from chat_activity.json."""
-
-    async def test_migrates_legacy_json(self, db: KlirDB, tmp_path: Path) -> None:
-        json_path = tmp_path / "chat_activity.json"
-        json_path.write_text(
-            json.dumps(
-                {
-                    "records": {
-                        "-1001": {
-                            "chat_id": -1001,
-                            "chat_type": "supergroup",
-                            "title": "Dev Group",
-                            "first_seen": "2025-01-01T00:00:00+00:00",
-                            "last_seen": "2025-03-01T10:00:00+00:00",
-                            "status": "active",
-                            "allowed": True,
-                            "rejected_count": 0,
-                        },
-                        "-2002": {
-                            "chat_id": -2002,
-                            "chat_type": "group",
-                            "title": "Spam",
-                            "first_seen": "2025-02-01T00:00:00+00:00",
-                            "last_seen": "2025-02-15T00:00:00+00:00",
-                            "status": "rejected",
-                            "allowed": False,
-                            "rejected_count": 5,
-                        },
-                    }
-                }
-            )
-        )
-
-        tracker = await ChatTracker.create(db, legacy_json_path=json_path)
-        records = tracker.get_all()
-        assert len(records) == 2
-
-        # Verify fields preserved
-        dev = next(r for r in records if r.chat_id == -1001)
-        assert dev.chat_type == "supergroup"
-        assert dev.title == "Dev Group"
-        assert dev.allowed is True
-
-        spam = next(r for r in records if r.chat_id == -2002)
-        assert spam.rejected_count == 5
-        assert spam.allowed is False
-
-        # JSON file renamed
-        assert not json_path.exists()
-        assert json_path.with_suffix(".json.migrated").exists()
-
-    async def test_skips_migration_when_db_has_data(self, db: KlirDB, tmp_path: Path) -> None:
-        # Pre-populate the DB
-        tracker = await ChatTracker.create(db)
-        await tracker.record_join(-1, "group", "Existing", allowed=True)
-
-        # Create legacy JSON
-        json_path = tmp_path / "chat_activity.json"
-        json_path.write_text(
-            json.dumps(
-                {
-                    "records": {
-                        "-9999": {
-                            "chat_id": -9999,
-                            "chat_type": "group",
-                            "title": "Should Not Appear",
-                            "first_seen": "2025-01-01T00:00:00+00:00",
-                            "last_seen": "2025-01-01T00:00:00+00:00",
-                            "status": "active",
-                            "allowed": True,
-                            "rejected_count": 0,
-                        }
-                    }
-                }
-            )
-        )
-
-        # Create a fresh tracker — should NOT migrate since DB has data
-        tracker2 = await ChatTracker.create(db, legacy_json_path=json_path)
-        ids = {r.chat_id for r in tracker2.get_all()}
-        assert -9999 not in ids
-        assert -1 in ids
-
-        # JSON file untouched
-        assert json_path.exists()
 
 
 class TestChatTrackerRetention:

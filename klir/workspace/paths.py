@@ -52,10 +52,6 @@ class KlirPaths:
         return self.config_dir / "config.json"
 
     @property
-    def sessions_path(self) -> Path:
-        return self.klir_home / "sessions.json"
-
-    @property
     def cron_jobs_path(self) -> Path:
         return self.klir_home / "cron_jobs.json"
 
@@ -111,15 +107,6 @@ class KlirPaths:
     def tasks_dir(self) -> Path:
         """Per-task metadata folders (TASKMEMORY.md etc.)."""
         return self.workspace / "tasks"
-
-    @property
-    def tasks_registry_path(self) -> Path:
-        """Task registry persistence."""
-        return self.klir_home / "tasks.json"
-
-    @property
-    def chat_activity_path(self) -> Path:
-        return self.klir_home / "chat_activity.json"
 
     @property
     def named_sessions_path(self) -> Path:

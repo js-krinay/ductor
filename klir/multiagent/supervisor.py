@@ -110,9 +110,7 @@ class AgentSupervisor:
                 db=self._task_db,
                 tasks_dir=self._main_paths.tasks_dir,
             )
-            await registry.load(
-                legacy_json_path=self._main_paths.tasks_registry_path,
-            )
+            await registry.load()
             self._task_hub = TaskHub(
                 registry,
                 self._main_paths,

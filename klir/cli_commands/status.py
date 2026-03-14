@@ -51,7 +51,7 @@ def build_status_lines(status: StatusSummary, *, paths: KlirPaths) -> list[str]:
     lines.append(f"  Config:     [cyan]{paths.config_path}[/cyan]")
     lines.append(f"  Workspace:  [cyan]{paths.workspace}[/cyan]")
     lines.append(f"  Logs:       [cyan]{paths.logs_dir}[/cyan]")
-    lines.append(f"  Sessions:   [cyan]{paths.sessions_path}[/cyan]")
+    lines.append(f"  Database:   [cyan]{paths.db_path}[/cyan]")
     return lines
 
 

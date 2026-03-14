@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import shutil
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -358,83 +357,6 @@ class TestPerAgentTasksDir:
         removed = await reg.cleanup_orphans()
         assert removed >= 1
         assert reg.get(entry.task_id) is None
-
-
-class TestJsonMigration:
-    async def test_migrates_from_json(self, db: KlirDB, tmp_path: Path) -> None:
-        """Existing tasks.json is imported into SQLite on first load."""
-        json_path = tmp_path / "tasks.json"
-        tasks_dir = tmp_path / "tasks"
-        tasks_dir.mkdir()
-        task_folder = tasks_dir / "abc12345"
-        task_folder.mkdir()
-        (task_folder / "TASKMEMORY.md").write_text("test")
-        json_path.write_text(
-            json.dumps(
-                {
-                    "tasks": [
-                        {
-                            "task_id": "abc12345",
-                            "chat_id": 42,
-                            "parent_agent": "main",
-                            "name": "Migrated",
-                            "prompt_preview": "test",
-                            "provider": "claude",
-                            "model": "opus",
-                            "status": "done",
-                            "created_at": 1000.0,
-                            "tasks_dir": str(tasks_dir),
-                        }
-                    ]
-                }
-            )
-        )
-
-        reg = TaskRegistry(db=db, tasks_dir=tasks_dir)
-        await reg.load(legacy_json_path=json_path)
-
-        entry = reg.get("abc12345")
-        assert entry is not None
-        assert entry.name == "Migrated"
-        assert entry.status == "done"
-
-        # JSON file renamed
-        assert not json_path.exists()
-        assert json_path.with_suffix(".json.migrated").exists()
-
-    async def test_skips_migration_when_sqlite_has_data(self, db: KlirDB, tmp_path: Path) -> None:
-        """If SQLite already has tasks, don't re-import from JSON."""
-        tasks_dir = tmp_path / "tasks"
-        reg = TaskRegistry(db=db, tasks_dir=tasks_dir)
-        await reg.load()
-        await reg.create(_submit(name="Existing"), "claude", "opus")
-
-        # Write a JSON file that should NOT be imported
-        json_path = tmp_path / "tasks.json"
-        json_path.write_text(
-            json.dumps(
-                {
-                    "tasks": [
-                        {
-                            "task_id": "should-not-import",
-                            "chat_id": 1,
-                            "status": "done",
-                            "provider": "x",
-                            "model": "y",
-                            "created_at": 1.0,
-                        }
-                    ]
-                }
-            )
-        )
-
-        reg2 = TaskRegistry(db=db, tasks_dir=tasks_dir)
-        await reg2.load(legacy_json_path=json_path)
-
-        # Should NOT have the JSON entry
-        assert reg2.get("should-not-import") is None
-        # JSON file should still exist (not renamed)
-        assert json_path.exists()
 
 
 class TestConcurrency:

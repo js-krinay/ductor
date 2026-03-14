@@ -3,20 +3,14 @@
 Tracks group joins/leaves (via ``my_chat_member`` events), rejected
 group access attempts (via AuthMiddleware callback), and private chat
 activity.  Persists to the ``chat_activity`` table in ``klir.db``.
-
-One-time migration from legacy ``chat_activity.json`` happens automatically
-on first load when the JSON file exists and the SQLite table is empty.
 """
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
-from dataclasses import fields as dc_fields
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -63,18 +57,10 @@ class ChatTracker:
     # -- Factory ---------------------------------------------------------------
 
     @classmethod
-    async def create(
-        cls,
-        db: KlirDB,
-        legacy_json_path: Path | None = None,
-    ) -> ChatTracker:
-        """Create a tracker, loading from SQLite and migrating legacy JSON."""
+    async def create(cls, db: KlirDB) -> ChatTracker:
+        """Create a tracker, loading from SQLite."""
         tracker = cls(db)
         await tracker._load()
-        if legacy_json_path is not None:
-            json_exists = await asyncio.to_thread(legacy_json_path.is_file)
-            if json_exists and not tracker._records:
-                await tracker._migrate_json(legacy_json_path)
         return tracker
 
     # -- Public API -----------------------------------------------------------
@@ -207,34 +193,6 @@ class ChatTracker:
                 meta,
             ),
         )
-
-    async def _migrate_json(self, json_path: Path) -> None:
-        """One-time migration from ``chat_activity.json``."""
-        from klir.infra.json_store import load_json
-
-        raw = await asyncio.to_thread(load_json, json_path)
-        if not isinstance(raw, dict):
-            return
-        records: dict[str, Any] = raw.get("records", {})
-        if not records:
-            return
-
-        migrated = 0
-        for key, val in records.items():
-            if not isinstance(val, dict) or "chat_id" not in val:
-                continue
-            known = {f.name for f in dc_fields(ChatRecord)}
-            rec = ChatRecord(**{k: v for k, v in val.items() if k in known})
-            self._records[int(key)] = rec
-            await self._upsert(rec)
-            migrated += 1
-
-        if migrated:
-            logger.info("Migrated %d record(s) from %s to SQLite", migrated, json_path.name)
-            # Rename so the file is no longer picked up on next boot.
-            backup = json_path.with_suffix(".json.migrated")
-            await asyncio.to_thread(json_path.rename, backup)
-            logger.info("Renamed %s -> %s", json_path.name, backup.name)
 
 
 def _parse_metadata(raw: object) -> dict[str, Any]:

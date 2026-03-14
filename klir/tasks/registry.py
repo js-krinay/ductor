@@ -114,17 +114,9 @@ class TaskRegistry:
         self._tasks_dir = tasks_dir
         self._entries: dict[str, TaskEntry] = {}
 
-    async def load(self, legacy_json_path: Path | None = None) -> None:
-        """Load tasks from SQLite into memory.
-
-        If the SQLite tasks table is empty and *legacy_json_path* points to an
-        existing JSON file, migrates from the legacy format first.
-        """
+    async def load(self) -> None:
+        """Load tasks from SQLite into memory."""
         rows = await self._db.fetch_all("SELECT * FROM tasks")
-
-        if not rows and legacy_json_path and legacy_json_path.is_file():  # noqa: ASYNC240
-            await self._migrate_from_json(legacy_json_path)
-            rows = await self._db.fetch_all("SELECT * FROM tasks")
 
         for row in rows:
             entry = _entry_from_row(row)
@@ -139,35 +131,6 @@ class TaskRegistry:
             self._entries[entry.task_id] = entry
 
         await self.cleanup_orphans()
-
-    async def _migrate_from_json(self, json_path: Path) -> None:
-        """One-time migration from tasks.json to SQLite."""
-        from klir.infra.json_store import load_json
-
-        data = load_json(json_path)
-        if data is None:
-            return
-
-        entries: list[TaskEntry] = []
-        for raw in data.get("tasks", []):
-            try:
-                entries.append(TaskEntry.from_dict(raw))
-            except (KeyError, TypeError):
-                logger.warning("Skipping corrupt task entry during migration: %s", raw)
-                continue
-
-        if entries:
-            params_seq = [_entry_to_params(e) for e in entries]
-            await self._db.executemany(_INSERT_SQL, params_seq)
-
-        migrated_path = json_path.with_suffix(".json.migrated")
-        json_path.rename(migrated_path)  # noqa: ASYNC240
-        logger.info(
-            "Migrated %d task(s) from %s to SQLite (renamed to %s)",
-            len(entries),
-            json_path,
-            migrated_path,
-        )
 
     # -- Write methods (async: update dict + SQLite) ---------------------------
 

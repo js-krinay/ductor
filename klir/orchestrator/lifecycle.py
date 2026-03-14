@@ -54,11 +54,6 @@ async def create_orchestrator(
 
     await orch.db.open()
 
-    from klir.cron.run_log import migrate_jsonl_to_sqlite
-
-    await migrate_jsonl_to_sqlite(orch.db, paths.cron_state_dir)
-    await orch._sessions.migrate_from_json(paths.sessions_path)
-
     load_translations(config.language)
 
     from klir.cli.auth import AuthStatus, check_all_auth

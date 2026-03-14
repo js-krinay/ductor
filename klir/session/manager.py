@@ -8,11 +8,9 @@ import logging
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 from klir.config import AgentConfig, resolve_user_timezone
 from klir.infra.db import KlirDB
-from klir.infra.json_store import load_json
 from klir.session.key import SessionKey
 
 logger = logging.getLogger(__name__)
@@ -352,43 +350,6 @@ class SessionManager:
     async def _persist(self, session: SessionData) -> None:
         """INSERT OR REPLACE a single session into SQLite."""
         await self._db.execute(_PERSIST_SQL, _session_to_params(session))
-
-    # ── migration ────────────────────────────────────────────────
-
-    async def migrate_from_json(self, sessions_path: Path) -> int:
-        """Import sessions from a legacy JSON file into SQLite.
-
-        Renames the file to ``sessions.json.migrated`` after import.
-        Returns the count of migrated sessions.
-        """
-        exists = await asyncio.to_thread(sessions_path.exists)
-        if not exists:
-            return 0
-
-        data = await asyncio.to_thread(load_json, sessions_path)
-        if not data:
-            return 0
-
-        sessions: list[SessionData] = []
-        for k, v in data.items():
-            parsed = SessionKey.parse(k)
-            if "topic_id" not in v and parsed.topic_id is not None:
-                v["topic_id"] = parsed.topic_id
-            if "user_id" not in v and parsed.user_id is not None:
-                v["user_id"] = parsed.user_id
-            sessions.append(SessionData(**v))
-
-        if not sessions:
-            return 0
-
-        params_seq = [_session_to_params(s) for s in sessions]
-        await self._db.executemany(_PERSIST_SQL, params_seq)
-
-        migrated_path = sessions_path.with_suffix(".json.migrated")
-        await asyncio.to_thread(sessions_path.rename, migrated_path)
-
-        logger.info("Migrated %d sessions from %s to SQLite", len(sessions), sessions_path)
-        return len(sessions)
 
     # ── public API ───────────────────────────────────────────────
 

@@ -27,13 +27,13 @@ def test_config_path() -> None:
     assert paths.config_path == Path("/home/test/.klir/config/config.json")
 
 
-def test_sessions_path() -> None:
+def test_db_path() -> None:
     paths = KlirPaths(
         klir_home=Path("/home/test/.klir"),
         home_defaults=Path("/opt/klir/workspace"),
         framework_root=Path("/opt/klir"),
     )
-    assert paths.sessions_path == Path("/home/test/.klir/sessions.json")
+    assert paths.db_path == Path("/home/test/.klir/klir.db")
 
 
 def test_logs_dir() -> None:

@@ -257,56 +257,6 @@ async def test_model_update_without_provider_switch(tmp_path: Path) -> None:
     assert s2.model == "gpt-5.2-codex"
 
 
-async def test_legacy_session_without_model_is_migrated_on_resolve(tmp_path: Path) -> None:
-    # Write legacy JSON, then migrate into SQLite
-    json_path = tmp_path / "sessions.json"
-    json_path.write_text(
-        '{"1":{"session_id":"legacy-sid","chat_id":1,"provider":"codex"}}',
-        encoding="utf-8",
-    )
-
-    mgr = await _make_manager(tmp_path, idle_timeout_minutes=30)
-    await mgr.migrate_from_json(json_path)
-
-    s1, is_new = await mgr.resolve_session(
-        key=SessionKey(chat_id=1), provider="codex", model="gpt-5.2-codex"
-    )
-    assert is_new is False
-    assert s1.session_id == "legacy-sid"
-    assert s1.provider == "codex"
-    assert s1.model == "gpt-5.2-codex"
-
-    # Verify via API that model is persisted
-    active = await mgr.get_active(SessionKey(chat_id=1))
-    assert active is not None
-    assert active.model == "gpt-5.2-codex"
-
-
-async def test_sync_session_target_migrates_missing_model_without_value_change(
-    tmp_path: Path,
-) -> None:
-    # Write legacy JSON, then migrate into SQLite
-    json_path = tmp_path / "sessions.json"
-    json_path.write_text(
-        '{"1":{"session_id":"legacy-sid","chat_id":1,"provider":"claude"}}',
-        encoding="utf-8",
-    )
-
-    mgr = await _make_manager(tmp_path)
-    await mgr.migrate_from_json(json_path)
-
-    session = await mgr.get_active(SessionKey(chat_id=1))
-    assert session is not None
-    assert session.model == "opus"
-
-    await mgr.sync_session_target(session, provider="claude", model="opus")
-
-    # Verify via API that model is persisted
-    reloaded = await mgr.get_active(SessionKey(chat_id=1))
-    assert reloaded is not None
-    assert reloaded.model == "opus"
-
-
 async def test_sync_session_target_does_not_overwrite_metrics_from_stale_snapshot(
     tmp_path: Path,
 ) -> None:
@@ -383,21 +333,6 @@ async def test_topic_name_round_trip(tmp_path: Path) -> None:
     reloaded = await mgr.get_active(SessionKey(chat_id=-100, topic_id=42))
     assert reloaded is not None
     assert reloaded.topic_name == "test 1"
-
-
-async def test_topic_name_backward_compat(tmp_path: Path) -> None:
-    """Old sessions without topic_name load cleanly via JSON migration."""
-    json_path = tmp_path / "sessions.json"
-    json_path.write_text(
-        '{"1":{"chat_id":1,"provider":"claude","model":"opus"}}',
-        encoding="utf-8",
-    )
-    mgr = await _make_manager(tmp_path)
-    await mgr.migrate_from_json(json_path)
-
-    s = await mgr.get_active(SessionKey(chat_id=1))
-    assert s is not None
-    assert s.topic_name is None
 
 
 async def test_topic_name_resolver_fills_on_resolve(tmp_path: Path) -> None:

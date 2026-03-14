@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import time
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -14,7 +13,6 @@ from klir.cron.run_log import (
     RunLogPage,
     append_run_log,
     cleanup_old_runs,
-    migrate_jsonl_to_sqlite,
     read_run_log_page,
     save_run_output,
 )
@@ -27,64 +25,6 @@ async def db(tmp_path: Path) -> AsyncIterator[KlirDB]:
     await instance.open()
     yield instance
     await instance.close()
-
-
-class TestCronRunLogEntry:
-    def test_to_json_line_basic(self) -> None:
-        entry = CronRunLogEntry(ts=1234567890.0, job_id="daily", status="success")
-        line = entry.to_json_line()
-        data = json.loads(line)
-        assert data["ts"] == 1234567890.0
-        assert data["job_id"] == "daily"
-        assert data["status"] == "success"
-        assert data["action"] == "finished"
-
-    def test_to_json_line_omits_none(self) -> None:
-        entry = CronRunLogEntry(ts=1.0, job_id="test")
-        line = entry.to_json_line()
-        data = json.loads(line)
-        assert "error" not in data
-        assert "summary" not in data
-        assert "model" not in data
-
-    def test_from_json_line_roundtrip(self) -> None:
-        entry = CronRunLogEntry(
-            ts=1234567890.0,
-            job_id="daily",
-            status="success",
-            duration_ms=1500,
-            provider="claude",
-        )
-        line = entry.to_json_line()
-        restored = CronRunLogEntry.from_json_line(line)
-        assert restored is not None
-        assert restored.ts == 1234567890.0
-        assert restored.job_id == "daily"
-        assert restored.status == "success"
-        assert restored.duration_ms == 1500
-        assert restored.provider == "claude"
-
-    def test_from_json_line_int_ts_works(self) -> None:
-        line = '{"ts": 1234567890, "job_id": "daily"}'
-        entry = CronRunLogEntry.from_json_line(line)
-        assert entry is not None
-        assert entry.ts == 1234567890
-        assert entry.job_id == "daily"
-
-    def test_from_json_line_malformed_returns_none(self) -> None:
-        assert CronRunLogEntry.from_json_line("{not valid json") is None
-        assert CronRunLogEntry.from_json_line("") is None
-        assert CronRunLogEntry.from_json_line("null") is None
-        # Missing ts
-        assert CronRunLogEntry.from_json_line('{"job_id": "daily"}') is None
-        # Non-numeric ts (string)
-        assert CronRunLogEntry.from_json_line('{"ts": "not_a_number", "job_id": "daily"}') is None
-        # Empty job_id
-        assert CronRunLogEntry.from_json_line('{"ts": 1234567890.0, "job_id": ""}') is None
-        # Whitespace-only job_id
-        assert CronRunLogEntry.from_json_line('{"ts": 1234567890.0, "job_id": "  "}') is None
-        # Missing job_id entirely
-        assert CronRunLogEntry.from_json_line('{"ts": 1234567890.0}') is None
 
 
 class TestAppendRunLog:
@@ -184,44 +124,6 @@ class TestCleanupOldRuns:
         await cleanup_old_runs(db, max_age_days=30)
         page = await read_run_log_page(db)
         assert page.total == 1
-
-
-class TestMigrateJsonlToSqlite:
-    async def test_imports_jsonl_entries(self, db: KlirDB, tmp_path: Path) -> None:
-        state_dir = tmp_path / "cron_state"
-        job_dir = state_dir / "daily"
-        job_dir.mkdir(parents=True)
-        entries = [
-            CronRunLogEntry(ts=1.0, job_id="daily", status="success", run_id="m1"),
-            CronRunLogEntry(ts=2.0, job_id="daily", status="error", run_id="m2"),
-        ]
-        jsonl = "\n".join(e.to_json_line() for e in entries) + "\n"
-        (job_dir / "runs.jsonl").write_text(jsonl)
-
-        count = await migrate_jsonl_to_sqlite(db, state_dir)
-        assert count == 2
-        page = await read_run_log_page(db)
-        assert page.total == 2
-
-    async def test_idempotent_migration(self, db: KlirDB, tmp_path: Path) -> None:
-        state_dir = tmp_path / "cron_state"
-        job_dir = state_dir / "daily"
-        job_dir.mkdir(parents=True)
-        entry = CronRunLogEntry(ts=1.0, job_id="daily", status="success", run_id="idem1")
-        (job_dir / "runs.jsonl").write_text(entry.to_json_line() + "\n")
-
-        first = await migrate_jsonl_to_sqlite(db, state_dir)
-        second = await migrate_jsonl_to_sqlite(db, state_dir)
-        assert first == 1
-        assert second == 0
-        page = await read_run_log_page(db)
-        assert page.total == 1
-
-    async def test_empty_dir_returns_zero(self, db: KlirDB, tmp_path: Path) -> None:
-        state_dir = tmp_path / "cron_state"
-        state_dir.mkdir()
-        count = await migrate_jsonl_to_sqlite(db, state_dir)
-        assert count == 0
 
 
 class TestSaveRunOutput:
