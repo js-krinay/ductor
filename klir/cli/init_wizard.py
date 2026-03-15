@@ -488,8 +488,16 @@ def run_onboarding() -> bool:
     api_token_line = f"  Token:      [cyan]{api_token}[/cyan]\n" if api_token else ""
 
     if ts_mode in ("serve", "funnel"):
-        url_line = "  URL:        [cyan]https://<tailnet-host>/dashboard/[/cyan]\n"
-        url_note = f"  [dim]Tailscale {ts_mode} will provide the HTTPS URL at startup.[/dim]\n"
+        import asyncio
+
+        from klir.infra.tailscale import get_tailnet_hostname
+
+        hostname = asyncio.run(get_tailnet_hostname())
+        if hostname:
+            url_line = f"  URL:        [cyan]https://{hostname}/dashboard/[/cyan]\n"
+        else:
+            url_line = "  URL:        [cyan]https://<tailnet-host>/dashboard/[/cyan]\n"
+        url_note = f"  [dim]Tailscale {ts_mode} provides HTTPS access.[/dim]\n"
     else:
         port = api_cfg.get("port", 8741)
         url_line = f"  URL:        [cyan]http://localhost:{port}/dashboard/[/cyan]\n"
