@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { EmptyState } from "@/components/EmptyState";
 import { useDashboardStore } from "@/store/dashboard";
 import { toggleCronJob, fetchCronHistory } from "@/api/client";
 import type { CronRunEntry } from "@/types/api";
@@ -12,6 +13,7 @@ import { formatDuration, formatRelativeTime } from "@/lib/format";
 
 export default function Cron() {
   const cronJobs = useDashboardStore((s) => s.cronJobs);
+  const lastSnapshotAt = useDashboardStore((s) => s.lastSnapshotAt);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [runHistory, setRunHistory] = useState<CronRunEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -45,109 +47,117 @@ export default function Cron() {
   }
 
   if (cronJobs.length === 0) {
-    return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        No cron jobs configured
-      </div>
-    );
+    return <EmptyState loading={!lastSnapshotAt} title="No cron jobs configured" icon="◷" />;
   }
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Cron Jobs</h1>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Title</TableHead>
-            <TableHead>Schedule</TableHead>
-            <TableHead>Enabled</TableHead>
-            <TableHead>Last Duration</TableHead>
-            <TableHead>Errors</TableHead>
-            <TableHead>Provider</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {cronJobs.map((job) => (
-            <Fragment key={job.id}>
-              <TableRow
-                className="cursor-pointer hover:bg-accent/50"
-                onClick={() => handleExpand(job.id)}
-              >
-                <TableCell className="font-medium">{job.title}</TableCell>
-                <TableCell className="font-mono text-sm">{job.schedule}</TableCell>
-                <TableCell>
-                  <Switch
-                    checked={job.enabled}
-                    onCheckedChange={(v) => handleToggle(job.id, v)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </TableCell>
-                <TableCell>
-                  {job.last_duration_ms != null
-                    ? formatDuration(job.last_duration_ms / 1000)
-                    : "\u2014"}
-                </TableCell>
-                <TableCell>
-                  {job.consecutive_errors > 0 ? (
-                    <Badge variant="destructive">{job.consecutive_errors}</Badge>
-                  ) : (
-                    "0"
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{job.provider}</Badge>
-                </TableCell>
-              </TableRow>
-
-              {/* Expanded run history */}
-              {expandedId === job.id && (
-                <TableRow>
-                  <TableCell colSpan={6} className="bg-accent/20 p-4">
-                    {loadingHistory ? (
-                      <p className="text-sm text-muted-foreground">Loading...</p>
-                    ) : historyError ? (
-                      <p className="text-sm text-destructive">{historyError}</p>
-                    ) : runHistory.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No run history</p>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Schedule</TableHead>
+              <TableHead>Enabled</TableHead>
+              <TableHead>Last Duration</TableHead>
+              <TableHead>Errors</TableHead>
+              <TableHead>Provider</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {cronJobs.map((job) => (
+              <Fragment key={job.id}>
+                <TableRow
+                  className="cursor-pointer hover:bg-accent/50"
+                  onClick={() => handleExpand(job.id)}
+                  tabIndex={0}
+                  role="button"
+                  aria-expanded={expandedId === job.id}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleExpand(job.id);
+                    }
+                  }}
+                >
+                  <TableCell className="font-medium">{job.title}</TableCell>
+                  <TableCell className="font-mono text-sm">{job.schedule}</TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={job.enabled}
+                      onCheckedChange={(v) => handleToggle(job.id, v)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Toggle ${job.title}`}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {job.last_duration_ms != null
+                      ? formatDuration(job.last_duration_ms / 1000)
+                      : "\u2014"}
+                  </TableCell>
+                  <TableCell>
+                    {job.consecutive_errors > 0 ? (
+                      <Badge variant="destructive">{job.consecutive_errors}</Badge>
                     ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Time</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Duration</TableHead>
-                            <TableHead>Summary</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {runHistory.map((run) => (
-                            <TableRow key={run.ts}>
-                              <TableCell className="text-sm">
-                                {formatRelativeTime(run.ts)}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={run.status === "success" ? "default" : "destructive"}
-                                >
-                                  {run.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{formatDuration(run.duration_ms / 1000)}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {run.error ?? run.summary}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                      "0"
                     )}
                   </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{job.provider}</Badge>
+                  </TableCell>
                 </TableRow>
-              )}
-            </Fragment>
-          ))}
-        </TableBody>
-      </Table>
+
+                {/* Expanded run history */}
+                {expandedId === job.id && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="bg-accent/20 p-4">
+                      {loadingHistory ? (
+                        <p className="text-sm text-muted-foreground">Loading...</p>
+                      ) : historyError ? (
+                        <p className="text-sm text-destructive">{historyError}</p>
+                      ) : runHistory.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No run history</p>
+                      ) : (
+                        <Table aria-label={`Run history for ${job.title}`}>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Time</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Duration</TableHead>
+                              <TableHead>Summary</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {runHistory.map((run) => (
+                              <TableRow key={run.ts}>
+                                <TableCell className="text-sm">
+                                  {formatRelativeTime(run.ts)}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={run.status === "success" ? "default" : "destructive"}
+                                  >
+                                    {run.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{formatDuration(run.duration_ms / 1000)}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground">
+                                  {run.error ?? run.summary}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

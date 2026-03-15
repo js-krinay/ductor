@@ -2,6 +2,17 @@ import { useAuthStore } from "@/store/auth";
 import { useDashboardStore } from "@/store/dashboard";
 import type { WsServerMessage } from "@/types/api";
 
+const VALID_WS_TYPES = new Set(["auth_ok", "snapshot", "event", "pong", "error"]);
+
+function isValidWsMessage(msg: unknown): msg is WsServerMessage {
+  if (typeof msg !== "object" || msg === null) return false;
+  const obj = msg as Record<string, unknown>;
+  if (typeof obj.type !== "string" || !VALID_WS_TYPES.has(obj.type)) return false;
+  if (obj.type === "snapshot" && (typeof obj.data !== "object" || obj.data === null)) return false;
+  if (obj.type === "event" && (typeof obj.data !== "object" || obj.data === null)) return false;
+  return true;
+}
+
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectDelay = 1000;
@@ -26,16 +37,22 @@ export function connect(): void {
   ws = new WebSocket(wsUrl());
 
   ws.onopen = () => {
+    // Token sent post-connect; server buffers until auth_ok. Acceptable for local deployment over HTTPS.
     ws!.send(JSON.stringify({ type: "auth", token }));
   };
 
   ws.onmessage = (ev) => {
-    let msg: WsServerMessage;
+    let parsed: unknown;
     try {
-      msg = JSON.parse(ev.data) as WsServerMessage;
+      parsed = JSON.parse(ev.data);
     } catch {
       return;
     }
+    if (!isValidWsMessage(parsed)) {
+      console.warn("[ws] invalid message shape:", parsed);
+      return;
+    }
+    const msg = parsed;
     const store = useDashboardStore.getState();
 
     switch (msg.type) {
@@ -81,10 +98,11 @@ export function disconnect(): void {
 
 function scheduleReconnect(): void {
   if (!useAuthStore.getState().token) return;
+  const delay = reconnectDelay;
+  reconnectDelay = Math.min(reconnectDelay * 2, MAX_DELAY);
   reconnectTimer = setTimeout(() => {
-    reconnectDelay = Math.min(reconnectDelay * 2, MAX_DELAY);
     connect();
-  }, reconnectDelay);
+  }, delay);
 }
 
 function startPing(): void {

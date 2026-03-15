@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useDashboardStore } from "@/store/dashboard";
 import { useAuthStore } from "@/store/auth";
 import ConnectionBanner from "@/components/ConnectionBanner";
+import { CommandPalette } from "@/components/CommandPalette";
+import { useHotkeys } from "@/hooks/useHotkeys";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -17,9 +19,34 @@ const NAV_ITEMS = [
 ] as const;
 
 export default function Layout() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem("sidebar-collapsed") === "true",
+  );
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("sidebar-collapsed", String(next));
+      return next;
+    });
+  }
   const connected = useDashboardStore((s) => s.connected);
   const clearToken = useAuthStore((s) => s.clearToken);
+  const navigate = useNavigate();
+
+  const hotkeys = useMemo(
+    () => [
+      { combo: { key: "1" }, handler: () => navigate("/") },
+      { combo: { key: "2" }, handler: () => navigate("/sessions") },
+      { combo: { key: "3" }, handler: () => navigate("/named-sessions") },
+      { combo: { key: "4" }, handler: () => navigate("/agents") },
+      { combo: { key: "5" }, handler: () => navigate("/cron") },
+      { combo: { key: "6" }, handler: () => navigate("/tasks") },
+      { combo: { key: "7" }, handler: () => navigate("/processes") },
+    ],
+    [navigate],
+  );
+  useHotkeys(hotkeys);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -31,12 +58,20 @@ export default function Layout() {
         )}
       >
         <div className="flex items-center gap-2 border-b px-3 py-3">
-          {!collapsed && <span className="text-sm font-bold">klir</span>}
+          <span
+            className={cn(
+              "overflow-hidden text-sm font-bold whitespace-nowrap transition-all duration-200",
+              collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
+            )}
+          >
+            klir
+          </span>
           <Button
             variant="ghost"
             size="icon"
             className="ml-auto h-7 w-7"
-            onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={toggleCollapsed}
           >
             {collapsed ? "\u2192" : "\u2190"}
           </Button>
@@ -57,8 +92,15 @@ export default function Layout() {
                 )
               }
             >
-              <span className="w-5 text-center">{icon}</span>
-              {!collapsed && <span>{label}</span>}
+              <span className="w-5 shrink-0 text-center">{icon}</span>
+              <span
+                className={cn(
+                  "overflow-hidden whitespace-nowrap transition-all duration-200",
+                  collapsed ? "w-0 opacity-0" : "w-28 opacity-100",
+                )}
+              >
+                {label}
+              </span>
             </NavLink>
           ))}
         </nav>
@@ -68,25 +110,43 @@ export default function Layout() {
             <span
               className={cn(
                 "h-2 w-2 rounded-full",
-                connected ? "bg-green-500" : "bg-red-500",
+                connected ? "bg-success" : "bg-destructive",
               )}
+              aria-label={connected ? "Connected" : "Disconnected"}
             />
-            {!collapsed && (
-              <span className="text-xs text-muted-foreground">
-                {connected ? "Connected" : "Disconnected"}
-              </span>
-            )}
+            <span
+              className={cn(
+                "overflow-hidden text-xs text-muted-foreground whitespace-nowrap transition-all duration-200",
+                collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
+              )}
+            >
+              {connected ? "Connected" : "Disconnected"}
+            </span>
+            <kbd
+              className={cn(
+                "ml-auto overflow-hidden rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground font-mono whitespace-nowrap transition-all duration-200",
+                collapsed ? "w-0 border-0 px-0 opacity-0" : "w-auto opacity-100",
+              )}
+            >
+              {"\u2318K"}
+            </kbd>
           </div>
-          {!collapsed && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 w-full text-xs"
-              onClick={clearToken}
+          <Button
+            variant="ghost"
+            size={collapsed ? "icon" : "sm"}
+            className={cn("mt-2 text-xs", collapsed ? "h-7 w-7" : "w-full")}
+            onClick={clearToken}
+          >
+            <span className="shrink-0">{"\u23FB"}</span>
+            <span
+              className={cn(
+                "overflow-hidden whitespace-nowrap transition-all duration-200",
+                collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
+              )}
             >
               Logout
-            </Button>
-          )}
+            </span>
+          </Button>
         </div>
       </aside>
 
@@ -97,6 +157,8 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+
+      <CommandPalette />
     </div>
   );
 }

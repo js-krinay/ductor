@@ -4,7 +4,10 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 
-createRoot(document.getElementById("root")!).render(
+const el = document.getElementById("root");
+if (!el) throw new Error("Root element not found");
+
+createRoot(el).render(
   <StrictMode>
     <BrowserRouter basename="/dashboard">
       <App />

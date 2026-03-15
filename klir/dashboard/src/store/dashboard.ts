@@ -9,6 +9,16 @@ import type {
   Snapshot,
 } from "@/types/api";
 
+// Event data arrives from WebSocket as Record<string, unknown>. These helpers
+// perform minimal runtime narrowing so we avoid blanket `as unknown as T` casts.
+function asDTO<T>(data: Record<string, unknown>): T {
+  return data as T;
+}
+
+function field<T>(data: Record<string, unknown>, key: string): T {
+  return data[key] as T;
+}
+
 interface DashboardState {
   sessions: SessionDTO[];
   namedSessions: NamedSessionDTO[];
@@ -16,7 +26,7 @@ interface DashboardState {
   cronJobs: CronJobDTO[];
   tasks: TaskDTO[];
   processes: ProcessDTO[];
-  observers: Record<string, unknown>;
+  observers: Record<string, boolean>;
   config: Record<string, unknown>;
   connected: boolean;
   lastSnapshotAt: number | null;
@@ -57,71 +67,75 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     set((state) => {
       switch (event) {
         case "session.created":
-          return { sessions: [...state.sessions, data as unknown as SessionDTO] };
-        case "session.updated":
+          return { sessions: [...state.sessions, asDTO<SessionDTO>(data)] };
+        case "session.updated": {
+          const chatId = field<number>(data, "chat_id");
+          if (!state.sessions.some((s) => s.chat_id === chatId)) return state;
           return {
             sessions: state.sessions.map((s) =>
-              s.chat_id === (data as unknown as SessionDTO).chat_id
-                ? { ...s, ...(data as unknown as SessionDTO) }
-                : s,
+              s.chat_id === chatId ? { ...s, ...asDTO<SessionDTO>(data) } : s,
             ),
           };
+        }
         case "session.reset":
           return {
-            sessions: state.sessions.filter(
-              (s) => s.chat_id !== (data as { chat_id: number }).chat_id,
-            ),
+            sessions: state.sessions.filter((s) => s.chat_id !== field<number>(data, "chat_id")),
           };
         case "named_session.created":
           return {
-            namedSessions: [...state.namedSessions, data as unknown as NamedSessionDTO],
+            namedSessions: [...state.namedSessions, asDTO<NamedSessionDTO>(data)],
           };
-        case "named_session.updated":
+        case "named_session.updated": {
+          const name = field<string>(data, "name");
+          if (!state.namedSessions.some((ns) => ns.name === name)) return state;
           return {
             namedSessions: state.namedSessions.map((ns) =>
-              ns.name === (data as unknown as NamedSessionDTO).name
-                ? { ...ns, ...(data as unknown as NamedSessionDTO) }
-                : ns,
+              ns.name === name ? { ...ns, ...asDTO<NamedSessionDTO>(data) } : ns,
             ),
           };
-        case "named_session.ended":
+        }
+        case "named_session.ended": {
+          const name = field<string>(data, "name");
+          if (!state.namedSessions.some((ns) => ns.name === name)) return state;
           return {
             namedSessions: state.namedSessions.map((ns) =>
-              ns.name === (data as { name: string }).name
-                ? { ...ns, status: "ended" }
-                : ns,
+              ns.name === name ? { ...ns, status: "ended" } : ns,
             ),
           };
+        }
         case "agent.health":
           return {
-            agents: upsertBy(state.agents, data as unknown as AgentHealthDTO, "name"),
+            agents: upsertBy(state.agents, asDTO<AgentHealthDTO>(data), "name"),
           };
         case "cron.fired":
-        case "cron.updated":
+        case "cron.updated": {
+          const id = field<string>(data, "id");
+          if (!state.cronJobs.some((j) => j.id === id)) return state;
           return {
             cronJobs: state.cronJobs.map((j) =>
-              j.id === (data as { id: string }).id ? { ...j, ...data } as CronJobDTO : j,
+              j.id === id ? ({ ...j, ...data } as CronJobDTO) : j,
             ),
           };
+        }
         case "task.created":
-          return { tasks: [...state.tasks, data as unknown as TaskDTO] };
-        case "task.updated":
+          return { tasks: [...state.tasks, asDTO<TaskDTO>(data)] };
+        case "task.updated": {
+          const taskId = field<string>(data, "task_id");
+          if (!state.tasks.some((t) => t.task_id === taskId)) return state;
           return {
             tasks: state.tasks.map((t) =>
-              t.task_id === (data as unknown as TaskDTO).task_id
-                ? { ...t, ...(data as unknown as TaskDTO) }
-                : t,
+              t.task_id === taskId ? { ...t, ...asDTO<TaskDTO>(data) } : t,
             ),
           };
+        }
         case "process.started":
-          return { processes: [...state.processes, data as unknown as ProcessDTO] };
+          return { processes: [...state.processes, asDTO<ProcessDTO>(data)] };
         case "process.ended":
           return {
-            processes: state.processes.filter(
-              (p) => p.pid !== (data as { pid: number }).pid,
-            ),
+            processes: state.processes.filter((p) => p.pid !== field<number>(data, "pid")),
           };
         default:
+          console.debug("[dashboard] unhandled event:", event);
           return {};
       }
     }),

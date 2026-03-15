@@ -10,6 +10,7 @@ export function formatTokens(n: number): string {
   return String(n);
 }
 
+/** Format a Unix timestamp (seconds) as relative time (e.g., "5m ago"). */
 export function formatRelativeTime(ts: number): string {
   const diff = Date.now() / 1000 - ts;
   if (diff < 60) return "just now";

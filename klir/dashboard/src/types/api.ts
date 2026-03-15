@@ -116,7 +116,8 @@ export interface Snapshot {
   cron_jobs: CronJobDTO[];
   tasks: TaskDTO[];
   processes: ProcessDTO[];
-  observers: Record<string, unknown>;
+  observers: Record<string, boolean>;
+  /** Intentionally loose — config shape varies by deployment and version. */
   config: Record<string, unknown>;
 }
 

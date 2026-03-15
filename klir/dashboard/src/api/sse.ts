@@ -41,6 +41,7 @@ export async function sendMessageStream(
   }
 
   const decoder = new TextDecoder();
+  // Note: assumes server sends single-line data payloads per the klir API contract.
   let buffer = "";
 
   try {
@@ -66,16 +67,17 @@ export async function sendMessageStream(
           }
           switch (currentEvent) {
             case "text_delta":
-              callbacks.onTextDelta(data.text);
+              if (typeof data.text === "string") callbacks.onTextDelta(data.text);
               break;
             case "tool_activity":
-              callbacks.onToolActivity(data.tool);
+              if (typeof data.tool === "string") callbacks.onToolActivity(data.tool);
               break;
             case "system_status":
-              callbacks.onSystemStatus(data.label);
+              if (typeof data.label === "string") callbacks.onSystemStatus(data.label);
               break;
             case "result":
-              callbacks.onResult(data);
+              if (typeof data.text === "string" && typeof data.cost_usd === "number")
+                callbacks.onResult(data);
               break;
           }
           currentEvent = "";

@@ -10,7 +10,7 @@ function headers(): HeadersInit {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, { ...init, headers: headers() });
+  const res = await fetch(path, { ...init, headers: { ...init?.headers, ...headers() } });
   if (res.status === 401) {
     useAuthStore.getState().clearToken();
     throw new Error("Unauthorized");

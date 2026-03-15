@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+// localStorage is acceptable for a local/internal dashboard. The token is a bearer token for the klir API only.
 const TOKEN_KEY = "klir_api_token";
 
 interface AuthState {
