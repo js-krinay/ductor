@@ -88,6 +88,13 @@ export interface ProcessDTO {
   registered_at: number;
 }
 
+export interface CommandDTO {
+  name: string;
+  description: string;
+  category: "core" | "agent" | "skill";
+  quick: boolean;
+}
+
 export interface MessageEntry {
   id: string;
   ts: number;

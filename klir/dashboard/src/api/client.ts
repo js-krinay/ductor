@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/store/auth";
-import type { HistoryResponse, CronRunEntry } from "@/types/api";
+import type { HistoryResponse, CronRunEntry, CommandDTO } from "@/types/api";
 
 function headers(): HeadersInit {
   const token = useAuthStore.getState().token;
@@ -51,5 +51,19 @@ export async function abortChat(chatId: number): Promise<void> {
   await apiFetch("/api/abort", {
     method: "POST",
     body: JSON.stringify({ chat_id: chatId }),
+  });
+}
+
+export async function fetchCommands(): Promise<{ commands: CommandDTO[] }> {
+  return apiFetch("/api/commands");
+}
+
+export async function sendMessage(
+  chatId: number,
+  text: string,
+): Promise<{ ok: boolean; result?: { text: string }; error?: string }> {
+  return apiFetch(`/api/sessions/${chatId}/message`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
   });
 }

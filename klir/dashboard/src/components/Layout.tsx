@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: "/cron", label: "Cron", icon: "◷" },
   { to: "/tasks", label: "Tasks", icon: "◧" },
   { to: "/processes", label: "Processes", icon: "◫" },
+  { to: "/commands", label: "Commands", icon: "◇" },
 ] as const;
 
 export default function Layout() {

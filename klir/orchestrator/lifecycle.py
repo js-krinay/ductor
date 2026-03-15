@@ -181,6 +181,8 @@ async def start_api_server(
                 },
                 history_store=orch._message_history,
                 db=orch._db,
+                skills_dir=paths.skills_dir,
+                has_supervisor=lambda: orch._supervisor is not None,
             )
             logger.info(
                 "Dashboard hub initialized (max_clients=%d)",

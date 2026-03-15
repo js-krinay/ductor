@@ -254,6 +254,8 @@ class ApiServer:
         task_cancel: Callable[..., Any] | None = None,
         history_store: Any = None,
         db: Any = None,
+        skills_dir: Path | None = None,
+        has_supervisor: Callable[[], bool] | None = None,
     ) -> None:
         """Store references for snapshot assembly on dashboard connect."""
         self._snapshot_sources = {
@@ -268,6 +270,8 @@ class ApiServer:
             "config_summary_getter": config_summary_getter,
             "history_store": history_store,
             "db": db,
+            "skills_dir": skills_dir,
+            "has_supervisor": has_supervisor,
         }
 
     def _resolve_dashboard_dist(self) -> Path | None:
@@ -329,6 +333,8 @@ class ApiServer:
                 config_summary_getter=src["config_summary_getter"],
                 agent_health_getter=src["agent_health_getter"],
                 db=src["db"],
+                skills_dir=src.get("skills_dir") or Path.home(),
+                has_supervisor=src.get("has_supervisor") or (lambda: False),
             )
             register_dashboard_routes(app, ctrl, self._verify_bearer)
             logger.info("Dashboard REST API routes registered")

@@ -13,6 +13,7 @@ import Agents from "@/views/Agents";
 import Cron from "@/views/Cron";
 import Tasks from "@/views/Tasks";
 import Processes from "@/views/Processes";
+import Commands from "@/views/Commands";
 
 function AuthenticatedApp() {
   const token = useAuthStore((s) => s.token);
@@ -33,6 +34,7 @@ function AuthenticatedApp() {
         <Route path="cron" element={<Cron />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="processes" element={<Processes />} />
+        <Route path="commands" element={<Commands />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

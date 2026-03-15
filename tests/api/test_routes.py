@@ -32,6 +32,7 @@ def _make_controller() -> AsyncMock:
     ctrl.send_message.return_value = {"text": "ok"}
     ctrl.get_health.return_value = {"status": "ok"}
     ctrl.abort_chat.return_value = {"killed": 0}
+    ctrl.list_commands.return_value = {"commands": []}
 
     async def _fake_stream(**_kwargs: Any) -> AsyncGenerator[str, None]:
         yield "data: chunk1\n\n"
@@ -81,6 +82,7 @@ _ALL_ENDPOINTS: list[tuple[str, str]] = [
     ("GET", "/api/tasks"),
     ("POST", "/api/tasks/t1/cancel"),
     ("GET", "/api/processes"),
+    ("GET", "/api/commands"),
     ("POST", "/api/sessions/1/message"),
     ("GET", "/api/health"),
     ("POST", "/api/abort"),
@@ -344,3 +346,13 @@ class TestControllerDelegation:
             json={"text": "hi", "topic_id": 3},
         )
         ctrl.send_message.assert_awaited_once_with(chat_id=7, text="hi", topic_id=3)
+
+
+class TestListCommands:
+    async def test_returns_commands(self, authed_client: Any) -> None:
+        resp = await authed_client.get("/api/commands")
+        assert resp.status == 200
+
+    async def test_401_when_unauthed(self, unauthed_client: Any) -> None:
+        resp = await unauthed_client.get("/api/commands")
+        assert resp.status == 401

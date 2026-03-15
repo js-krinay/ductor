@@ -224,6 +224,15 @@ def _h_list_processes(ctrl: Any, auth: Callable[[web.Request], bool]) -> Any:
     return handler
 
 
+def _h_list_commands(ctrl: Any, auth: Callable[[web.Request], bool]) -> Any:
+    async def handler(request: web.Request) -> web.Response:
+        if err := _require_auth(request, auth):
+            return err
+        return web.json_response(await ctrl.list_commands())
+
+    return handler
+
+
 async def _validate_message_body(
     request: web.Request,
 ) -> tuple[int, str, int | None, bool, web.Response | None]:
@@ -356,6 +365,7 @@ def register_dashboard_routes(
     r.add_get("/api/tasks", _h_list_tasks(controller, verify_bearer))
     r.add_post("/api/tasks/{task_id}/cancel", _h_cancel_task(controller, verify_bearer))
     r.add_get("/api/processes", _h_list_processes(controller, verify_bearer))
+    r.add_get("/api/commands", _h_list_commands(controller, verify_bearer))
     r.add_post("/api/sessions/{chat_id}/message", _h_send_message(controller, verify_bearer))
     r.add_get("/api/health", _h_health(controller, verify_bearer))
     r.add_post("/api/abort", _h_abort_chat(controller, verify_bearer))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -177,6 +178,8 @@ def controller() -> DashboardController:
         config_summary_getter=config_summary_getter,
         agent_health_getter=agent_health_getter,
         db=db,
+        skills_dir=Path("/nonexistent"),
+        has_supervisor=lambda: False,
     )
 
 
@@ -453,3 +456,33 @@ class TestSendMessageStreaming:
         assert len(events) == 1
         assert events[0].startswith("event: result\n")
         assert '"error": "internal_error"' in events[0]
+
+
+class TestListCommands:
+    async def test_returns_core_commands(self, controller: DashboardController) -> None:
+        result = await controller.list_commands()
+        commands = result["commands"]
+        assert len(commands) > 0
+        names = [c["name"] for c in commands]
+        assert "status" in names
+        assert "model" in names
+        first = commands[0]
+        assert "name" in first
+        assert "description" in first
+        assert "category" in first
+        assert "quick" in first
+
+    async def test_core_commands_have_correct_category(
+        self, controller: DashboardController
+    ) -> None:
+        result = await controller.list_commands()
+        status_cmd = next(c for c in result["commands"] if c["name"] == "status")
+        assert status_cmd["category"] == "core"
+        assert status_cmd["quick"] is True
+
+    async def test_non_quick_command_flagged_correctly(
+        self, controller: DashboardController
+    ) -> None:
+        result = await controller.list_commands()
+        new_cmd = next(c for c in result["commands"] if c["name"] == "new")
+        assert new_cmd["quick"] is False

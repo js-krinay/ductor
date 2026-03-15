@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncGenerator, Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from klir.api.dashboard import (
@@ -16,6 +17,8 @@ from klir.api.dashboard import (
     session_to_dto,
     task_to_dto,
 )
+from klir.bot.middleware import QUICK_COMMANDS
+from klir.commands import BOT_COMMANDS, MULTIAGENT_SUB_COMMANDS, discover_skill_commands
 from klir.cron.run_log import read_run_log_page
 from klir.session.key import SessionKey
 
@@ -56,6 +59,8 @@ class DashboardController:
         config_summary_getter: Callable[[], dict[str, Any]],
         agent_health_getter: Callable[[], dict[str, AgentHealth]],
         db: KlirDB,
+        skills_dir: Path,
+        has_supervisor: Callable[[], bool],
     ) -> None:
         self._session_mgr = session_mgr
         self._named_registry = named_registry
@@ -71,6 +76,8 @@ class DashboardController:
         self._config_summary_getter = config_summary_getter
         self._agent_health_getter = agent_health_getter
         self._db = db
+        self._skills_dir = skills_dir
+        self._has_supervisor = has_supervisor
 
     # ── Read-only list endpoints ──────────────────────────────────────
 
@@ -132,6 +139,43 @@ class DashboardController:
         return {
             "processes": [process_to_dto(tp) for tp in self._process_registry.list_all_active()],
         }
+
+    async def list_commands(self) -> dict[str, Any]:
+        """Return all available commands with metadata."""
+        commands: list[dict[str, Any]] = []
+
+        for name, desc in BOT_COMMANDS:
+            commands.append(
+                {
+                    "name": name,
+                    "description": desc,
+                    "category": "core",
+                    "quick": f"/{name}" in QUICK_COMMANDS,
+                }
+            )
+
+        if self._has_supervisor():
+            for name, desc in MULTIAGENT_SUB_COMMANDS:
+                commands.append(
+                    {
+                        "name": name,
+                        "description": desc,
+                        "category": "agent",
+                        "quick": False,
+                    }
+                )
+
+        for name, desc in await asyncio.to_thread(discover_skill_commands, self._skills_dir):
+            commands.append(
+                {
+                    "name": name,
+                    "description": desc,
+                    "category": "skill",
+                    "quick": False,
+                }
+            )
+
+        return {"commands": commands}
 
     # ── Query endpoints ───────────────────────────────────────────────
 
