@@ -2,16 +2,15 @@ import { toast } from "sonner";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/EmptyState";
 import { useDashboardStore } from "@/store/dashboard";
 import { cancelTask } from "@/api/client";
 import { formatDuration } from "@/lib/format";
 
 export default function Tasks() {
   const tasks = useDashboardStore((s) => s.tasks);
-  const lastSnapshotAt = useDashboardStore((s) => s.lastSnapshotAt);
 
   async function handleCancel(taskId: string) {
     try {
@@ -22,16 +21,56 @@ export default function Tasks() {
   }
 
   if (tasks.length === 0) {
-    return <EmptyState loading={!lastSnapshotAt} title="No tasks" icon="⬗" />;
+    return (
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        No tasks
+      </div>
+    );
   }
 
   const statusVariant = (s: string) =>
     s === "running" ? "default" : s === "done" ? "secondary" : "destructive";
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Tasks</h1>
-      <div className="overflow-x-auto">
+    <div className="space-y-3 md:space-y-4">
+      <h1 className="hidden text-2xl font-bold md:block">Tasks</h1>
+
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {tasks.map((t) => (
+          <Card key={t.task_id}>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{t.name}</span>
+                <Badge variant={statusVariant(t.status)}>{t.status}</Badge>
+              </div>
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{t.parent_agent}</span>
+                <Badge variant="outline">{t.provider}</Badge>
+                <span>{formatDuration(t.elapsed_seconds)}</span>
+              </div>
+              {t.prompt_preview && (
+                <p className="mt-1 truncate text-xs text-muted-foreground">
+                  {t.prompt_preview}
+                </p>
+              )}
+              {t.status === "running" && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={() => handleCancel(t.task_id)}
+                >
+                  Cancel
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Desktop: table (unchanged) */}
+      <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>

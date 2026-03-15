@@ -2,15 +2,14 @@ import { toast } from "sonner";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/EmptyState";
 import { useDashboardStore } from "@/store/dashboard";
 import { abortChat } from "@/api/client";
 import { formatRelativeTime } from "@/lib/format";
 
 export default function Processes() {
   const processes = useDashboardStore((s) => s.processes);
-  const lastSnapshotAt = useDashboardStore((s) => s.lastSnapshotAt);
 
   async function handleAbort(chatId: number) {
     try {
@@ -21,13 +20,45 @@ export default function Processes() {
   }
 
   if (processes.length === 0) {
-    return <EmptyState loading={!lastSnapshotAt} title="No active processes" icon="⬧" />;
+    return (
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        No active processes
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Processes</h1>
-      <div className="overflow-x-auto">
+    <div className="space-y-3 md:space-y-4">
+      <h1 className="hidden text-2xl font-bold md:block">Processes</h1>
+
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {processes.map((p) => (
+          <Card key={p.pid}>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{p.label}</span>
+                <span className="font-mono text-xs text-muted-foreground">PID {p.pid}</span>
+              </div>
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-mono">{p.chat_id}</span>
+                <span>{formatRelativeTime(p.registered_at)}</span>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="mt-2 w-full"
+                onClick={() => handleAbort(p.chat_id)}
+              >
+                Abort
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Desktop: table (unchanged) */}
+      <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>

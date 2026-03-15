@@ -1,27 +1,24 @@
-import { useMemo, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useDashboardStore } from "@/store/dashboard";
 import { useAuthStore } from "@/store/auth";
 import ConnectionBanner from "@/components/ConnectionBanner";
-import { CommandPalette } from "@/components/CommandPalette";
-import { useHotkeys } from "@/hooks/useHotkeys";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Overview", icon: "\u25C9" },
-  { to: "/sessions", label: "Sessions", icon: "\u25CE" },
-  { to: "/named-sessions", label: "Named", icon: "\u25C8" },
-  { to: "/agents", label: "Agents", icon: "\u25C6" },
-  { to: "/cron", label: "Cron", icon: "\u25F7" },
-  { to: "/tasks", label: "Tasks", icon: "\u25E7" },
-  { to: "/processes", label: "Processes", icon: "\u25EB" },
+  { to: "/", label: "Overview", icon: "◉" },
+  { to: "/sessions", label: "Sessions", icon: "◎" },
+  { to: "/named-sessions", label: "Named", icon: "◈" },
+  { to: "/agents", label: "Agents", icon: "◆" },
+  { to: "/cron", label: "Cron", icon: "◷" },
+  { to: "/tasks", label: "Tasks", icon: "◧" },
+  { to: "/processes", label: "Processes", icon: "◫" },
 ] as const;
 
 export default function Layout() {
-  const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem("sidebar-collapsed") === "true",
-  );
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("sidebar-collapsed") === "true");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -30,50 +27,78 @@ export default function Layout() {
       return next;
     });
   }
+
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
   const connected = useDashboardStore((s) => s.connected);
   const clearToken = useAuthStore((s) => s.clearToken);
-  const navigate = useNavigate();
+  const location = useLocation();
 
-  const hotkeys = useMemo(
-    () => [
-      { combo: { key: "1" }, handler: () => navigate("/") },
-      { combo: { key: "2" }, handler: () => navigate("/sessions") },
-      { combo: { key: "3" }, handler: () => navigate("/named-sessions") },
-      { combo: { key: "4" }, handler: () => navigate("/agents") },
-      { combo: { key: "5" }, handler: () => navigate("/cron") },
-      { combo: { key: "6" }, handler: () => navigate("/tasks") },
-      { combo: { key: "7" }, handler: () => navigate("/processes") },
-    ],
-    [navigate],
-  );
-  useHotkeys(hotkeys);
+  // Close mobile drawer on navigation
+  const handleNavClick = () => setMobileOpen(false);
+
+  // Find current page label for mobile header
+  const currentPage =
+    NAV_ITEMS.find(
+      (item) =>
+        item.to === location.pathname ||
+        (item.to !== "/" && location.pathname.startsWith(item.to)),
+    )?.label ?? "Overview";
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — overlay on mobile, static on desktop */}
       <aside
         className={cn(
+          // Shared
           "flex flex-col border-r bg-card transition-all",
-          collapsed ? "w-14" : "w-48",
+          // Mobile: fixed overlay drawer
+          "fixed inset-y-0 left-0 z-50 w-48 md:relative md:z-auto",
+          // Mobile: slide in/out
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          // Desktop: collapsible width
+          collapsed ? "md:w-14" : "md:w-48",
         )}
       >
         <div className="flex items-center gap-2 border-b px-3 py-3">
-          <span
-            className={cn(
-              "overflow-hidden text-sm font-bold whitespace-nowrap transition-all duration-200",
-              collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
-            )}
-          >
+          <span className={cn("text-sm font-bold", collapsed && "md:hidden")}>
             klir
           </span>
+          {/* Desktop collapse toggle */}
           <Button
             variant="ghost"
             size="icon"
-            className="ml-auto h-7 w-7"
+            className="ml-auto hidden h-7 w-7 md:inline-flex"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={toggleCollapsed}
           >
-            {collapsed ? "\u2192" : "\u2190"}
+            {collapsed ? "→" : "←"}
+          </Button>
+          {/* Mobile close button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Close menu"
+            className="ml-auto h-7 w-7 md:hidden"
+            onClick={() => setMobileOpen(false)}
+          >
+            ✕
           </Button>
         </div>
 
@@ -83,6 +108,7 @@ export default function Layout() {
               key={to}
               to={to}
               end={to === "/"}
+              onClick={handleNavClick}
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
@@ -92,15 +118,8 @@ export default function Layout() {
                 )
               }
             >
-              <span className="w-5 shrink-0 text-center">{icon}</span>
-              <span
-                className={cn(
-                  "overflow-hidden whitespace-nowrap transition-all duration-200",
-                  collapsed ? "w-0 opacity-0" : "w-28 opacity-100",
-                )}
-              >
-                {label}
-              </span>
+              <span className="w-5 text-center">{icon}</span>
+              <span className={cn(collapsed && "md:hidden")}>{label}</span>
             </NavLink>
           ))}
         </nav>
@@ -108,57 +127,63 @@ export default function Layout() {
         <div className="border-t p-3">
           <div className="flex items-center gap-2">
             <span
+              aria-label={connected ? "Connected" : "Disconnected"}
               className={cn(
                 "h-2 w-2 rounded-full",
-                connected ? "bg-success" : "bg-destructive",
+                connected ? "bg-green-500" : "bg-red-500",
               )}
-              aria-label={connected ? "Connected" : "Disconnected"}
             />
             <span
               className={cn(
-                "overflow-hidden text-xs text-muted-foreground whitespace-nowrap transition-all duration-200",
-                collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
+                "text-xs text-muted-foreground",
+                collapsed && "md:hidden",
               )}
             >
               {connected ? "Connected" : "Disconnected"}
             </span>
-            <kbd
-              className={cn(
-                "ml-auto overflow-hidden rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground font-mono whitespace-nowrap transition-all duration-200",
-                collapsed ? "w-0 border-0 px-0 opacity-0" : "w-auto opacity-100",
-              )}
-            >
-              {"\u2318K"}
-            </kbd>
           </div>
           <Button
             variant="ghost"
-            size={collapsed ? "icon" : "sm"}
-            className={cn("mt-2 text-xs", collapsed ? "h-7 w-7" : "w-full")}
+            size="sm"
+            className={cn(
+              "mt-2 w-full text-xs",
+              collapsed && "md:hidden",
+            )}
             onClick={clearToken}
           >
-            <span className="shrink-0">{"\u23FB"}</span>
-            <span
-              className={cn(
-                "overflow-hidden whitespace-nowrap transition-all duration-200",
-                collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
-              )}
-            >
-              Logout
-            </span>
+            Logout
           </Button>
         </div>
       </aside>
 
       {/* Main content */}
       <main className="flex flex-1 flex-col overflow-hidden">
+        {/* Mobile top bar */}
+        <div className="flex items-center gap-2 border-b px-3 py-2 md:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Open menu"
+            className="h-8 w-8"
+            onClick={() => setMobileOpen(true)}
+          >
+            ☰
+          </Button>
+          <span className="text-sm font-bold">{currentPage}</span>
+          <span
+            aria-label={connected ? "Connected" : "Disconnected"}
+            className={cn(
+              "ml-auto h-2 w-2 rounded-full",
+              connected ? "bg-green-500" : "bg-red-500",
+            )}
+          />
+        </div>
+
         <ConnectionBanner />
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-3 md:p-6">
           <Outlet />
         </div>
       </main>
-
-      <CommandPalette />
     </div>
   );
 }

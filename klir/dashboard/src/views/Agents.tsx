@@ -1,21 +1,23 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/EmptyState";
 import { useDashboardStore } from "@/store/dashboard";
 import { formatDuration } from "@/lib/format";
 
 export default function Agents() {
   const agents = useDashboardStore((s) => s.agents);
-  const lastSnapshotAt = useDashboardStore((s) => s.lastSnapshotAt);
 
   if (agents.length === 0) {
-    return <EmptyState loading={!lastSnapshotAt} title="No agents configured" description="Add agents via klir agents add" icon="◇" />;
+    return (
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        No agents configured
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Agents</h1>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-3 md:space-y-4">
+      <h1 className="hidden text-2xl font-bold md:block">Agents</h1>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {agents.map((a) => (
           <Card key={a.name}>
             <CardHeader className="pb-2">

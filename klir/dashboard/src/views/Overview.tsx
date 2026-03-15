@@ -41,11 +41,11 @@ export default function Overview() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Mission Control</h1>
+    <div className="space-y-4 md:space-y-6">
+      <h1 className="hidden text-2xl font-bold md:block">Mission Control</h1>
 
       {/* Stat cards */}
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         <Link to="/sessions" aria-label="View active sessions">
           <StatCard title="Active Sessions" value={sessions.length} />
         </Link>
@@ -74,11 +74,11 @@ export default function Overview() {
 
       {/* Observers */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Observers</CardTitle>
+        <CardHeader className="pb-2 md:pb-4">
+          <CardTitle className="text-base md:text-lg">Observers</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {Object.entries(observers).map(([name, status]) => (
               <Badge
                 key={name}
@@ -95,11 +95,11 @@ export default function Overview() {
       {/* Agents */}
       {agents.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Agents</CardTitle>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Agents</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               {agents.map((a) => (
                 <Badge
                   key={a.name}
@@ -115,11 +115,11 @@ export default function Overview() {
 
       {/* Config summary */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Configuration</CardTitle>
+        <CardHeader className="pb-2 md:pb-4">
+          <CardTitle className="text-base md:text-lg">Configuration</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {Object.entries(config).map(([key, value]) => (
               <span key={key}>
                 {key}: <span className="text-foreground">{String(value)}</span>
@@ -135,11 +135,13 @@ export default function Overview() {
 const StatCard = React.memo(function StatCard({ title, value }: { title: string; value: number | string }) {
   return (
     <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      <CardHeader className="p-3 pb-1 md:p-6 md:pb-2">
+        <CardTitle className="text-xs font-medium text-muted-foreground md:text-sm">
+          {title}
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-bold">{value}</p>
+      <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+        <p className="text-2xl font-bold md:text-3xl">{value}</p>
       </CardContent>
     </Card>
   );

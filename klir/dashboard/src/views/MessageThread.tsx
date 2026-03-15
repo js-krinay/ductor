@@ -147,8 +147,10 @@ export default function MessageThread() {
 
   return (
     <div className="flex h-full flex-col">
+      <h1 className="mb-2 hidden text-2xl font-bold md:mb-4 md:block">Chat {chatId}</h1>
+
       {/* Session context header */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between md:mb-4">
         <Link
           to="/sessions"
           className="text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -192,7 +194,7 @@ export default function MessageThread() {
 
         {/* Streaming response */}
         {streaming && streamText && (
-          <div className="rounded-lg bg-card p-4" aria-live="polite" role="log">
+          <div className="rounded-lg bg-card p-3 md:p-4" aria-live="polite" role="log">
             <div className="prose dark:prose-invert max-w-none text-sm">
               <ReactMarkdown>{streamText}</ReactMarkdown>
             </div>
@@ -205,7 +207,7 @@ export default function MessageThread() {
         )}
 
         {streaming && !streamText && (
-          <div className="rounded-lg bg-card p-4 text-sm text-muted-foreground animate-pulse">
+          <div className="rounded-lg bg-card p-3 text-sm text-muted-foreground animate-pulse md:p-4">
             Thinking...
           </div>
         )}
@@ -217,7 +219,7 @@ export default function MessageThread() {
           e.preventDefault();
           handleSend();
         }}
-        className="flex gap-2 border-t pt-4"
+        className="flex gap-2 border-t pt-3 md:pt-4"
       >
         <Input
           value={input}
@@ -239,7 +241,7 @@ const MessageBubble = React.memo(function MessageBubble({ message }: { message: 
   const isOutbound = message.direction === "outbound";
 
   return (
-    <div className={cn("rounded-lg p-4", isOutbound ? "bg-card" : "bg-accent/30")}>
+    <div className={cn("rounded-lg p-3 md:p-4", isOutbound ? "bg-card" : "bg-accent/30")}>
       <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
         <span>{isOutbound ? "Assistant" : "You"}</span>
         <span>{formatRelativeTime(message.ts)}</span>

@@ -3,9 +3,9 @@ import { toast } from "sonner";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { EmptyState } from "@/components/EmptyState";
 import { useDashboardStore } from "@/store/dashboard";
 import { toggleCronJob, fetchCronHistory } from "@/api/client";
 import type { CronRunEntry } from "@/types/api";
@@ -13,7 +13,6 @@ import { formatDuration, formatRelativeTime } from "@/lib/format";
 
 export default function Cron() {
   const cronJobs = useDashboardStore((s) => s.cronJobs);
-  const lastSnapshotAt = useDashboardStore((s) => s.lastSnapshotAt);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [runHistory, setRunHistory] = useState<CronRunEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -47,13 +46,88 @@ export default function Cron() {
   }
 
   if (cronJobs.length === 0) {
-    return <EmptyState loading={!lastSnapshotAt} title="No cron jobs configured" icon="◷" />;
+    return (
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        No cron jobs configured
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Cron Jobs</h1>
-      <div className="overflow-x-auto">
+    <div className="space-y-3 md:space-y-4">
+      <h1 className="hidden text-2xl font-bold md:block">Cron Jobs</h1>
+
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {cronJobs.map((job) => (
+          <Card key={job.id}>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <span
+                  className="font-medium cursor-pointer text-primary hover:underline"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleExpand(job.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleExpand(job.id);
+                    }
+                  }}
+                >
+                  {job.title} {expandedId === job.id ? "\u25be" : "\u25b8"}
+                </span>
+                <Switch
+                  checked={job.enabled}
+                  onCheckedChange={(v) => handleToggle(job.id, v)}
+                />
+              </div>
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-mono">{job.schedule}</span>
+                <Badge variant="outline">{job.provider}</Badge>
+                {job.consecutive_errors > 0 && (
+                  <Badge variant="destructive">{job.consecutive_errors} errors</Badge>
+                )}
+              </div>
+              {job.last_duration_ms != null && (
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Last: {formatDuration(job.last_duration_ms / 1000)}
+                </div>
+              )}
+
+              {/* Expanded run history */}
+              {expandedId === job.id && (
+                <div className="mt-3 rounded bg-accent/20 p-2">
+                  {loadingHistory ? (
+                    <p className="text-xs text-muted-foreground">Loading...</p>
+                  ) : historyError ? (
+                    <p className="text-xs text-destructive">{historyError}</p>
+                  ) : runHistory.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No run history</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {runHistory.map((run) => (
+                        <div key={run.ts} className="flex items-center gap-2 text-xs">
+                          <Badge
+                            variant={run.status === "success" ? "default" : "destructive"}
+                          >
+                            {run.status}
+                          </Badge>
+                          <span>{formatRelativeTime(run.ts)}</span>
+                          <span>{formatDuration(run.duration_ms / 1000)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Desktop: table (unchanged) */}
+      <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -70,10 +144,10 @@ export default function Cron() {
               <Fragment key={job.id}>
                 <TableRow
                   className="cursor-pointer hover:bg-accent/50"
-                  onClick={() => handleExpand(job.id)}
                   tabIndex={0}
                   role="button"
                   aria-expanded={expandedId === job.id}
+                  onClick={() => handleExpand(job.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
@@ -108,7 +182,6 @@ export default function Cron() {
                   </TableCell>
                 </TableRow>
 
-                {/* Expanded run history */}
                 {expandedId === job.id && (
                   <TableRow>
                     <TableCell colSpan={6} className="bg-accent/20 p-4">
@@ -119,7 +192,7 @@ export default function Cron() {
                       ) : runHistory.length === 0 ? (
                         <p className="text-sm text-muted-foreground">No run history</p>
                       ) : (
-                        <Table aria-label={`Run history for ${job.title}`}>
+                        <Table aria-label="Run history">
                           <TableHeader>
                             <TableRow>
                               <TableHead>Time</TableHead>
