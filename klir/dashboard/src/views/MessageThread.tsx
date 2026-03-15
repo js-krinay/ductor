@@ -1,31 +1,42 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchHistory } from "@/api/client";
 import { sendMessageStream } from "@/api/sse";
+import { useDashboardStore } from "@/store/dashboard";
 import type { MessageEntry } from "@/types/api";
-import { formatRelativeTime, formatCost } from "@/lib/format";
+import { formatRelativeTime, formatCost, formatTokens } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export default function MessageThread() {
   const { chatId } = useParams<{ chatId: string }>();
   const chatIdNum = Number(chatId);
+  const session = useDashboardStore((s) =>
+    s.sessions.find((sess) => sess.chat_id === chatIdNum),
+  );
   const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [toolActivity, setToolActivity] = useState<string | null>(null);
-  const [_hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const valid = Boolean(chatId) && !Number.isNaN(chatIdNum);
 
-  const scrollToBottom = useCallback(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, []);
+  const scrollToBottom = useCallback(
+    (instant?: boolean) => {
+      scrollRef.current?.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: instant ? "instant" : "smooth",
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!valid) return;
@@ -41,11 +52,21 @@ export default function MessageThread() {
   }, [chatIdNum, valid]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, streamText, scrollToBottom]);
+    scrollToBottom(streaming);
+  }, [messages, streamText, scrollToBottom, streaming]);
 
   if (!valid) {
     return <Navigate to="/sessions" replace />;
+  }
+
+  function handleLoadOlder() {
+    if (!hasMore) return;
+    fetchHistory(chatIdNum, { limit: 50, offset: messages.length })
+      .then((res) => {
+        setMessages((prev) => [...res.messages.reverse(), ...prev]);
+        setHasMore(res.has_more);
+      })
+      .catch(() => {});
   }
 
   async function handleSend() {
@@ -126,10 +147,39 @@ export default function MessageThread() {
 
   return (
     <div className="flex h-full flex-col">
-      <h1 className="mb-4 text-2xl font-bold">Chat {chatId}</h1>
+      {/* Session context header */}
+      <div className="mb-4 flex items-center justify-between">
+        <Link
+          to="/sessions"
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          &larr; Sessions
+        </Link>
+        {session ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{session.provider}</span>
+            <span className="opacity-40">&middot;</span>
+            <span>{session.model}</span>
+            <span className="opacity-40">&middot;</span>
+            <span>{formatCost(session.total_cost_usd)}</span>
+            <span className="opacity-40">&middot;</span>
+            <span>{formatTokens(session.total_tokens)} tokens</span>
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">Chat {chatId}</span>
+        )}
+      </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 space-y-4 overflow-auto pb-4">
+      <div ref={scrollRef} className="flex-1 space-y-4 overflow-auto pb-4" aria-live="polite">
+        {hasMore && (
+          <div className="flex justify-center">
+            <Button variant="ghost" size="sm" onClick={handleLoadOlder}>
+              Load older messages
+            </Button>
+          </div>
+        )}
+
         {messages.length === 0 && !streaming && (
           <div className="flex h-32 items-center justify-center text-muted-foreground">
             No messages yet
@@ -142,8 +192,8 @@ export default function MessageThread() {
 
         {/* Streaming response */}
         {streaming && streamText && (
-          <div className="rounded-lg bg-card p-4">
-            <div className="prose prose-invert max-w-none text-sm">
+          <div className="rounded-lg bg-card p-4" aria-live="polite" role="log">
+            <div className="prose dark:prose-invert max-w-none text-sm">
               <ReactMarkdown>{streamText}</ReactMarkdown>
             </div>
             {toolActivity && (
@@ -175,6 +225,7 @@ export default function MessageThread() {
           placeholder="Send a message..."
           disabled={streaming}
           autoFocus
+          aria-label="Send a message"
         />
         <Button type="submit" disabled={streaming || !input.trim()}>
           Send
@@ -184,18 +235,18 @@ export default function MessageThread() {
   );
 }
 
-function MessageBubble({ message }: { message: MessageEntry }) {
+const MessageBubble = React.memo(function MessageBubble({ message }: { message: MessageEntry }) {
   const isOutbound = message.direction === "outbound";
 
   return (
-    <div className={`rounded-lg p-4 ${isOutbound ? "bg-card" : "bg-accent/30"}`}>
+    <div className={cn("rounded-lg p-4", isOutbound ? "bg-card" : "bg-accent/30")}>
       <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
         <span>{isOutbound ? "Assistant" : "You"}</span>
         <span>{formatRelativeTime(message.ts)}</span>
         {isOutbound && message.cost_usd > 0 && <span>{formatCost(message.cost_usd)}</span>}
       </div>
       {isOutbound ? (
-        <div className="prose prose-invert max-w-none text-sm">
+        <div className="prose dark:prose-invert max-w-none text-sm">
           <ReactMarkdown>{message.text}</ReactMarkdown>
         </div>
       ) : (
@@ -203,4 +254,4 @@ function MessageBubble({ message }: { message: MessageEntry }) {
       )}
     </div>
   );
-}
+});

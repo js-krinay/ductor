@@ -142,3 +142,25 @@ Optional multi-agent system (when `agents.json` is present):
 - ruff with strict lint profile
 - config deep-merge adds new defaults without dropping user keys
 - supervisor restart code is `42`
+
+## Design Context
+
+### Users
+Solo operators running their own klir bot. They open the dashboard to check status, inspect sessions, debug cron jobs, and monitor agents. Context is typically a single person managing one deployment — they want fast answers, not collaboration features.
+
+### Brand Personality
+Bold, technical, precise. klir's dashboard is a command center — it should feel like a high-quality instrument panel that rewards expertise. Not playful, not corporate. Think hacker aesthetic refined through modern design sensibility.
+
+### Aesthetic Direction
+- **Visual tone:** High-contrast dark UI with sharp typography and deliberate spacing. Dense but not cluttered.
+- **References:** Vercel/Linear (clean dark UI, precise type, subtle animations) + Raycast/Arc (modern desktop app feel, keyboard-first, smooth transitions).
+- **Anti-references:** Generic SaaS dashboards with pastel cards, rounded-everything, or gratuitous illustrations. Nothing that looks AI-generated or template-driven.
+- **Theme:** Dark only. OKLCH color system with monochromatic grays. Geist Variable font.
+- **Icons:** Unicode symbols (◉, ◎, ◈) — no icon library dependency.
+
+### Design Principles
+1. **Density over decoration** — Every pixel should communicate. Prefer data-rich layouts over whitespace padding. Stat cards, tables, and badges are first-class citizens.
+2. **Quiet until it matters** — Animations are subtle and purposeful. Respect `prefers-reduced-motion`. No gratuitous transitions. Motion should confirm actions, not entertain.
+3. **Terminal-grade legibility** — Monospace for data, proportional for prose. High contrast ratios. Text should be scannable at a glance, even in small sizes.
+4. **Keyboard-aware** — Focus rings are visible and intentional. Navigation should feel natural without a mouse. Interactive elements have clear focus states.
+5. **Honest status** — Connection state, errors, and loading are always visible. Never hide failure behind optimistic UI. Red means broken, green means connected.

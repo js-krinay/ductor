@@ -33,6 +33,7 @@ function AuthenticatedApp() {
         <Route path="cron" element={<Cron />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="processes" element={<Processes />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

@@ -54,12 +54,17 @@ export default function Login() {
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="Paste your API token"
                 autoFocus
+                aria-describedby={error ? "token-error" : undefined}
               />
               <p className="text-xs text-muted-foreground">
                 Found in your klir config or shown during setup
               </p>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p id="token-error" role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
             <Button type="submit" className="w-full" disabled={loading || !token.trim()}>
               {loading ? "Connecting..." : "Connect"}
             </Button>

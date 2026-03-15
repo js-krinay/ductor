@@ -2,30 +2,28 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
 import { useDashboardStore } from "@/store/dashboard";
 
 const STATUSES = ["all", "running", "idle", "ended"] as const;
 
 export default function NamedSessions() {
   const namedSessions = useDashboardStore((s) => s.namedSessions);
+  const lastSnapshotAt = useDashboardStore((s) => s.lastSnapshotAt);
   const [filter, setFilter] = useState<string>("all");
 
   const filtered =
     filter === "all" ? namedSessions : namedSessions.filter((ns) => ns.status === filter);
 
   if (namedSessions.length === 0) {
-    return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        No named sessions
-      </div>
-    );
+    return <EmptyState loading={!lastSnapshotAt} title="No named sessions" icon="◈" />;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Named Sessions</h1>
-        <div className="flex gap-1">
+        <div className="flex gap-1" role="group" aria-label="Filter by status">
           {STATUSES.map((s) => (
             <Button
               key={s}

@@ -4,12 +4,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
 import { useDashboardStore } from "@/store/dashboard";
 import { cancelTask } from "@/api/client";
 import { formatDuration } from "@/lib/format";
 
 export default function Tasks() {
   const tasks = useDashboardStore((s) => s.tasks);
+  const lastSnapshotAt = useDashboardStore((s) => s.lastSnapshotAt);
 
   async function handleCancel(taskId: string) {
     try {
@@ -20,11 +22,7 @@ export default function Tasks() {
   }
 
   if (tasks.length === 0) {
-    return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        No tasks
-      </div>
-    );
+    return <EmptyState loading={!lastSnapshotAt} title="No tasks" icon="⬗" />;
   }
 
   const statusVariant = (s: string) =>
@@ -33,48 +31,50 @@ export default function Tasks() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Tasks</h1>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Agent</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Provider</TableHead>
-            <TableHead>Elapsed</TableHead>
-            <TableHead>Prompt</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {tasks.map((t) => (
-            <TableRow key={t.task_id}>
-              <TableCell className="font-medium">{t.name}</TableCell>
-              <TableCell>{t.parent_agent}</TableCell>
-              <TableCell>
-                <Badge variant={statusVariant(t.status)}>{t.status}</Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline">{t.provider}</Badge>
-              </TableCell>
-              <TableCell>{formatDuration(t.elapsed_seconds)}</TableCell>
-              <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                {t.prompt_preview}
-              </TableCell>
-              <TableCell>
-                {t.status === "running" && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleCancel(t.task_id)}
-                  >
-                    Cancel
-                  </Button>
-                )}
-              </TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Agent</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Provider</TableHead>
+              <TableHead>Elapsed</TableHead>
+              <TableHead>Prompt</TableHead>
+              <TableHead><span className="sr-only">Actions</span></TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {tasks.map((t) => (
+              <TableRow key={t.task_id}>
+                <TableCell className="font-medium">{t.name}</TableCell>
+                <TableCell>{t.parent_agent}</TableCell>
+                <TableCell>
+                  <Badge variant={statusVariant(t.status)}>{t.status}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">{t.provider}</Badge>
+                </TableCell>
+                <TableCell>{formatDuration(t.elapsed_seconds)}</TableCell>
+                <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                  {t.prompt_preview}
+                </TableCell>
+                <TableCell>
+                  {t.status === "running" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleCancel(t.task_id)}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
