@@ -504,7 +504,7 @@ wheels = [
 
 [[package]]
 name = "klir-bot"
-version = "0.7.1"
+version = "0.7.2"
 source = { editable = "." }
 dependencies = [
     { name = "aiogram" },
@@ -513,15 +513,11 @@ dependencies = [
     { name = "filetype" },
     { name = "pillow" },
     { name = "pydantic" },
+    { name = "pynacl" },
     { name = "pyyaml" },
     { name = "questionary" },
     { name = "rich" },
     { name = "tzdata" },
-]
-
-[package.optional-dependencies]
-api = [
-    { name = "pynacl" },
 ]
 
 [package.dev-dependencies]
@@ -556,13 +552,12 @@ requires-dist = [
     { name = "filetype", specifier = ">=1.2.0" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pynacl", marker = "extra == 'api'", specifier = ">=1.6.2" },
+    { name = "pynacl", specifier = ">=1.6.2" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "questionary", specifier = ">=2.1.1" },
     { name = "rich", specifier = ">=14.3.2" },
     { name = "tzdata", specifier = ">=2024.1" },
 ]
-provides-extras = ["api"]
 
 [package.metadata.requires-dev]
 dev = [

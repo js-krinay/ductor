@@ -121,13 +121,7 @@ async def start_api_server(
     paths: KlirPaths,
 ) -> None:
     """Initialize and start the direct WebSocket API server."""
-    try:
-        from klir.api.server import ApiServer
-    except ImportError:
-        logger.warning(
-            "API server enabled but PyNaCl is not installed. Install with: pip install klir[api]"
-        )
-        return
+    from klir.api.server import ApiServer
 
     if not config.api.token:
         from klir.config import update_config_file_async
