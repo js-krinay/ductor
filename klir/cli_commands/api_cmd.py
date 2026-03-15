@@ -15,7 +15,7 @@ from klir.workspace.paths import resolve_paths
 
 _console = Console()
 
-_API_SUBCOMMANDS = frozenset({"enable", "disable"})
+_API_SUBCOMMANDS = frozenset({"enable", "disable", "token"})
 
 
 def _parse_api_subcommand(args: list[str]) -> str | None:
@@ -40,6 +40,7 @@ def print_api_help() -> None:
     table.add_column()
     table.add_row("klir api enable", "Enable the WebSocket API server")
     table.add_row("klir api disable", "Disable the WebSocket API server")
+    table.add_row("klir api token", "Show your API token and dashboard URL")
 
     # Show current status
     paths = resolve_paths()
@@ -172,6 +173,32 @@ def api_disable() -> None:
     _console.print("[dim]Restart the bot to apply.[/dim]")
 
 
+def api_token() -> None:
+    """Display the current API token."""
+    result = _read_config()
+    if result is None:
+        return
+    _config_path, data = result
+
+    api = data.get("api", {})
+    if not isinstance(api, dict):
+        api = {}
+    token = api.get("token", "")
+    if not token:
+        _console.print("[dim]No API token configured. Run [bold]klir[/bold] to set up.[/dim]")
+        return
+    port = api.get("port", 8741)
+    _console.print(
+        Panel(
+            f"  Token:  [cyan]{token}[/cyan]\n"
+            f"  URL:    [cyan]http://localhost:{port}/dashboard/[/cyan]",
+            title="[bold]API Access[/bold]",
+            border_style="blue",
+            padding=(1, 2),
+        ),
+    )
+
+
 def cmd_api(args: list[str]) -> None:
     """Handle 'klir api <subcommand>'."""
     sub = _parse_api_subcommand(args)
@@ -182,6 +209,7 @@ def cmd_api(args: list[str]) -> None:
     dispatch: dict[str, Callable[[], None]] = {
         "enable": api_enable,
         "disable": api_disable,
+        "token": api_token,
     }
     _console.print()
     dispatch[sub]()

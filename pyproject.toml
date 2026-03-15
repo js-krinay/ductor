@@ -90,6 +90,13 @@ include = [
     "README.md",
     "pyproject.toml",
 ]
+exclude = [
+    "klir/dashboard/node_modules/",
+    "klir/dashboard/src/",
+    "klir/dashboard/*.json",
+    "klir/dashboard/*.ts",
+    "klir/dashboard/*.html",
+]
 
 [tool.ruff]
 target-version = "py311"

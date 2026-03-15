@@ -40,6 +40,7 @@ async def test_orchestrator_starts_cache_observer(mock_codex_cache: CodexModelCa
     mock_observer.get_cache = MagicMock(return_value=mock_codex_cache)
 
     mock_config = AgentConfig()
+    mock_config.api.enabled = False
 
     with (
         patch("klir.orchestrator.observers.CodexCacheObserver", return_value=mock_observer),
@@ -78,6 +79,7 @@ async def test_orchestrator_passes_cache_to_observers(
     mock_webhook_class = MagicMock(return_value=mock_webhook_instance)
 
     mock_config = AgentConfig()
+    mock_config.api.enabled = False
 
     with (
         patch("klir.orchestrator.observers.CodexCacheObserver", return_value=mock_cache_observer),
@@ -118,6 +120,7 @@ async def test_orchestrator_stops_cache_observer(mock_codex_cache: CodexModelCac
     mock_observer.get_cache = MagicMock(return_value=mock_codex_cache)
 
     mock_config = AgentConfig()
+    mock_config.api.enabled = False
 
     with (
         patch("klir.orchestrator.observers.CodexCacheObserver", return_value=mock_observer),
