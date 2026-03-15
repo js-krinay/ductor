@@ -10,12 +10,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from klir.config import _BIND_ALL_INTERFACES
 from klir.workspace.paths import resolve_paths
 
 _console = Console()
 
-_API_SUBCOMMANDS = frozenset({"enable", "disable", "token"})
+_API_SUBCOMMANDS = frozenset({"token"})
 
 
 def _parse_api_subcommand(args: list[str]) -> str | None:
@@ -38,8 +37,6 @@ def print_api_help() -> None:
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_column(style="bold green", min_width=30)
     table.add_column()
-    table.add_row("klir api enable", "Enable the WebSocket API server")
-    table.add_row("klir api disable", "Disable the WebSocket API server")
     table.add_row("klir api token", "Show your API token and dashboard URL")
 
     # Show current status
@@ -69,23 +66,6 @@ def print_api_help() -> None:
     _console.print()
 
 
-def nacl_available() -> bool:
-    """Check if PyNaCl is importable."""
-    from importlib.util import find_spec
-
-    return find_spec("nacl.public") is not None
-
-
-def api_install_hint() -> str:
-    """Return the install command for PyNaCl based on install mode."""
-    from klir.infra.install import detect_install_mode
-
-    mode = detect_install_mode()
-    if mode == "pipx":
-        return "pipx inject klir PyNaCl"
-    return "pip install klir[api]"
-
-
 def _read_config() -> tuple[Path, dict[str, object]] | None:
     """Read the config file and return (path, data) or None on failure."""
     paths = resolve_paths()
@@ -101,80 +81,8 @@ def _read_config() -> tuple[Path, dict[str, object]] | None:
     return config_path, data
 
 
-def api_enable() -> None:
-    """Enable the API server: check deps, write config, generate token."""
-    if not nacl_available():
-        hint = api_install_hint()
-        _console.print(
-            Panel(
-                "[bold yellow]PyNaCl is required for the API server (E2E encryption).[/bold yellow]"
-                f"\n\nInstall it with:\n\n  [bold]{hint}[/bold]"
-                "\n\nThen run [bold]klir api enable[/bold] again.",
-                title="[bold]Missing dependency[/bold]",
-                border_style="yellow",
-                padding=(1, 2),
-            ),
-        )
-        return
-
-    result = _read_config()
-    if result is None:
-        return
-    config_path, data = result
-
-    import secrets as _secrets
-
-    api = data.get("api", {})
-    if not isinstance(api, dict):
-        api = {}
-    api["enabled"] = True
-    if not api.get("token"):
-        api["token"] = _secrets.token_urlsafe(32)
-    api.setdefault("host", _BIND_ALL_INTERFACES)
-    api.setdefault("port", 8741)
-    api.setdefault("chat_id", 0)
-    api.setdefault("allow_public", False)
-    from klir.infra.json_store import atomic_json_save
-
-    data["api"] = api
-    atomic_json_save(config_path, data)
-
-    _console.print(
-        Panel(
-            "[bold green]API server enabled.[/bold green]\n\n"
-            f"  Host:   [cyan]{api['host']}[/cyan]\n"
-            f"  Port:   [cyan]{api['port']}[/cyan]\n"
-            f"  Token:  [cyan]{api['token']}[/cyan]\n\n"
-            "[dim]Restart the bot to start the API server.[/dim]\n"
-            "[dim]Designed for use with Tailscale or other private networks.[/dim]",
-            title="[bold]API Server[/bold] [dim](beta)[/dim]",
-            border_style="green",
-            padding=(1, 2),
-        ),
-    )
-
-
-def api_disable() -> None:
-    """Disable the API server in config."""
-    result = _read_config()
-    if result is None:
-        return
-    config_path, data = result
-
-    api = data.get("api", {})
-    if not isinstance(api, dict):
-        api = {}
-    from klir.infra.json_store import atomic_json_save
-
-    api["enabled"] = False
-    data["api"] = api
-    atomic_json_save(config_path, data)
-    _console.print("API server: [dim]disabled[/dim]")
-    _console.print("[dim]Restart the bot to apply.[/dim]")
-
-
 def api_token() -> None:
-    """Display the current API token."""
+    """Display the current API token and dashboard URL."""
     result = _read_config()
     if result is None:
         return
@@ -187,11 +95,24 @@ def api_token() -> None:
     if not token:
         _console.print("[dim]No API token configured. Run [bold]klir[/bold] to set up.[/dim]")
         return
+
     port = api.get("port", 8741)
+    ts_cfg = api.get("tailscale", {})
+    ts_mode = ts_cfg.get("mode", "off") if isinstance(ts_cfg, dict) else "off"
+
+    lines = [f"  Token:      [cyan]{token}[/cyan]"]
+
+    if ts_mode in ("serve", "funnel"):
+        lines.append(f"  Local URL:  [cyan]http://localhost:{port}/dashboard/[/cyan]")
+        lines.append(
+            f"  Tailscale:  [green]{ts_mode}[/green] [dim](HTTPS URL shown at startup)[/dim]"
+        )
+    else:
+        lines.append(f"  URL:        [cyan]http://localhost:{port}/dashboard/[/cyan]")
+
     _console.print(
         Panel(
-            f"  Token:  [cyan]{token}[/cyan]\n"
-            f"  URL:    [cyan]http://localhost:{port}/dashboard/[/cyan]",
+            "\n".join(lines),
             title="[bold]API Access[/bold]",
             border_style="blue",
             padding=(1, 2),
@@ -207,8 +128,6 @@ def cmd_api(args: list[str]) -> None:
         return
 
     dispatch: dict[str, Callable[[], None]] = {
-        "enable": api_enable,
-        "disable": api_disable,
         "token": api_token,
     }
     _console.print()

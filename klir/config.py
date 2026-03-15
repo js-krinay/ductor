@@ -193,6 +193,21 @@ class DashboardConfig(BaseModel):
     max_clients: int = 5
 
 
+TailscaleMode = Literal["off", "serve", "funnel"]
+
+
+class TailscaleConfig(BaseModel):
+    """Settings for Tailscale network exposure.
+
+    ``serve`` exposes the dashboard privately to your tailnet (HTTPS).
+    ``funnel`` exposes it publicly via the internet (HTTPS).
+    Both proxy to localhost, so the API server binds to ``127.0.0.1``.
+    """
+
+    mode: TailscaleMode = "off"
+    reset_on_exit: bool = True
+
+
 class ApiConfig(BaseModel):
     """Settings for the direct WebSocket API server.
 
@@ -210,6 +225,7 @@ class ApiConfig(BaseModel):
     token: str = ""
     chat_id: int = 0
     allow_public: bool = False
+    tailscale: TailscaleConfig = Field(default_factory=TailscaleConfig)
     dashboard: DashboardConfig = Field(default_factory=DashboardConfig)
 
 

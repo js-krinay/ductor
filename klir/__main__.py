@@ -97,7 +97,7 @@ def load_config() -> AgentConfig:
         else:
             defaults = AgentConfig().model_dump(mode="json")
             defaults["gemini_api_key"] = DEFAULT_EMPTY_GEMINI_API_KEY
-            defaults.pop("api", None)  # Beta: only written by `klir api enable`
+
             atomic_json_save(config_path, defaults)
             logger.info("Created default config at %s", config_path)
 
@@ -114,7 +114,6 @@ def load_config() -> AgentConfig:
 
     defaults = AgentConfig().model_dump(mode="json")
     defaults["gemini_api_key"] = DEFAULT_EMPTY_GEMINI_API_KEY
-    defaults.pop("api", None)  # Beta: only written by `klir api enable`
     merged, changed = deep_merge_config(user_data, defaults)
     changed = changed or normalized_existing
 

@@ -299,11 +299,95 @@ def _offer_service_install(console: Console) -> bool:
     return bool(enabled)
 
 
+_TAILSCALE_CHOICES = [
+    questionary.Choice("Off — localhost only", value="off"),
+    questionary.Choice("Serve — private HTTPS for your tailnet", value="serve"),
+    questionary.Choice("Funnel — public HTTPS via Tailscale", value="funnel"),
+]
+
+
+def _ask_dashboard_access(console: Console) -> dict[str, object]:
+    """Ask how the dashboard should be exposed and return API config overrides."""
+    from klir.infra.tailscale import detect_tailscale
+
+    has_tailscale = detect_tailscale()
+
+    if has_tailscale:
+        console.print(
+            Panel(
+                "[bold]Tailscale detected.[/bold]\n\n"
+                "klir includes a web dashboard (Mission Control) for monitoring\n"
+                "sessions, cron jobs, and agents.\n\n"
+                "  [bold]Off[/bold]      Dashboard on localhost only (http://localhost:8741)\n"
+                "  [bold]Serve[/bold]    Private HTTPS via your tailnet (recommended)\n"
+                "  [bold]Funnel[/bold]   Public HTTPS via Tailscale Funnel",
+                title="[bold]Dashboard Access[/bold]",
+                border_style="blue",
+                padding=(1, 2),
+            ),
+        )
+
+        mode: str | None = questionary.select(
+            "How should the dashboard be exposed?",
+            choices=_TAILSCALE_CHOICES,
+            default="serve",
+        ).ask()
+        if mode is None:
+            _abort()
+
+        overrides: dict[str, object] = {}
+        if mode in ("serve", "funnel"):
+            # Tailscale proxies to localhost — bind loopback
+            overrides["host"] = "127.0.0.1"
+            overrides["tailscale"] = {"mode": mode, "reset_on_exit": True}
+            overrides["allow_public"] = mode == "funnel"
+        else:
+            overrides["host"] = "127.0.0.1"
+            overrides["tailscale"] = {"mode": "off", "reset_on_exit": True}
+
+        console.print()
+        return overrides
+
+    # No Tailscale detected
+    console.print(
+        Panel(
+            "[bold]Dashboard Access[/bold]\n\n"
+            "klir includes a web dashboard for monitoring sessions,\n"
+            "cron jobs, and agents.\n\n"
+            "  [bold]Localhost[/bold]   Dashboard on http://localhost:8741 only\n"
+            "  [bold]Network[/bold]    Bind to all interfaces (use with VPN/firewall)\n\n"
+            "[dim]Install Tailscale for secure private HTTPS access.[/dim]",
+            title="[bold]Dashboard Access[/bold]",
+            border_style="blue",
+            padding=(1, 2),
+        ),
+    )
+
+    bind_all: bool | None = questionary.confirm(
+        "Expose dashboard on all network interfaces?",
+        default=False,
+    ).ask()
+    if bind_all is None:
+        _abort()
+
+    overrides = {}
+    if bind_all:
+        overrides["host"] = "0.0.0.0"  # noqa: S104
+        overrides["allow_public"] = True
+    else:
+        overrides["host"] = "127.0.0.1"
+
+    overrides["tailscale"] = {"mode": "off", "reset_on_exit": True}
+    console.print()
+    return overrides
+
+
 def _write_config(
     *,
     telegram_token: str,
     allowed_user_ids: list[int],
     user_timezone: str,
+    api_overrides: dict[str, object] | None = None,
 ) -> Path:
     """Write the config file with wizard values merged into defaults."""
     paths = resolve_paths()
@@ -333,9 +417,16 @@ def _write_config(
     import secrets as _secrets
 
     api = merged.get("api", {})
-    if isinstance(api, dict) and not api.get("token"):
+    if not isinstance(api, dict):
+        api = {}
+    if not api.get("token"):
         api["token"] = _secrets.token_urlsafe(32)
-        merged["api"] = api
+
+    # Apply dashboard access overrides from wizard
+    if api_overrides:
+        api.update(api_overrides)
+
+    merged["api"] = api
 
     from klir.infra.json_store import atomic_json_save
 
@@ -366,10 +457,13 @@ def run_onboarding() -> bool:
     timezone = _ask_timezone(console)
     console.print()
 
+    api_overrides = _ask_dashboard_access(console)
+
     config_path = _write_config(
         telegram_token=token,
         allowed_user_ids=user_ids,
         user_timezone=timezone,
+        api_overrides=api_overrides,
     )
 
     paths = resolve_paths()
@@ -377,14 +471,29 @@ def run_onboarding() -> bool:
     # Offer background service setup on Linux with systemd
     run_as_service = _offer_service_install(console)
 
-    # Read back the API token for display
+    # Read back the API config for display
+    api_cfg: dict[str, object] = {}
     try:
         final_config = json.loads(config_path.read_text(encoding="utf-8"))
-        api_token = final_config.get("api", {}).get("token", "")
+        raw_api = final_config.get("api", {})
+        if isinstance(raw_api, dict):
+            api_cfg = raw_api
     except (json.JSONDecodeError, OSError):
-        api_token = ""
+        pass
 
-    api_token_line = f"  API Token:  [cyan]{api_token}[/cyan]\n" if api_token else ""
+    api_token = str(api_cfg.get("token", ""))
+    ts_raw = api_cfg.get("tailscale", {})
+    ts_mode = ts_raw.get("mode", "off") if isinstance(ts_raw, dict) else "off"
+
+    api_token_line = f"  Token:      [cyan]{api_token}[/cyan]\n" if api_token else ""
+
+    if ts_mode in ("serve", "funnel"):
+        url_line = "  URL:        [cyan]https://<tailnet-host>/dashboard/[/cyan]\n"
+        url_note = f"  [dim]Tailscale {ts_mode} will provide the HTTPS URL at startup.[/dim]\n"
+    else:
+        port = api_cfg.get("port", 8741)
+        url_line = f"  URL:        [cyan]http://localhost:{port}/dashboard/[/cyan]\n"
+        url_note = ""
 
     console.print(
         Panel(
@@ -395,8 +504,9 @@ def run_onboarding() -> bool:
             f"  Workspace:  [cyan]{paths.workspace}[/cyan]\n"
             f"  Logs:       [cyan]{paths.logs_dir}[/cyan]\n\n"
             "[bold]Dashboard:[/bold]\n\n"
-            f"  URL:        [cyan]http://localhost:8741/dashboard/[/cyan]\n"
+            + url_line
             + api_token_line
+            + url_note
             + "\n"
             + ("Installing service..." if run_as_service else "Starting bot..."),
             title="[bold green]Ready[/bold green]",

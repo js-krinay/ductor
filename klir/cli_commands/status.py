@@ -171,7 +171,7 @@ def print_usage() -> None:
     table.add_row("klir service install", f"Run as background service ({svc_hint})")
     table.add_row("klir service", "Service management (status/stop/logs/...)")
     table.add_row("klir agents", "Sub-agent management (list/add/remove)")
-    table.add_row("klir api", "API server management (enable/disable) [beta]")
+    table.add_row("klir api", "API server management [beta]")
     table.add_row("klir status", "Show bot status, paths, and agents")
     table.add_row("klir help", "Show this message")
     table.add_row("-v, --verbose", "Verbose logging output")

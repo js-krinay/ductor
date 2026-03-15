@@ -203,6 +203,18 @@ async def start_api_server(
         )
         return
 
+    # Start Tailscale serve/funnel if configured
+    ts_mode = config.api.tailscale.mode
+    if ts_mode != "off":
+        from klir.infra.tailscale import start_tailscale_exposure
+
+        hostname = await start_tailscale_exposure(ts_mode, config.api.port)
+        if hostname:
+            logger.info(
+                "Dashboard available at https://%s/dashboard/",
+                hostname,
+            )
+
     orch._api_stop = server.stop
     orch._dashboard_hub = dashboard_hub
 
@@ -212,6 +224,17 @@ async def shutdown(orch: Orchestrator) -> None:
     killed = await orch._process_registry.kill_all_active()
     if killed:
         logger.info("Shutdown terminated %d active CLI process(es)", killed)
+
+    # Reset Tailscale exposure before stopping the API server
+    ts_cfg = orch._config.api.tailscale
+    if ts_cfg.mode != "off" and ts_cfg.reset_on_exit:
+        try:
+            from klir.infra.tailscale import stop_tailscale_exposure
+
+            await stop_tailscale_exposure(ts_cfg.mode)
+        except Exception:
+            logger.exception("Failed to reset Tailscale exposure during shutdown")
+
     if orch._api_stop is not None:
         await orch._api_stop()
     try:

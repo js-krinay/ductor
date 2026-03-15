@@ -33,7 +33,6 @@ import asyncio
 import hmac
 import json
 import logging
-import shutil
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -82,8 +81,10 @@ _MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
 
 
 def _detect_tailscale() -> bool:
-    """Return True if the ``tailscale`` binary is found in PATH."""
-    return shutil.which("tailscale") is not None
+    """Return True if the ``tailscale`` binary is available."""
+    from klir.infra.tailscale import detect_tailscale
+
+    return detect_tailscale()
 
 
 async def _ws_send(ws: web.WebSocketResponse, data: dict[str, object]) -> bool:
