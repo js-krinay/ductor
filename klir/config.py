@@ -204,7 +204,7 @@ class ApiConfig(BaseModel):
     ``0`` means "use the first ``allowed_user_ids`` entry".
     """
 
-    enabled: bool = False
+    enabled: bool = True
     host: str = _BIND_ALL_INTERFACES
     port: int = 8741
     token: str = ""

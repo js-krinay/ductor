@@ -329,6 +329,14 @@ def _write_config(
     merged["allowed_user_ids"] = allowed_user_ids
     merged["user_timezone"] = user_timezone
 
+    # Ensure API token exists
+    import secrets as _secrets
+
+    api = merged.get("api", {})
+    if isinstance(api, dict) and not api.get("token"):
+        api["token"] = _secrets.token_urlsafe(32)
+        merged["api"] = api
+
     from klir.infra.json_store import atomic_json_save
 
     atomic_json_save(config_path, merged)
@@ -369,6 +377,15 @@ def run_onboarding() -> bool:
     # Offer background service setup on Linux with systemd
     run_as_service = _offer_service_install(console)
 
+    # Read back the API token for display
+    try:
+        final_config = json.loads(config_path.read_text(encoding="utf-8"))
+        api_token = final_config.get("api", {}).get("token", "")
+    except (json.JSONDecodeError, OSError):
+        api_token = ""
+
+    api_token_line = f"  API Token:  [cyan]{api_token}[/cyan]\n" if api_token else ""
+
     console.print(
         Panel(
             "[bold green]Setup complete![/bold green]\n\n"
@@ -377,6 +394,10 @@ def run_onboarding() -> bool:
             f"  Config:     [cyan]{config_path}[/cyan]\n"
             f"  Workspace:  [cyan]{paths.workspace}[/cyan]\n"
             f"  Logs:       [cyan]{paths.logs_dir}[/cyan]\n\n"
+            "[bold]Dashboard:[/bold]\n\n"
+            f"  URL:        [cyan]http://localhost:8741/dashboard/[/cyan]\n"
+            + api_token_line
+            + "\n"
             + ("Installing service..." if run_as_service else "Starting bot..."),
             title="[bold green]Ready[/bold green]",
             border_style="green",

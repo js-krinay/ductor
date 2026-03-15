@@ -269,10 +269,21 @@ class ApiServer:
             "db": db,
         }
 
+    def _resolve_dashboard_dist(self) -> Path | None:
+        """Return dashboard dist dir if it exists."""
+        dist = Path(__file__).resolve().parent.parent / "dashboard" / "dist"
+        if dist.is_dir() and (dist / "index.html").exists():
+            return dist
+        return None
+
     # -- Lifecycle -------------------------------------------------------------
 
     async def start(self) -> None:
         """Create the aiohttp app and start listening."""
+        if not self._config.token:
+            logger.warning("API server disabled: no token configured")
+            return
+
         if not _detect_tailscale() and not self._config.allow_public:
             logger.warning(
                 "API server: Tailscale NOT detected. Your API may be exposed "
@@ -320,6 +331,39 @@ class ApiServer:
             )
             register_dashboard_routes(app, ctrl, self._verify_bearer)
             logger.info("Dashboard REST API routes registered")
+        else:
+            logger.info("Dashboard REST routes not registered (missing dependencies)")
+
+        # Dashboard SPA static files
+        dashboard_dist = self._resolve_dashboard_dist()
+        if dashboard_dist is not None:
+            index_html = dashboard_dist / "index.html"
+            index_bytes = index_html.read_bytes()
+
+            async def _dashboard_spa_fallback(
+                request: web.Request,
+            ) -> web.StreamResponse:
+                """SPA catch-all: serve index.html for client-side routing."""
+                rel = request.match_info.get("path", "")
+                static_file = dashboard_dist / rel
+                if (
+                    rel
+                    and static_file.is_file()
+                    and static_file.resolve().is_relative_to(dashboard_dist)
+                ):
+                    return web.FileResponse(static_file)
+                return web.Response(body=index_bytes, content_type="text/html")
+
+            async def _dashboard_redirect(
+                _request: web.Request,
+            ) -> web.StreamResponse:
+                raise web.HTTPFound("/dashboard/")
+
+            # Register specific routes before the catch-all wildcard
+            app.router.add_get("/dashboard", _dashboard_redirect)
+            app.router.add_get("/dashboard/", _dashboard_spa_fallback)
+            app.router.add_get("/dashboard/{path:.*}", _dashboard_spa_fallback)
+            logger.info("Dashboard SPA serving from %s", dashboard_dist)
 
         self._runner = web.AppRunner(app, access_log=None)
         await self._runner.setup()

@@ -53,6 +53,10 @@ desktop.ini
 *.log
 *.sock
 
+# Dashboard frontend
+klir/dashboard/node_modules/
+klir/dashboard/dist/
+
 # Personal / dev-only (not part of the project)
 start_bot.sh
 python_best_practice.md
